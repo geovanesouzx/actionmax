@@ -127,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
-    let isInitialLoad = true;
     const markdownConverter = new showdown.Converter();
 
     // --- Lógica de Autenticação do Firebase ---
@@ -866,13 +865,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detailsAddListBtn?.addEventListener('click', () => toggleMyList(currentDetailsData));
         
-        // CORREÇÃO: Adiciona o event listener para o botão de assistir na página de detalhes
         detailsWatchBtn?.addEventListener('click', () => {
             if (currentDetailsData) {
                 if (currentDetailsData.type === 'Filme' && currentDetailsData.videoSrc) {
                     playContent(currentDetailsData.videoSrc);
                 } else if (currentDetailsData.type === 'Série') {
-                    // Toca o primeiro episódio da primeira temporada como padrão
                     const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => a-b)[0];
                     if (firstSeasonNum) {
                         const firstEpisodeNum = Object.keys(currentDetailsData.parsedSeasons[firstSeasonNum]).sort((a,b) => a-b)[0];
@@ -1144,41 +1141,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const setupRealtimeListeners = async () => {
-            await loadMyList();
-            await loadAvatar();
-            await loadAvatars();
+            // Essas funções podem rodar em paralelo com o carregamento principal
+            loadMyList();
+            loadAvatar();
+            loadAvatars();
             listenForNotifications();
             loadSiteSettings();
 
-            onSnapshot(collection(db, 'content'), (snapshot) => {
-                allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                renderAllPages();
-            });
+            try {
+                // 1. Busca os dados iniciais de forma garantida
+                const contentQuery = collection(db, 'content');
+                const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
 
-            onSnapshot(query(collection(db, 'categories'), orderBy("order")), (snapshot) => {
-                allCategories = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                renderAllPages();
-            });
+                const [contentSnapshot, categoriesSnapshot] = await Promise.all([
+                    getDocs(contentQuery),
+                    getDocs(categoriesQuery)
+                ]);
 
-            if (isInitialLoad) {
-                setTimeout(() => {
-                    const hash = window.location.hash;
-                    if (hash.startsWith('#/details/')) {
-                        const itemId = hash.split('/')[2];
-                        const data = allContent.find(item => item.id === itemId);
-                        if (data) showPage('details-page', false, data);
-                        else showPage('inicio-page', false);
-                    } else if (hash.startsWith('#/genre/')) {
-                        showGenrePage(decodeURIComponent(hash.split('/')[2]));
-                    } else {
-                        const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
-                        if (document.getElementById(pageId)) showPage(pageId, false);
-                        else showPage('inicio-page', false);
-                    }
-                    isInitialLoad = false;
-                    loadingScreen.classList.add('opacity-0');
-                    loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
-                }, 1000); // Atraso para garantir que os dados iniciais sejam carregados
+                // 2. Popula os arrays de dados
+                allContent = contentSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                allCategories = categoriesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
+                // 3. Renderiza a página com os dados iniciais
+                await renderAllPages();
+
+                // 4. Lida com a rota inicial (URL com hash)
+                const hash = window.location.hash;
+                if (hash.startsWith('#/details/')) {
+                    const itemId = hash.split('/')[2];
+                    const data = allContent.find(item => item.id === itemId);
+                    if (data) showPage('details-page', false, data);
+                    else showPage('inicio-page', false);
+                } else if (hash.startsWith('#/genre/')) {
+                    showGenrePage(decodeURIComponent(hash.split('/')[2]));
+                } else {
+                    const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
+                    if (document.getElementById(pageId)) showPage(pageId, false);
+                    else showPage('inicio-page', false);
+                }
+
+                // 5. Esconde a tela de carregamento APÓS tudo estar pronto
+                loadingScreen.classList.add('opacity-0');
+                loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
+
+                // 6. Anexa os listeners para atualizações em tempo real
+                onSnapshot(contentQuery, (snapshot) => {
+                    allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                    renderAllPages(); 
+                });
+
+                onSnapshot(categoriesQuery, (snapshot) => {
+                    allCategories = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                    renderAllPages();
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar dados iniciais:", error);
+                loadingScreen.innerHTML = '<h2 class="text-red-500 text-center p-4">Falha ao carregar o site. Por favor, recarregue a página.</h2>';
             }
         };
 
