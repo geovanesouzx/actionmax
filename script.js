@@ -349,8 +349,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const populateDetailsPage = (data) => {
-            const bgImage = (window.innerWidth < 768 && data.bg_mobile) ? data.bg_mobile : data.bg;
-            document.getElementById('details-bg').src = bgImage || '';
+            document.getElementById('details-bg-desktop').src = data.bg || '';
+            document.getElementById('details-bg-mobile').src = data.bg_mobile || data.bg || ''; // Fallback to desktop bg
             document.getElementById('details-poster').src = data.img || '';
             document.getElementById('details-title').textContent = data.title || 'Título não encontrado';
             document.getElementById('details-desc').textContent = data.desc || 'Descrição não disponível.';
@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             if(user) {
                 const userDocRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(userDocRef);
+                const docSnap = await getDoc(docRef);
                 const savedAvatar = docSnap.exists() ? docSnap.data().avatarUrl : null;
                 if (savedAvatar) {
                     profileAvatar.src = savedAvatar;
@@ -1041,10 +1041,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupHero = () => {
             const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque'));
             if (heroContentData) {
-                const bgImage = (window.innerWidth < 768 && heroContentData.bg_mobile) ? heroContentData.bg_mobile : heroContentData.bg;
+                document.getElementById('hero-bg-desktop').src = heroContentData.bg || '';
+                document.getElementById('hero-bg-mobile').src = heroContentData.bg_mobile || heroContentData.bg || '';
                 heroSection.dataset.id = heroContentData.id;
                 heroSection.dataset.videoSrc = heroContentData.videoSrc || '';
-                document.getElementById('hero-bg').src = bgImage;
                 document.getElementById('hero-title').textContent = heroContentData.title;
                 document.getElementById('hero-desc').textContent = heroContentData.desc;
                 document.getElementById('hero-genre').textContent = Array.isArray(heroContentData.genre) ? heroContentData.genre.join(', ') : (heroContentData.genre || '');
