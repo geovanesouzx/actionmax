@@ -118,7 +118,8 @@
                     <!-- Conteúdo do Hero será preenchido dinamicamente -->
                     <div class="absolute inset-0 z-0">
                         <img id="hero-bg" src="https://placehold.co/1920x1080/040714/1c1d2c?text=+" alt="Filme em destaque" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/1920x1080/000000/ffffff?text=Placeholder';">
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#040714] via-[#040714]/70 to-transparent"></div>
+                        <!-- ATUALIZADO: Gradiente mais suave -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#040714]/90 via-[#040714]/60 to-transparent"></div>
                     </div>
                     <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div id="hero-content" class="max-w-xl">
@@ -231,14 +232,14 @@
                 <section class="relative min-h-screen py-20">
                     <div class="absolute inset-0 z-0">
                         <img id="details-bg" src="" alt="Background" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/1920x1080/000000/ffffff?text=Placeholder';">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#040714] via-[#040714]"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#040714] via-[#040714]/80 to-transparent"></div>
+                        <!-- ATUALIZADO: Gradientes mais suaves -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#040714]/80 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#040714]/90 via-[#040714]/50 to-transparent"></div>
                     </div>
                     <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <!-- Grid para poster, título, etc. -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 items-start pt-16 md:pt-0">
                             <div class="md:col-span-1 flex justify-center">
-                                <!-- ATUALIZADO: Container para manter a proporção do pôster -->
                                 <div class="w-56 sm:w-64 aspect-[2/3]">
                                     <img id="details-poster" src="" alt="Poster" class="w-full h-full object-cover rounded-lg shadow-2xl" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                                 </div>
