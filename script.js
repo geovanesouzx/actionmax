@@ -348,8 +348,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const populateDetailsPage = (data) => {
-            document.getElementById('details-bg-desktop').src = data.bg || '';
-            document.getElementById('details-bg-mobile').src = data.bg_mobile || data.bg || ''; // Fallback to desktop bg
+            const bgImage = (window.innerWidth < 768 && data.bg_mobile) ? data.bg_mobile : data.bg;
+            document.getElementById('details-bg').src = bgImage || data.bg || '';
+            
             document.getElementById('details-poster').src = data.img || '';
             document.getElementById('details-title').textContent = data.title || 'Título não encontrado';
             document.getElementById('details-desc').textContent = data.desc || 'Descrição não disponível.';
@@ -632,15 +633,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const loadAvatar = async () => {
             const user = auth.currentUser;
-            if(user) {
+            if (!user) return;
+
+            try {
                 const userDocRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                const savedAvatar = docSnap.exists() ? docSnap.data().avatarUrl : null;
-                if (savedAvatar) {
-                    profileAvatar.src = savedAvatar;
-                    profileAvatarLarge.src = savedAvatar;
-                    commentAvatar.src = savedAvatar;
-                }
+                const docSnap = await getDoc(userDocRef);
+                const defaultAvatar = `https://placehold.co/150x150/040714/a78bfa?text=${user.displayName.charAt(0).toUpperCase()}`;
+                const savedAvatar = (docSnap.exists() && docSnap.data().avatarUrl) ? docSnap.data().avatarUrl : defaultAvatar;
+                
+                profileAvatar.src = savedAvatar;
+                profileAvatarLarge.src = savedAvatar;
+                commentAvatar.src = savedAvatar;
+            } catch (error) {
+                console.error("Error loading avatar:", error);
             }
         };
 
@@ -1038,8 +1043,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupHero = () => {
             const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque'));
             if (heroContentData) {
-                document.getElementById('hero-bg-desktop').src = heroContentData.bg || '';
-                document.getElementById('hero-bg-mobile').src = heroContentData.bg_mobile || heroContentData.bg || '';
+                const bgImage = (window.innerWidth < 768 && heroContentData.bg_mobile) ? heroContentData.bg_mobile : heroContentData.bg;
+                document.getElementById('hero-bg').src = bgImage || heroContentData.bg || '';
                 heroSection.dataset.id = heroContentData.id;
                 heroSection.dataset.videoSrc = heroContentData.videoSrc || '';
                 document.getElementById('hero-title').textContent = heroContentData.title;
@@ -1141,9 +1146,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const setupRealtimeListeners = async () => {
+            let isInitialLoad = true;
+            
             // Essas funções podem rodar em paralelo com o carregamento principal
             loadMyList();
-            loadAvatar();
+            loadAvatar(); // CORREÇÃO: Carrega o avatar assim que o usuário é autenticado
             loadAvatars();
             listenForNotifications();
             loadSiteSettings();
@@ -1166,18 +1173,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 await renderAllPages();
 
                 // 4. Lida com a rota inicial (URL com hash)
-                const hash = window.location.hash;
-                if (hash.startsWith('#/details/')) {
-                    const itemId = hash.split('/')[2];
-                    const data = allContent.find(item => item.id === itemId);
-                    if (data) showPage('details-page', false, data);
-                    else showPage('inicio-page', false);
-                } else if (hash.startsWith('#/genre/')) {
-                    showGenrePage(decodeURIComponent(hash.split('/')[2]));
-                } else {
-                    const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
-                    if (document.getElementById(pageId)) showPage(pageId, false);
-                    else showPage('inicio-page', false);
+                if (isInitialLoad) {
+                    isInitialLoad = false;
+                    const hash = window.location.hash;
+                    if (hash.startsWith('#/details/')) {
+                        const itemId = hash.split('/')[2];
+                        const data = allContent.find(item => item.id === itemId);
+                        if (data) showPage('details-page', false, data);
+                        else showPage('inicio-page', false);
+                    } else if (hash.startsWith('#/genre/')) {
+                        showGenrePage(decodeURIComponent(hash.split('/')[2]));
+                    } else {
+                        const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
+                        if (document.getElementById(pageId)) showPage(pageId, false);
+                        else showPage('inicio-page', false);
+                    }
                 }
 
                 // 5. Esconde a tela de carregamento APÓS tudo estar pronto

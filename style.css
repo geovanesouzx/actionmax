@@ -150,18 +150,3 @@ body {
     margin-left: 1.5rem; 
     margin-bottom: 1rem; 
 }
-
-/* ATUALIZADO: Regras para imagens de fundo responsivas */
-#hero-bg-mobile, #details-bg-mobile {
-    display: none; /* Esconde a imagem mobile por padrão */
-}
-
-/* Media query para telas menores (mobile) */
-@media (max-width: 768px) {
-    #hero-bg-desktop, #details-bg-desktop {
-        display: none; /* Esconde a imagem de desktop em telas pequenas */
-    }
-    #hero-bg-mobile, #details-bg-mobile {
-        display: block; /* Mostra a imagem de mobile em telas pequenas */
-    }
-}
