@@ -1,0 +1,152 @@
+html, body { 
+    overflow-x: hidden; 
+}
+body { 
+    font-family: 'Inter', sans-serif; 
+    background-color: #040714; 
+    background-image: linear-gradient(to bottom right, #040714, #1c1d2c); 
+    color: #f9f9f9; 
+}
+.glass-effect { 
+    background-color: rgba(4, 7, 20, 0.5); 
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); 
+    border-color: rgba(255, 255, 255, 0.1); 
+}
+.movie-card { 
+    transition: transform 0.3s ease, box-shadow 0.3s ease; 
+    border: 2px solid transparent; 
+    cursor: pointer; 
+    aspect-ratio: 2 / 3; 
+}
+.movie-card:hover { 
+    transform: scale(1.05); 
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); 
+    border-color: rgba(167, 139, 250, 0.8); 
+}
+.btn-primary { 
+    background-color: #8b5cf6; 
+    transition: background-color 0.3s ease, transform 0.2s ease; 
+}
+.btn-primary:hover { 
+    background-color: #a78bfa; 
+    transform: scale(1.03); 
+}
+.btn-secondary { 
+    background-color: rgba(255, 255, 255, 0.1); 
+    transition: background-color 0.3s ease, transform 0.2s ease; 
+}
+.btn-secondary:hover { 
+    background-color: rgba(255, 255, 255, 0.2); 
+    transform: scale(1.03); 
+}
+.mobile-nav-link.active { 
+    color: #a78bfa; 
+}
+.modal-overlay { 
+    transition: opacity 0.3s ease-in-out; 
+}
+.modal { 
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; 
+}
+.avatar-option { 
+    transition: transform 0.2s ease, border-color 0.2s ease; 
+}
+.avatar-option:hover { 
+    transform: scale(1.08); 
+    border-color: #a78bfa; 
+}
+.avatar-option.selected { 
+    border-color: #c4b5fd; 
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.7); 
+    transform: scale(1.08); 
+}
+.star-rating .fa-star { 
+    color: #4a5568; 
+    cursor: pointer; 
+    transition: color 0.2s; 
+}
+.star-rating:hover .fa-star { 
+    color: #f6e05e; 
+}
+.star-rating .fa-star:hover ~ .fa-star { 
+    color: #4a5568; 
+}
+.star-rating .fa-star.selected { 
+    color: #f6e05e; 
+}
+.like-btn.liked { 
+    color: #fb7185; 
+}
+.loader { 
+    border: 4px solid rgba(255, 255, 255, 0.2); 
+    border-left-color: #a78bfa; 
+    border-radius: 50%; 
+    width: 50px; 
+    height: 50px; 
+    animation: spin 1s linear infinite; 
+}
+@keyframes spin { 
+    to { transform: rotate(360deg); } 
+}
+.swiper-button-next, .swiper-button-prev { 
+    color: #a78bfa; 
+    background-color: rgba(4, 7, 20, 0.5); 
+    border-radius: 50%; 
+    width: 44px; 
+    height: 44px; 
+    transition: background-color 0.3s ease; 
+    backdrop-filter: blur(5px); 
+}
+.swiper-button-next:hover, .swiper-button-prev:hover { 
+    background-color: rgba(4, 7, 20, 0.8); 
+}
+.swiper-button-next::after, .swiper-button-prev::after { 
+    font-size: 20px; 
+    font-weight: bold; 
+}
+.swiper-slide { 
+    height: auto; 
+}
+.season-btn { 
+    background-color: rgba(255, 255, 255, 0.1); 
+    transition: background-color 0.3s ease; 
+}
+.season-btn.active, .season-btn:hover { 
+    background-color: #8b5cf6; 
+}
+.episode-card { 
+    transition: transform 0.2s ease, background-color 0.2s ease; 
+    min-height: 120px; 
+}
+.episode-card:hover { 
+    transform: translateY(-4px); 
+    background-color: rgba(255, 255, 255, 0.15); 
+}
+#player-container iframe { 
+    width: 100%; 
+    height: 100%; 
+    border: none; 
+}
+.avatar-carousel.swiper {
+    overflow: visible; /* Allows hover effect to go outside the carousel bounds */
+}
+/* Estilos para o conteúdo do rodapé */
+.footer-content h2 { 
+    font-size: 1.25rem; 
+    font-weight: 600; 
+    margin-bottom: 0.5rem; 
+}
+.footer-content h3 { 
+    font-size: 1.1rem; 
+    font-weight: 600; 
+    margin-bottom: 0.5rem; 
+}
+.footer-content p { 
+    margin-bottom: 1rem; 
+}
+.footer-content ul { 
+    list-style-type: disc; 
+    margin-left: 1.5rem; 
+    margin-bottom: 1rem; 
+}
