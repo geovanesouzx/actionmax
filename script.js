@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationList = document.getElementById('notification-list');
     const closeNotificationBtn = document.getElementById('close-notification-btn');
     const detailsAddListBtn = document.getElementById('details-add-list-btn');
+    const detailsWatchBtn = document.getElementById('details-watch-btn');
     const myListContainer = document.getElementById('my-list-container');
     const myListEmptyMsg = document.getElementById('my-list-empty');
     const changePhotoBtn = document.getElementById('change-photo-btn');
@@ -865,6 +866,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detailsAddListBtn?.addEventListener('click', () => toggleMyList(currentDetailsData));
         
+        // CORREÇÃO: Adiciona o event listener para o botão de assistir na página de detalhes
+        detailsWatchBtn?.addEventListener('click', () => {
+            if (currentDetailsData) {
+                if (currentDetailsData.type === 'Filme' && currentDetailsData.videoSrc) {
+                    playContent(currentDetailsData.videoSrc);
+                } else if (currentDetailsData.type === 'Série') {
+                    // Toca o primeiro episódio da primeira temporada como padrão
+                    const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => a-b)[0];
+                    if (firstSeasonNum) {
+                        const firstEpisodeNum = Object.keys(currentDetailsData.parsedSeasons[firstSeasonNum]).sort((a,b) => a-b)[0];
+                        if (firstEpisodeNum) {
+                            const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][firstEpisodeNum];
+                            const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
+                            playContent(videoSrc, firstSeasonNum, firstEpisodeNum);
+                        }
+                    }
+                }
+            }
+        });
+
         const heroWatchBtn = document.getElementById('hero-watch-btn');
         const heroAddListBtn = document.getElementById('hero-add-list-btn');
         const heroTitle = document.getElementById('hero-title');
