@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainHeader = document.getElementById('main-header');
     const heroSection = document.getElementById('hero-section');
     const homeCarousels = document.getElementById('home-carousels');
+    const continueWatchingContainer = document.getElementById('continue-watching-container');
     const seasonSelector = document.getElementById('season-selector');
     const episodesList = document.getElementById('episodes-list');
     const seasonsSection = document.getElementById('seasons-section');
@@ -122,8 +123,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
-    let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null };
+    let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
+    let watchProgressInterval = null;
     let isInitialLoad = true;
     const markdownConverter = new showdown.Converter();
 
@@ -346,7 +348,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const populateDetailsPage = (data) => {
-            document.getElementById('details-bg').src = data.bg || '';
+            const bgImage = (window.innerWidth < 768 && data.bg_mobile) ? data.bg_mobile : data.bg;
+            document.getElementById('details-bg').src = bgImage || '';
             document.getElementById('details-poster').src = data.img || '';
             document.getElementById('details-title').textContent = data.title || 'Título não encontrado';
             document.getElementById('details-desc').textContent = data.desc || 'Descrição não disponível.';
@@ -474,33 +477,46 @@ document.addEventListener('DOMContentLoaded', () => {
             playerContainer.innerHTML = '';
             if (!src) return;
 
+            clearInterval(watchProgressInterval);
+
             currentPlaying = {
                 season: seasonNum,
                 episode: epNum,
-                nextEpisodeInfo: findNextEpisode(seasonNum, epNum)
+                nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
+                contentId: currentDetailsData.id
             };
 
             const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
 
             if (src.trim().startsWith('<iframe')) {
-                // Handle direct iframe code
                 playerContainer.innerHTML = src;
             } else if (youtubeEmbedUrl) {
-                // Handle YouTube URLs
                 playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else if (src.trim().startsWith('http')) {
-                // Handle generic embeddable URLs
                 playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
-                // Fallback for other cases (e.g., direct video files)
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
                 videoEl.controls = true;
                 videoEl.autoplay = true;
                 videoEl.controlsList = "nodownload";
                 videoEl.innerHTML = `<source src="${src}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
+                
+                videoEl.addEventListener('loadedmetadata', () => {
+                    const progress = watchHistory[currentPlaying.contentId];
+                    if (progress && progress.currentTime) {
+                        videoEl.currentTime = progress.currentTime;
+                    }
+                });
+
                 videoEl.addEventListener('ended', handleVideoEnd);
                 playerContainer.appendChild(videoEl);
+
+                watchProgressInterval = setInterval(() => {
+                    if (!videoEl.paused) {
+                        updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
+                    }
+                }, 10000); // Salva a cada 10 segundos
             }
 
             showPage('player-page', true, currentDetailsData);
@@ -911,16 +927,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('popstate', (e) => {
             playerContainer.innerHTML = ''; // Limpa o player ao voltar
+            clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
             if (e.state && e.state.page) showPage(e.state.page, false, e.state.data);
             else showPage(lastPageId || 'inicio-page', false);
         });
 
-        const createCardHTML = (data) => {
-            return `<div class="movie-card rounded-lg overflow-hidden" data-id="${data.id}"><img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';"></div>`;
+        const createCardHTML = (data, progress = null) => {
+            const progressHTML = progress ? `
+                <div class="absolute bottom-0 left-0 w-full h-1.5 bg-gray-500/50">
+                    <div class="h-full bg-violet-500" style="width: ${progress}%;"></div>
+                </div>
+            ` : '';
+            return `
+                <div class="movie-card rounded-lg overflow-hidden relative" data-id="${data.id}">
+                    <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                    ${progressHTML}
+                </div>
+            `;
         };
 
-        const renderAllPages = () => {
+        const renderAllPages = async () => {
+            await loadWatchHistory();
+            renderContinueWatchingCarousel();
             setupHero();
             renderHomeCarousels();
             populateGenres();
@@ -936,12 +965,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderHomeCarousels = () => {
             homeCarousels.innerHTML = '';
             allCategories.forEach(category => {
-                const categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
+                let categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
+                
+                // Ordenar o conteúdo com base no contentOrder da categoria
+                const orderedIds = category.contentOrder || [];
+                categoryContent.sort((a, b) => {
+                    const indexA = orderedIds.indexOf(a.id);
+                    const indexB = orderedIds.indexOf(b.id);
+                    if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title); // both new
+                    if (indexA === -1) return 1; // a is new
+                    if (indexB === -1) return -1; // b is new
+                    return indexA - indexB;
+                });
+
                 if (categoryContent.length > 0) {
                      const slidesHTML = categoryContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
                      const carouselHTML = `
-                         <div>
-                             <h2 class="text-2xl font-bold text-white mb-6">${category.title}</h2>
+                         <div class="space-y-6">
+                             <h2 class="text-2xl font-bold text-white">${category.title}</h2>
                              <div class="relative">
                                  <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
                                  <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
@@ -979,9 +1020,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupHero = () => {
             const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque'));
             if (heroContentData) {
+                const bgImage = (window.innerWidth < 768 && heroContentData.bg_mobile) ? heroContentData.bg_mobile : heroContentData.bg;
                 heroSection.dataset.id = heroContentData.id;
                 heroSection.dataset.videoSrc = heroContentData.videoSrc || '';
-                document.getElementById('hero-bg').src = heroContentData.bg;
+                document.getElementById('hero-bg').src = bgImage;
                 document.getElementById('hero-title').textContent = heroContentData.title;
                 document.getElementById('hero-desc').textContent = heroContentData.desc;
                 document.getElementById('hero-genre').textContent = Array.isArray(heroContentData.genre) ? heroContentData.genre.join(', ') : (heroContentData.genre || '');
@@ -1012,7 +1054,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     privacidadeContent.innerHTML = data.privacidadeContent ? markdownConverter.makeHtml(data.privacidadeContent) : '<p>Conteúdo não disponível.</p>';
                     ajudaContent.innerHTML = data.ajudaContent ? markdownConverter.makeHtml(data.ajudaContent) : '<p>Conteúdo não disponível.</p>';
                 } else {
-                    // Placeholder content if nothing is in the database
                     socialLinksContainer.innerHTML = `<a href="#" class="hover:text-white transition-colors"><i class="fab fa-telegram-plane text-xl"></i></a>`;
                     termosContent.innerHTML = '<p>Os termos de serviço serão adicionados em breve.</p>';
                     privacidadeContent.innerHTML = '<p>A política de privacidade será adicionada em breve.</p>';
@@ -1020,6 +1061,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         };
+
+        // --- Lógica de Continuar Assistindo ---
+        async function loadWatchHistory() {
+            const user = auth.currentUser;
+            if (user) {
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                watchHistory = (docSnap.exists() && docSnap.data().watchHistory) ? docSnap.data().watchHistory : {};
+            }
+        }
+
+        async function updateWatchHistory(contentId, currentTime, duration) {
+            const user = auth.currentUser;
+            if (user && contentId) {
+                const progress = (currentTime / duration) * 100;
+                // Não salva se estiver quase no final
+                if (progress > 95) {
+                    delete watchHistory[contentId];
+                } else {
+                    watchHistory[contentId] = {
+                        currentTime,
+                        duration,
+                        watchedAt: serverTimestamp()
+                    };
+                }
+                const docRef = doc(db, 'users', user.uid);
+                await setDoc(docRef, { watchHistory }, { merge: true });
+            }
+        }
+
+        function renderContinueWatchingCarousel() {
+            continueWatchingContainer.innerHTML = '';
+            const historyItems = Object.entries(watchHistory)
+                .map(([id, data]) => ({ id, ...data }))
+                .filter(item => item.currentTime && item.duration); // Garante que temos dados válidos
+
+            // Ordena por mais recente
+            historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.watchedAt?.toDate() || 0));
+
+            if (historyItems.length === 0) return;
+
+            const slidesHTML = historyItems.map(item => {
+                const contentData = allContent.find(c => c.id === item.id);
+                if (!contentData) return '';
+                const progress = (item.currentTime / item.duration) * 100;
+                return `<div class="swiper-slide">${createCardHTML(contentData, progress)}</div>`;
+            }).join('');
+
+            const carouselHTML = `
+                <div class="space-y-6 mb-8">
+                    <h2 class="text-2xl font-bold text-white">Continuar Assistindo</h2>
+                    <div class="relative">
+                        <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
+                        <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
+                        <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
+                    </div>
+                </div>`;
+            continueWatchingContainer.innerHTML = carouselHTML;
+            initCarousel(continueWatchingContainer.querySelector('.content-carousel'));
+        }
 
         const setupRealtimeListeners = async () => {
             await loadMyList();
@@ -1033,9 +1134,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderAllPages();
             });
 
-            onSnapshot(collection(db, 'categories'), (snapshot) => {
-                allCategories = snapshot.docs.map(doc => doc.data());
-                allCategories.sort((a, b) => a.order - b.order);
+            onSnapshot(query(collection(db, 'categories'), orderBy("order")), (snapshot) => {
+                allCategories = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                 renderAllPages();
             });
 

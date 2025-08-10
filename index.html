@@ -137,8 +137,11 @@
                         </div>
                     </div>
                 </section>
-                <div id="home-carousels" class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-                    <!-- Carrosséis serão injetados aqui pelo JS -->
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+                    <!-- NOVO: Container para "Continuar Assistindo" -->
+                    <div id="continue-watching-container"></div>
+                    <!-- Container para os outros carrosséis -->
+                    <div id="home-carousels"></div>
                 </div>
             </div>
             <div id="series-page" class="page-content hidden">
@@ -235,7 +238,10 @@
                         <!-- Grid para poster, título, etc. -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 items-start pt-16 md:pt-0">
                             <div class="md:col-span-1 flex justify-center">
-                                <img id="details-poster" src="" alt="Poster" class="w-56 sm:w-64 rounded-lg shadow-2xl" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                                <!-- ATUALIZADO: Container para manter a proporção do pôster -->
+                                <div class="w-56 sm:w-64 aspect-[2/3]">
+                                    <img id="details-poster" src="" alt="Poster" class="w-full h-full object-cover rounded-lg shadow-2xl" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                                </div>
                             </div>
                             <div class="md:col-span-2 text-center md:text-left">
                                 <h1 id="details-title" class="text-4xl md:text-6xl font-black text-white uppercase tracking-wider"></h1>
