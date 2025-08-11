@@ -18,6 +18,8 @@ body {
     border: 2px solid transparent; 
     cursor: pointer; 
     aspect-ratio: 2 / 3; 
+    border-radius: 0.5rem; /* Garante que os cantos sejam sempre arredondados */
+    overflow: hidden;      /* Garante que a imagem interna seja cortada */
 }
 .movie-card:hover { 
     transform: scale(1.05); 
