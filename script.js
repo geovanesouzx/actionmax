@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let playerReady = false;
     let videoElement = null;
     let hostSyncInterval = null;
+    let isSeeking = false; // Flag para evitar loop de eventos de seek
 
 
     // --- Lógica de Autenticação do Firebase ---
@@ -351,22 +352,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
-            // Não limpa os listeners da sala aqui para permitir a navegação de volta
-            // if (unsubscribeFromRoom) unsubscribeFromRoom();
-            // if (unsubscribeFromChat) unsubscribeFromChat();
 
-            const isDetailsPage = pageId === 'details-page';
-            const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
 
-            if (!isDetailsPage && !isAvatarPage && !isPlayerPage) {
+            if (!isPlayerPage) {
                 lastPageId = pageId;
-                // Limpa a sala se sair da página do player
                 if(currentRoomId) {
                     if (unsubscribeFromRoom) unsubscribeFromRoom();
                     if (unsubscribeFromChat) unsubscribeFromChat();
+                    clearInterval(hostSyncInterval);
                     currentRoomId = null;
                     isHost = false;
+                    videoElement = null;
                 }
             }
 
@@ -384,14 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (targetPage) {
                 targetPage.classList.remove('hidden');
-                if (isDetailsPage && data) {
+                if (pageId === 'details-page' && data) {
                     currentDetailsData = data;
                     populateDetailsPage(data);
                     updateAllListButtons(data.id);
                     loadComments(data.id);
                     loadRatingData(data.id);
                     loadLikeDislikeStatus(data.id);
-                } else if (isAvatarPage) {
+                } else if (pageId === 'avatar-page') {
                     updateSelectedAvatarVisual();
                 } else if (isPlayerPage && data && data.roomId) {
                     joinWatchParty(data.roomId);
@@ -406,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (pushState) {
                     let url = `#${pageId.replace('-page', '')}`;
-                    if(isDetailsPage && data) url = `#/details/${data.id}`;
+                    if(pageId === 'details-page' && data) url = `#/details/${data.id}`;
                     if(isPlayerPage && data && data.roomId) url = `#/watchparty/${data.roomId}`;
                     history.pushState({ page: pageId, data: data }, '', url);
                 }
@@ -523,8 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const handleVideoEnd = () => {
-            // Em modo Watch Party, apenas o host controla o próximo episódio.
-            if (isHost) {
+            if (isHost && currentRoomId) {
                 const next = currentPlaying.nextEpisodeInfo;
                 if (next) {
                     const roomRef = doc(db, 'watch_parties', currentRoomId);
@@ -537,7 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
-            // Lógica de overlay de próximo episódio para visualização solo
             else if (!currentRoomId && currentPlaying.nextEpisodeInfo) {
                 nextEpisodeOverlay.classList.remove('hidden');
                 nextEpisodeOverlay.classList.add('flex');
@@ -573,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
             playerReady = false;
             clearInterval(watchProgressInterval);
             
-            // Se estiver em uma watch party, não faz nada aqui. O player é controlado por `joinWatchParty`
             if (currentRoomId) return;
 
             if (!src) return;
@@ -1060,16 +1054,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         window.addEventListener('popstate', (e) => {
-            playerContainer.innerHTML = ''; // Limpa o player ao voltar
+            playerContainer.innerHTML = '';
             clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
             
             if (currentRoomId) {
                 if (unsubscribeFromRoom) unsubscribeFromRoom();
                 if (unsubscribeFromChat) unsubscribeFromChat();
+                clearInterval(hostSyncInterval);
                 currentRoomId = null;
                 isHost = false;
-                clearInterval(hostSyncInterval);
+                videoElement = null;
             }
 
             if (e.state && e.state.page) {
@@ -1316,21 +1311,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 hostId: user.uid,
                 contentId: currentDetailsData.id,
                 createdAt: serverTimestamp(),
-                state: 'paused', // Começa pausado
+                state: 'paused',
                 currentTime: 0,
-                currentSrc: currentDetailsData.type === 'Filme' ? currentDetailsData.videoSrc : null, // Define a fonte para filmes
+                currentSrc: currentDetailsData.type === 'Filme' ? currentDetailsData.videoSrc : null,
                 currentSeason: null,
                 currentEpisode: null,
             });
 
             currentRoomId = roomRef.id;
             
-            // Mostra o modal de convite
             const partyLink = `${window.location.origin}${window.location.pathname}#/watchparty/${currentRoomId}`;
             watchPartyLinkInput.value = partyLink;
             openModal(watchPartyModalOverlay, watchPartyModal);
             
-            // Leva o host para a sala
             showPage('player-page', true, { roomId: currentRoomId });
         };
 
@@ -1349,7 +1342,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             isHost = user.uid === roomData.hostId;
             
-            // Carrega os dados do conteúdo da sala
             currentDetailsData = allContent.find(c => c.id === roomData.contentId);
             if (!currentDetailsData) {
                 alert("Conteúdo da sala não encontrado!");
@@ -1357,38 +1349,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // Mostra o player e o chat
             watchPartyChatSidebar.classList.remove('hidden');
-            renderWatchPartyUI(roomData); // Renderiza a UI específica (ex: seletor de ep)
+            renderWatchPartyUI(roomData); 
 
-            // Listener para o estado da sala (play, pause, seek)
             unsubscribeFromRoom = onSnapshot(roomRef, (doc) => {
                 const data = doc.data();
-                if (videoElement && playerReady) {
-                    // Sincroniza o player do convidado
+                if (!videoElement && data.currentSrc) {
+                    loadVideoForWatchParty(data.currentSrc, data);
+                } else if (videoElement && playerReady) {
+                    if (videoElement.src !== data.currentSrc && data.currentSrc) {
+                        videoElement.src = data.currentSrc;
+                    }
                     if (!isHost) {
-                        // Sincroniza a fonte do vídeo
-                        if (videoElement.currentSrc !== data.currentSrc && data.currentSrc) {
-                            videoElement.src = data.currentSrc;
-                        }
-                        // Sincroniza o tempo
-                        if (Math.abs(videoElement.currentTime - data.currentTime) > 2) { // Tolerância de 2s
+                        if (Math.abs(videoElement.currentTime - data.currentTime) > 2.5) {
                             videoElement.currentTime = data.currentTime;
                         }
-                        // Sincroniza o estado (play/pause)
                         if (data.state === 'playing' && videoElement.paused) {
-                            videoElement.play();
+                            videoElement.play().catch(e => console.error("Play error:", e));
                         } else if (data.state === 'paused' && !videoElement.paused) {
                             videoElement.pause();
                         }
                     }
-                } else if (data.currentSrc) {
-                    // Se o player ainda não foi criado, cria ele
-                    loadVideoForWatchParty(data.currentSrc);
                 }
             });
 
-            // Listener para o chat
             const chatQuery = query(collection(db, 'watch_parties', roomId, 'messages'), orderBy('createdAt'));
             unsubscribeFromChat = onSnapshot(chatQuery, (snapshot) => {
                 chatMessages.innerHTML = '';
@@ -1402,18 +1386,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        const loadVideoForWatchParty = (src) => {
+        const loadVideoForWatchParty = (src, roomData) => {
             playerContainer.innerHTML = '';
             videoElement = document.createElement('video');
             videoElement.className = 'w-full h-full';
-            videoElement.controls = isHost; // Controles apenas para o host
-            videoElement.muted = isHost; // Host começa mudo para evitar eco
-            videoElement.autoplay = true;
+            videoElement.controls = isHost;
+            videoElement.muted = isHost; 
             videoElement.src = src;
             playerContainer.appendChild(videoElement);
 
-            videoElement.addEventListener('loadedmetadata', () => {
+            videoElement.addEventListener('loadeddata', () => {
                 playerReady = true;
+                videoElement.currentTime = roomData.currentTime;
+                if (roomData.state === 'playing') {
+                    videoElement.play().catch(e => console.error("Autoplay failed", e));
+                }
                 if (isHost) {
                     setupHostControls();
                 }
@@ -1421,15 +1408,23 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const setupHostControls = () => {
+            if (!videoElement) return;
             const roomRef = doc(db, 'watch_parties', currentRoomId);
-            videoElement.addEventListener('play', () => updateDoc(roomRef, { state: 'playing' }));
-            videoElement.addEventListener('pause', () => updateDoc(roomRef, { state: 'paused' }));
-            // Sincroniza o tempo a cada 3 segundos
+            
+            videoElement.onplay = () => updateDoc(roomRef, { state: 'playing' });
+            videoElement.onpause = () => updateDoc(roomRef, { state: 'paused' });
+            videoElement.onseeking = () => { isSeeking = true; };
+            videoElement.onseeked = () => {
+                updateDoc(roomRef, { currentTime: videoElement.currentTime });
+                isSeeking = false;
+            };
+
+            clearInterval(hostSyncInterval);
             hostSyncInterval = setInterval(() => {
-                if(videoElement && !videoElement.paused) {
+                if(videoElement && !videoElement.paused && !isSeeking) {
                     updateDoc(roomRef, { currentTime: videoElement.currentTime });
                 }
-            }, 3000);
+            }, 2000);
         };
 
         const renderWatchPartyUI = (roomData) => {
@@ -1441,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const seasons = content.seasons;
                 Object.keys(seasons).sort((a,b) => a-b).forEach(seasonNum => {
                     const seasonTitle = document.createElement('h4');
-                    seasonTitle.className = 'text-lg font-bold mt-4 mb-2';
+                    seasonTitle.className = 'text-lg font-bold mt-4 mb-2 px-2';
                     seasonTitle.textContent = `Temporada ${seasonNum}`;
                     watchPartyEpisodeSelector.appendChild(seasonTitle);
                     
@@ -1487,8 +1482,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- FIM da Lógica da Watch Party ---
 
-        // --- NOVAS FUNÇÕES ---
-
         const handleLikeDislike = async (action) => {
             const user = auth.currentUser;
             if (!user || !currentDetailsData) return;
@@ -1515,20 +1508,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
                     if (action === 'like') {
                         if (hasLiked) {
-                            newLikes = newLikes.filter(id => id !== userId); // Unlike
+                            newLikes = newLikes.filter(id => id !== userId);
                         } else {
-                            newLikes.push(userId); // Like
+                            newLikes.push(userId);
                             if (hasDisliked) {
-                                newDislikes = newDislikes.filter(id => id !== userId); // Remove from dislikes
+                                newDislikes = newDislikes.filter(id => id !== userId);
                             }
                         }
                     } else if (action === 'dislike') {
                         if (hasDisliked) {
-                            newDislikes = newDislikes.filter(id => id !== userId); // Undislike
+                            newDislikes = newDislikes.filter(id => id !== userId);
                         } else {
-                            newDislikes.push(userId); // Dislike
+                            newDislikes.push(userId);
                             if (hasLiked) {
-                                newLikes = newLikes.filter(id => id !== userId); // Remove from likes
+                                newLikes = newLikes.filter(id => id !== userId);
                             }
                         }
                     }
@@ -1536,7 +1529,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     transaction.update(contentRef, { likes: newLikes, dislikes: newDislikes });
                 });
         
-                // Atualiza a UI após a transação
                 loadLikeDislikeStatus(currentDetailsData.id);
             } catch (e) {
                 console.error("Transaction failed: ", e);
@@ -1591,8 +1583,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
             window.open(url, '_blank', 'noopener,noreferrer');
         };
-        
-        // --- FIM DAS NOVAS FUNÇÕES ---
         
         const handleRouting = (pushState = true) => {
             const hash = window.location.hash;
@@ -1660,7 +1650,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // Adiciona os novos event listeners
         detailsLikeBtn.addEventListener('click', () => handleLikeDislike('like'));
         detailsDislikeBtn.addEventListener('click', () => handleLikeDislike('dislike'));
         socialShareContainer.addEventListener('click', handleSocialShare);
