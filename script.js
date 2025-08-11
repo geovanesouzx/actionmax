@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsDislikeBtn = document.getElementById('details-dislike-btn');
     const socialShareContainer = document.getElementById('social-share-container');
     const copyLinkMsg = document.getElementById('copy-link-msg');
-    // NOVOS ELEMENTOS WATCH PARTY
+    // ELEMENTOS WATCH PARTY
     const detailsWatchPartyBtn = document.getElementById('details-watch-party-btn');
     const watchPartyChatSidebar = document.getElementById('watch-party-chat-sidebar');
     const chatMessages = document.getElementById('chat-messages');
@@ -132,6 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const watchPartyLinkInput = document.getElementById('watch-party-link-input');
     const copyWatchPartyLinkBtn = document.getElementById('copy-watch-party-link-btn');
     const copyPartyLinkMsg = document.getElementById('copy-party-link-msg');
+    const watchPartyEpisodeSelector = document.getElementById('watch-party-episode-selector');
+
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -147,13 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let watchProgressInterval = null;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
-    // NOVO ESTADO WATCH PARTY
+    // ESTADO WATCH PARTY
     let currentRoomId = null;
     let unsubscribeFromRoom = null;
     let unsubscribeFromChat = null;
     let isHost = false;
     let playerReady = false;
-    let videoElement = null; // Referência global para o elemento de vídeo
+    let videoElement = null;
+    let hostSyncInterval = null;
+
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -347,21 +351,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
-            if (unsubscribeFromRoom) unsubscribeFromRoom();
-            if (unsubscribeFromChat) unsubscribeFromChat();
+            // Não limpa os listeners da sala aqui para permitir a navegação de volta
+            // if (unsubscribeFromRoom) unsubscribeFromRoom();
+            // if (unsubscribeFromChat) unsubscribeFromChat();
 
             const isDetailsPage = pageId === 'details-page';
             const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
 
-            if (!isDetailsPage && !isAvatarPage && !isPlayerPage) lastPageId = pageId;
+            if (!isDetailsPage && !isAvatarPage && !isPlayerPage) {
+                lastPageId = pageId;
+                // Limpa a sala se sair da página do player
+                if(currentRoomId) {
+                    if (unsubscribeFromRoom) unsubscribeFromRoom();
+                    if (unsubscribeFromChat) unsubscribeFromChat();
+                    currentRoomId = null;
+                    isHost = false;
+                }
+            }
+
             pageContents.forEach(page => page.classList.add('hidden'));
             const targetPage = document.getElementById(pageId);
-            mobileNav.classList.toggle('hidden', isDetailsPage || isAvatarPage || isPlayerPage);
-            mainHeader.classList.toggle('hidden', isDetailsPage || isAvatarPage || isPlayerPage);
+            mobileNav.classList.toggle('hidden', isPlayerPage);
+            mainHeader.classList.toggle('hidden', isPlayerPage);
 
             const body = document.body;
-            if (isPlayerPage || isDetailsPage) {
+            if (isPlayerPage) {
                 body.classList.remove('pb-24', 'lg:pb-0');
             } else {
                 body.classList.add('pb-24', 'lg:pb-0');
@@ -378,6 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadLikeDislikeStatus(data.id);
                 } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
+                } else if (isPlayerPage && data && data.roomId) {
+                    joinWatchParty(data.roomId);
                 } else if (!isPlayerPage) {
                     currentDetailsData = null;
                 }
@@ -386,10 +403,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'series-page') renderAllSeriesPage();
                 if (pageId === 'aovivo-page') renderAoVivoPage();
                 if (pageId === 'embreve-page') renderEmBrevePage();
+                
                 if (pushState) {
                     let url = `#${pageId.replace('-page', '')}`;
                     if(isDetailsPage && data) url = `#/details/${data.id}`;
-                    if(data && data.roomId) url = `#/watchparty/${data.roomId}`;
+                    if(isPlayerPage && data && data.roomId) url = `#/watchparty/${data.roomId}`;
                     history.pushState({ page: pageId, data: data }, '', url);
                 }
             } else {
@@ -505,7 +523,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const handleVideoEnd = () => {
-            if (currentPlaying.nextEpisodeInfo) {
+            // Em modo Watch Party, apenas o host controla o próximo episódio.
+            if (isHost) {
+                const next = currentPlaying.nextEpisodeInfo;
+                if (next) {
+                    const roomRef = doc(db, 'watch_parties', currentRoomId);
+                    updateDoc(roomRef, {
+                        currentSrc: next.src,
+                        currentTime: 0,
+                        state: 'paused',
+                        currentEpisode: next.episode,
+                        currentSeason: next.season
+                    });
+                }
+            }
+            // Lógica de overlay de próximo episódio para visualização solo
+            else if (!currentRoomId && currentPlaying.nextEpisodeInfo) {
                 nextEpisodeOverlay.classList.remove('hidden');
                 nextEpisodeOverlay.classList.add('flex');
                 let countdown = 5;
@@ -530,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const match = url.match(youtubeRegex);
             if (match) {
                 videoId = match[1];
-                return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+                return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`;
             }
             return null;
         };
@@ -538,9 +571,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const playContent = (src, seasonNum = null, epNum = null) => {
             playerContainer.innerHTML = '';
             playerReady = false;
-            if (!src) return;
-
             clearInterval(watchProgressInterval);
+            
+            // Se estiver em uma watch party, não faz nada aqui. O player é controlado por `joinWatchParty`
+            if (currentRoomId) return;
+
+            if (!src) return;
 
             currentPlaying = {
                 season: seasonNum,
@@ -576,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerContainer.appendChild(videoElement);
 
                 watchProgressInterval = setInterval(() => {
-                    if (!videoElement.paused) {
+                    if (videoElement && !videoElement.paused) {
                         updateWatchHistory(currentPlaying.contentId, videoElement.currentTime, videoElement.duration);
                     }
                 }, 10000);
@@ -1027,8 +1063,25 @@ document.addEventListener('DOMContentLoaded', () => {
             playerContainer.innerHTML = ''; // Limpa o player ao voltar
             clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
-            if (e.state && e.state.page) showPage(e.state.page, false, e.state.data);
-            else showPage(lastPageId || 'inicio-page', false);
+            
+            if (currentRoomId) {
+                if (unsubscribeFromRoom) unsubscribeFromRoom();
+                if (unsubscribeFromChat) unsubscribeFromChat();
+                currentRoomId = null;
+                isHost = false;
+                clearInterval(hostSyncInterval);
+            }
+
+            if (e.state && e.state.page) {
+                showPage(e.state.page, false, e.state.data);
+            } else {
+                const hash = window.location.hash;
+                if (!hash || hash === '#') {
+                    showPage('inicio-page', false);
+                } else {
+                    handleRouting(false);
+                }
+            }
         });
 
         const createCardHTML = (data, progress = null) => {
@@ -1208,7 +1261,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             if (user && contentId) {
                 const progress = (currentTime / duration) * 100;
-                // Não salva se estiver quase no final
                 if (progress > 95) {
                     delete watchHistory[contentId];
                 } else {
@@ -1227,9 +1279,8 @@ document.addEventListener('DOMContentLoaded', () => {
             continueWatchingContainer.innerHTML = '';
             const historyItems = Object.entries(watchHistory)
                 .map(([id, data]) => ({ id, ...data }))
-                .filter(item => item.currentTime && item.duration); // Garante que temos dados válidos
+                .filter(item => item.currentTime && item.duration); 
 
-            // Ordena por mais recente
             historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.watchedAt?.toDate() || 0));
 
             if (historyItems.length === 0) return;
@@ -1253,6 +1304,188 @@ document.addEventListener('DOMContentLoaded', () => {
             continueWatchingContainer.innerHTML = carouselHTML;
             initCarousel(continueWatchingContainer.querySelector('.content-carousel'));
         }
+
+        // --- Lógica da Watch Party ---
+
+        const createWatchParty = async () => {
+            const user = auth.currentUser;
+            if (!user || !currentDetailsData) return;
+
+            isHost = true;
+            const roomRef = await addDoc(collection(db, 'watch_parties'), {
+                hostId: user.uid,
+                contentId: currentDetailsData.id,
+                createdAt: serverTimestamp(),
+                state: 'paused', // Começa pausado
+                currentTime: 0,
+                currentSrc: currentDetailsData.type === 'Filme' ? currentDetailsData.videoSrc : null, // Define a fonte para filmes
+                currentSeason: null,
+                currentEpisode: null,
+            });
+
+            currentRoomId = roomRef.id;
+            
+            // Mostra o modal de convite
+            const partyLink = `${window.location.origin}${window.location.pathname}#/watchparty/${currentRoomId}`;
+            watchPartyLinkInput.value = partyLink;
+            openModal(watchPartyModalOverlay, watchPartyModal);
+            
+            // Leva o host para a sala
+            showPage('player-page', true, { roomId: currentRoomId });
+        };
+
+        const joinWatchParty = async (roomId) => {
+            currentRoomId = roomId;
+            const roomRef = doc(db, 'watch_parties', roomId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (!roomSnap.exists()) {
+                alert("Sala não encontrada!");
+                showPage('inicio-page');
+                return;
+            }
+
+            const roomData = roomSnap.data();
+            const user = auth.currentUser;
+            isHost = user.uid === roomData.hostId;
+            
+            // Carrega os dados do conteúdo da sala
+            currentDetailsData = allContent.find(c => c.id === roomData.contentId);
+            if (!currentDetailsData) {
+                alert("Conteúdo da sala não encontrado!");
+                showPage('inicio-page');
+                return;
+            }
+            
+            // Mostra o player e o chat
+            watchPartyChatSidebar.classList.remove('hidden');
+            renderWatchPartyUI(roomData); // Renderiza a UI específica (ex: seletor de ep)
+
+            // Listener para o estado da sala (play, pause, seek)
+            unsubscribeFromRoom = onSnapshot(roomRef, (doc) => {
+                const data = doc.data();
+                if (videoElement && playerReady) {
+                    // Sincroniza o player do convidado
+                    if (!isHost) {
+                        // Sincroniza a fonte do vídeo
+                        if (videoElement.currentSrc !== data.currentSrc && data.currentSrc) {
+                            videoElement.src = data.currentSrc;
+                        }
+                        // Sincroniza o tempo
+                        if (Math.abs(videoElement.currentTime - data.currentTime) > 2) { // Tolerância de 2s
+                            videoElement.currentTime = data.currentTime;
+                        }
+                        // Sincroniza o estado (play/pause)
+                        if (data.state === 'playing' && videoElement.paused) {
+                            videoElement.play();
+                        } else if (data.state === 'paused' && !videoElement.paused) {
+                            videoElement.pause();
+                        }
+                    }
+                } else if (data.currentSrc) {
+                    // Se o player ainda não foi criado, cria ele
+                    loadVideoForWatchParty(data.currentSrc);
+                }
+            });
+
+            // Listener para o chat
+            const chatQuery = query(collection(db, 'watch_parties', roomId, 'messages'), orderBy('createdAt'));
+            unsubscribeFromChat = onSnapshot(chatQuery, (snapshot) => {
+                chatMessages.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const msgEl = document.createElement('div');
+                    msgEl.innerHTML = `<div class="flex items-start gap-2 mb-2"><img src="${msg.authorAvatar}" class="w-8 h-8 rounded-full object-cover"><div class="bg-gray-800 p-2 rounded-lg"><p class="text-sm font-semibold text-violet-300">${msg.authorName}</p><p class="text-white text-sm">${msg.text}</p></div></div>`;
+                    chatMessages.appendChild(msgEl);
+                });
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        };
+
+        const loadVideoForWatchParty = (src) => {
+            playerContainer.innerHTML = '';
+            videoElement = document.createElement('video');
+            videoElement.className = 'w-full h-full';
+            videoElement.controls = isHost; // Controles apenas para o host
+            videoElement.muted = isHost; // Host começa mudo para evitar eco
+            videoElement.autoplay = true;
+            videoElement.src = src;
+            playerContainer.appendChild(videoElement);
+
+            videoElement.addEventListener('loadedmetadata', () => {
+                playerReady = true;
+                if (isHost) {
+                    setupHostControls();
+                }
+            });
+        };
+
+        const setupHostControls = () => {
+            const roomRef = doc(db, 'watch_parties', currentRoomId);
+            videoElement.addEventListener('play', () => updateDoc(roomRef, { state: 'playing' }));
+            videoElement.addEventListener('pause', () => updateDoc(roomRef, { state: 'paused' }));
+            // Sincroniza o tempo a cada 3 segundos
+            hostSyncInterval = setInterval(() => {
+                if(videoElement && !videoElement.paused) {
+                    updateDoc(roomRef, { currentTime: videoElement.currentTime });
+                }
+            }, 3000);
+        };
+
+        const renderWatchPartyUI = (roomData) => {
+            const content = allContent.find(c => c.id === roomData.contentId);
+            watchPartyEpisodeSelector.innerHTML = '';
+            
+            if (isHost && content.type === 'Série') {
+                watchPartyEpisodeSelector.classList.remove('hidden');
+                const seasons = content.seasons;
+                Object.keys(seasons).sort((a,b) => a-b).forEach(seasonNum => {
+                    const seasonTitle = document.createElement('h4');
+                    seasonTitle.className = 'text-lg font-bold mt-4 mb-2';
+                    seasonTitle.textContent = `Temporada ${seasonNum}`;
+                    watchPartyEpisodeSelector.appendChild(seasonTitle);
+                    
+                    Object.keys(seasons[seasonNum]).sort((a,b) => a-b).forEach(epNum => {
+                        const epData = seasons[seasonNum][epNum];
+                        const src = typeof epData === 'string' ? epData : epData.src;
+                        const title = typeof epData === 'object' ? epData.title : `Episódio ${epNum}`;
+                        const epButton = document.createElement('button');
+                        epButton.className = 'block w-full text-left p-2 rounded-md hover:bg-violet-600 transition';
+                        epButton.textContent = title;
+                        epButton.onclick = () => {
+                            const roomRef = doc(db, 'watch_parties', currentRoomId);
+                            updateDoc(roomRef, {
+                                currentSrc: src,
+                                currentTime: 0,
+                                state: 'paused',
+                                currentEpisode: epNum,
+                                currentSeason: seasonNum
+                            });
+                        };
+                        watchPartyEpisodeSelector.appendChild(epButton);
+                    });
+                });
+            } else {
+                watchPartyEpisodeSelector.classList.add('hidden');
+            }
+        };
+
+        const sendChatMessage = async () => {
+            const user = auth.currentUser;
+            const text = chatInput.value.trim();
+            if (text && user && currentRoomId) {
+                await addDoc(collection(db, 'watch_parties', currentRoomId, 'messages'), {
+                    text: text,
+                    authorId: user.uid,
+                    authorName: user.displayName,
+                    authorAvatar: profileAvatar.src,
+                    createdAt: serverTimestamp()
+                });
+                chatInput.value = '';
+            }
+        };
+
+        // --- FIM da Lógica da Watch Party ---
 
         // --- NOVAS FUNÇÕES ---
 
@@ -1360,11 +1593,29 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         // --- FIM DAS NOVAS FUNÇÕES ---
+        
+        const handleRouting = (pushState = true) => {
+            const hash = window.location.hash;
+            if (hash.startsWith('#/watchparty/')) {
+                const roomId = hash.split('/')[2];
+                showPage('player-page', pushState, { roomId });
+            } else if (hash.startsWith('#/details/')) {
+                const itemId = hash.split('/')[2];
+                const data = allContent.find(item => item.id === itemId);
+                if (data) showPage('details-page', pushState, data);
+                else showPage('inicio-page', pushState);
+            } else if (hash.startsWith('#/genre/')) {
+                showGenrePage(decodeURIComponent(hash.split('/')[2]));
+            } else {
+                const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
+                if (document.getElementById(pageId)) showPage(pageId, pushState);
+                else showPage('inicio-page', pushState);
+            }
+        }
 
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
-            // Essas funções podem rodar em paralelo com o carregamento principal
             loadMyList();
             loadAvatar(); 
             loadAvatars();
@@ -1372,7 +1623,6 @@ document.addEventListener('DOMContentLoaded', () => {
             loadSiteSettings();
 
             try {
-                // 1. Busca os dados iniciais de forma garantida
                 const contentQuery = collection(db, 'content');
                 const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
 
@@ -1381,36 +1631,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     getDocs(categoriesQuery)
                 ]);
 
-                // 2. Popula os arrays de dados
                 allContent = contentSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                 allCategories = categoriesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-                // 3. Renderiza a página com os dados iniciais
                 await renderAllPages();
 
-                // 4. Lida com a rota inicial (URL com hash)
                 if (isInitialLoad) {
                     isInitialLoad = false;
-                    const hash = window.location.hash;
-                    if (hash.startsWith('#/details/')) {
-                        const itemId = hash.split('/')[2];
-                        const data = allContent.find(item => item.id === itemId);
-                        if (data) showPage('details-page', false, data);
-                        else showPage('inicio-page', false);
-                    } else if (hash.startsWith('#/genre/')) {
-                        showGenrePage(decodeURIComponent(hash.split('/')[2]));
-                    } else {
-                        const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
-                        if (document.getElementById(pageId)) showPage(pageId, false);
-                        else showPage('inicio-page', false);
-                    }
+                    handleRouting(false);
                 }
 
-                // 5. Esconde a tela de carregamento APÓS tudo estar pronto
                 loadingScreen.classList.add('opacity-0');
                 loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
 
-                // 6. Anexa os listeners para atualizações em tempo real
                 onSnapshot(contentQuery, (snapshot) => {
                     allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                     renderAllPages(); 
@@ -1431,6 +1664,19 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsLikeBtn.addEventListener('click', () => handleLikeDislike('like'));
         detailsDislikeBtn.addEventListener('click', () => handleLikeDislike('dislike'));
         socialShareContainer.addEventListener('click', handleSocialShare);
+        detailsWatchPartyBtn.addEventListener('click', createWatchParty);
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendChatMessage();
+        });
+        copyWatchPartyLinkBtn.addEventListener('click', () => {
+             watchPartyLinkInput.select();
+             document.execCommand('copy');
+             copyPartyLinkMsg.textContent = 'Link copiado!';
+             setTimeout(() => { copyPartyLinkMsg.textContent = ''; }, 2000);
+        });
+        closeWatchPartyModalBtn.addEventListener('click', () => closeModal(watchPartyModalOverlay, watchPartyModal));
+
 
         setupRealtimeListeners();
     }
