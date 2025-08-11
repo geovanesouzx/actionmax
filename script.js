@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDetailsData = null;
     let lastPageId = 'inicio-page';
     let unsubscribeComments = null;
+    let unsubscribeRatings = null;
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
@@ -305,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
+            if (unsubscribeRatings) unsubscribeRatings();
             const isDetailsPage = pageId === 'details-page';
             const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
@@ -780,7 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await setDoc(doc(db, "ratings", `${user.uid}_${currentDetailsData.id}`), {
                     contentId: currentDetailsData.id, userId: user.uid, rating: rating
                 });
-                loadRatingData(currentDetailsData.id); // Recarrega os dados para atualizar a média e as cores
+                // A atualização da UI agora é tratada pelo listener em loadRatingData
             }
         };
         
@@ -792,43 +794,42 @@ document.addEventListener('DOMContentLoaded', () => {
             return '';
         };
 
-        const loadRatingData = async (contentId) => {
+        const loadRatingData = (contentId) => {
             const user = auth.currentUser;
             averageRatingEl.textContent = 'N/A';
-            userRatingStars.className = 'star-rating flex text-3xl'; // Reseta as classes de cor
-            
-            // Limpa as estrelas do usuário
+            userRatingStars.className = 'star-rating flex text-3xl';
             userRatingStars.querySelectorAll('.fa-star').forEach(star => star.className = 'far fa-star');
 
-            // Carrega a avaliação do usuário atual
             if (user) {
-                const docSnap = await getDoc(doc(db, "ratings", `${user.uid}_${contentId}`));
-                if (docSnap.exists()) {
-                    const userRating = docSnap.data().rating;
-                    for (let i = 0; i < userRating; i++) {
-                        userRatingStars.children[i].className = 'fas fa-star selected';
+                getDoc(doc(db, "ratings", `${user.uid}_${contentId}`)).then(docSnap => {
+                    if (docSnap.exists()) {
+                        const userRating = docSnap.data().rating;
+                        for (let i = 0; i < userRating; i++) {
+                            userRatingStars.children[i].className = 'fas fa-star selected';
+                        }
+                        userRatingStars.classList.add(getRatingColorClass(userRating));
                     }
-                    userRatingStars.classList.add(getRatingColorClass(userRating));
-                }
+                });
             }
 
-            // Calcula e exibe a média de todas as avaliações
             const q = query(collection(db, "ratings"), where("contentId", "==", contentId));
-            const querySnapshot = await getDocs(q);
-            let totalRating = 0, count = 0;
-            querySnapshot.forEach((doc) => {
-                totalRating += doc.data().rating;
-                count++;
-            });
+            unsubscribeRatings = onSnapshot(q, (querySnapshot) => {
+                let totalRating = 0, count = 0;
+                querySnapshot.forEach((doc) => {
+                    totalRating += doc.data().rating;
+                    count++;
+                });
 
-            if (count > 0) {
-                const average = totalRating / count;
-                averageRatingEl.textContent = average.toFixed(1);
-                const averageRatingContainer = averageRatingEl.parentElement.parentElement;
-                averageRatingContainer.className = `border-l border-gray-600 pl-4 ${getRatingColorClass(average)}`;
-            } else {
-                 averageRatingEl.parentElement.parentElement.className = 'border-l border-gray-600 pl-4';
-            }
+                const averageRatingContainer = averageRatingEl.closest('.flex').parentElement;
+                if (count > 0) {
+                    const average = totalRating / count;
+                    averageRatingEl.textContent = average.toFixed(1);
+                    averageRatingContainer.className = `border-l border-gray-600 pl-4 ${getRatingColorClass(average)}`;
+                } else {
+                    averageRatingEl.textContent = 'N/A';
+                    averageRatingContainer.className = 'border-l border-gray-600 pl-4';
+                }
+            });
         };
 
         userRatingStars.addEventListener('click', (e) => {
@@ -836,8 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rating = parseInt(e.target.dataset.value);
                 handleStarRating(rating);
                 
-                // Atualiza a cor imediatamente para o usuário
-                userRatingStars.className = 'star-rating flex text-3xl'; // Reseta
+                userRatingStars.className = 'star-rating flex text-3xl';
                 userRatingStars.classList.add(getRatingColorClass(rating));
                 for (let i = 0; i < 5; i++) {
                     userRatingStars.children[i].className = i < rating ? 'fas fa-star selected' : 'far fa-star';
@@ -1253,25 +1253,29 @@ document.addEventListener('DOMContentLoaded', () => {
             initCarousel(continueWatchingContainer.querySelector('.content-carousel'));
         }
 
-        async function loadAllAverageRatings() {
-            const ratingsSnapshot = await getDocs(collection(db, "ratings"));
-            const ratingsByContent = {};
+        function listenForAllAverageRatings() {
+            const q = query(collection(db, "ratings"));
+            onSnapshot(q, (snapshot) => {
+                const ratingsByContent = {};
+                snapshot.forEach(doc => {
+                    const ratingData = doc.data();
+                    if (!ratingsByContent[ratingData.contentId]) {
+                        ratingsByContent[ratingData.contentId] = { total: 0, count: 0 };
+                    }
+                    ratingsByContent[ratingData.contentId].total += ratingData.rating;
+                    ratingsByContent[ratingData.contentId].count++;
+                });
 
-            ratingsSnapshot.forEach(doc => {
-                const ratingData = doc.data();
-                if (!ratingsByContent[ratingData.contentId]) {
-                    ratingsByContent[ratingData.contentId] = { total: 0, count: 0 };
+                allAverageRatings = {}; // Reset before recalculating
+                for (const contentId in ratingsByContent) {
+                    allAverageRatings[contentId] = {
+                        average: ratingsByContent[contentId].total / ratingsByContent[contentId].count,
+                        count: ratingsByContent[contentId].count
+                    };
                 }
-                ratingsByContent[ratingData.contentId].total += ratingData.rating;
-                ratingsByContent[ratingData.contentId].count++;
+                // Re-render relevant parts of the UI
+                renderAllPages();
             });
-
-            for (const contentId in ratingsByContent) {
-                allAverageRatings[contentId] = {
-                    average: ratingsByContent[contentId].total / ratingsByContent[contentId].count,
-                    count: ratingsByContent[contentId].count
-                };
-            }
         }
 
         const setupRealtimeListeners = async () => {
@@ -1283,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadAvatars();
             listenForNotifications();
             loadSiteSettings();
-            await loadAllAverageRatings();
+            listenForAllAverageRatings(); // Substituído para ser em tempo real
 
             try {
                 // 1. Busca os dados iniciais de forma garantida
