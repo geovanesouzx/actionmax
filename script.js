@@ -1032,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return `
                 <div class="movie-card rounded-lg" data-id="${data.id}">
-                    <div class="card-image bg-cover bg-center w-full h-full" style="background-image: url('${data.img}')" onerror="this.style.backgroundImage='url(https://placehold.co/240x360/cccccc/000000?text=Image)'"></div>
+                    <img src="${data.img}" class="card-image w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                     ${progressHTML}
                     ${ratingHTML}
                 </div>
@@ -1091,7 +1091,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderHomeCarousels = () => {
             homeCarousels.innerHTML = '';
-            allCategories.forEach(category => {
+            // Ordena as categorias localmente
+            const sortedCategories = [...allCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            sortedCategories.forEach(category => {
                 let categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
                 
                 const orderedIds = category.contentOrder || [];
@@ -1261,7 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // 1. Busca os dados iniciais de forma garantida
                 const contentQuery = collection(db, 'content');
-                const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
+                const categoriesQuery = query(collection(db, 'categories')); // Removido o orderBy
                 const ratingsQuery = collection(db, 'ratings');
 
                 const [contentSnapshot, categoriesSnapshot, ratingsSnapshot] = await Promise.all([
