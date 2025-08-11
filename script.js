@@ -120,20 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsDislikeBtn = document.getElementById('details-dislike-btn');
     const socialShareContainer = document.getElementById('social-share-container');
     const copyLinkMsg = document.getElementById('copy-link-msg');
-    // ELEMENTOS WATCH PARTY
-    const detailsWatchPartyBtn = document.getElementById('details-watch-party-btn');
-    const watchPartyChatSidebar = document.getElementById('watch-party-chat-sidebar');
-    const chatMessages = document.getElementById('chat-messages');
-    const chatForm = document.getElementById('chat-form');
-    const chatInput = document.getElementById('chat-input');
-    const watchPartyModalOverlay = document.getElementById('watch-party-modal-overlay');
-    const watchPartyModal = document.getElementById('watch-party-modal');
-    const closeWatchPartyModalBtn = document.getElementById('close-watch-party-modal-btn');
-    const watchPartyLinkInput = document.getElementById('watch-party-link-input');
-    const copyWatchPartyLinkBtn = document.getElementById('copy-watch-party-link-btn');
-    const copyPartyLinkMsg = document.getElementById('copy-party-link-msg');
-    const watchPartyEpisodeSelector = document.getElementById('watch-party-episode-selector');
-
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -149,16 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let watchProgressInterval = null;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
-    // ESTADO WATCH PARTY
-    let currentRoomId = null;
-    let unsubscribeFromRoom = null;
-    let unsubscribeFromChat = null;
-    let isHost = false;
-    let playerReady = false;
     let videoElement = null;
-    let hostSyncInterval = null;
-    let isSeeking = false; // Flag para evitar loop de eventos de seek
-
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -353,20 +330,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
 
+            const isDetailsPage = pageId === 'details-page';
+            const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
 
-            if (!isPlayerPage) {
-                lastPageId = pageId;
-                if(currentRoomId) {
-                    if (unsubscribeFromRoom) unsubscribeFromRoom();
-                    if (unsubscribeFromChat) unsubscribeFromChat();
-                    clearInterval(hostSyncInterval);
-                    currentRoomId = null;
-                    isHost = false;
-                    videoElement = null;
-                }
-            }
-
+            if (!isDetailsPage && !isAvatarPage && !isPlayerPage) lastPageId = pageId;
             pageContents.forEach(page => page.classList.add('hidden'));
             const targetPage = document.getElementById(pageId);
             mobileNav.classList.toggle('hidden', isPlayerPage);
@@ -381,17 +349,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (targetPage) {
                 targetPage.classList.remove('hidden');
-                if (pageId === 'details-page' && data) {
+                if (isDetailsPage && data) {
                     currentDetailsData = data;
                     populateDetailsPage(data);
                     updateAllListButtons(data.id);
                     loadComments(data.id);
                     loadRatingData(data.id);
                     loadLikeDislikeStatus(data.id);
-                } else if (pageId === 'avatar-page') {
+                } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
-                } else if (isPlayerPage && data && data.roomId) {
-                    joinWatchParty(data.roomId);
                 } else if (!isPlayerPage) {
                     currentDetailsData = null;
                 }
@@ -403,8 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (pushState) {
                     let url = `#${pageId.replace('-page', '')}`;
-                    if(pageId === 'details-page' && data) url = `#/details/${data.id}`;
-                    if(isPlayerPage && data && data.roomId) url = `#/watchparty/${data.roomId}`;
+                    if(isDetailsPage && data) url = `#/details/${data.id}`;
                     history.pushState({ page: pageId, data: data }, '', url);
                 }
             } else {
@@ -520,20 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const handleVideoEnd = () => {
-            if (isHost && currentRoomId) {
-                const next = currentPlaying.nextEpisodeInfo;
-                if (next) {
-                    const roomRef = doc(db, 'watch_parties', currentRoomId);
-                    updateDoc(roomRef, {
-                        currentSrc: next.src,
-                        currentTime: 0,
-                        state: 'paused',
-                        currentEpisode: next.episode,
-                        currentSeason: next.season
-                    });
-                }
-            }
-            else if (!currentRoomId && currentPlaying.nextEpisodeInfo) {
+            if (currentPlaying.nextEpisodeInfo) {
                 nextEpisodeOverlay.classList.remove('hidden');
                 nextEpisodeOverlay.classList.add('flex');
                 let countdown = 5;
@@ -565,10 +517,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const playContent = (src, seasonNum = null, epNum = null) => {
             playerContainer.innerHTML = '';
-            playerReady = false;
+            let playerReady = false;
             clearInterval(watchProgressInterval);
-            
-            if (currentRoomId) return;
 
             if (!src) return;
 
@@ -1301,12 +1251,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- Lógica da Watch Party ---
+        const generateRoomCode = () => {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        };
 
         const createWatchParty = async () => {
             const user = auth.currentUser;
             if (!user || !currentDetailsData) return;
 
             isHost = true;
+            const roomCode = generateRoomCode();
             const roomRef = await addDoc(collection(db, 'watch_parties'), {
                 hostId: user.uid,
                 contentId: currentDetailsData.id,
@@ -1316,12 +1275,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentSrc: currentDetailsData.type === 'Filme' ? currentDetailsData.videoSrc : null,
                 currentSeason: null,
                 currentEpisode: null,
+                roomCode: roomCode
             });
 
             currentRoomId = roomRef.id;
             
             const partyLink = `${window.location.origin}${window.location.pathname}#/watchparty/${currentRoomId}`;
             watchPartyLinkInput.value = partyLink;
+            watchPartyCodeDisplay.textContent = `Ou use o código: ${roomCode}`;
             openModal(watchPartyModalOverlay, watchPartyModal);
             
             showPage('player-page', true, { roomId: currentRoomId });
@@ -1357,7 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!videoElement && data.currentSrc) {
                     loadVideoForWatchParty(data.currentSrc, data);
                 } else if (videoElement && playerReady) {
-                    if (videoElement.src !== data.currentSrc && data.currentSrc) {
+                    if (videoElement.src.split('?')[0] !== data.currentSrc.split('?')[0]) {
                         videoElement.src = data.currentSrc;
                     }
                     if (!isHost) {
@@ -1370,6 +1331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             videoElement.pause();
                         }
                     }
+                    lastKnownState = data.state;
                 }
             });
 
@@ -1411,8 +1373,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!videoElement) return;
             const roomRef = doc(db, 'watch_parties', currentRoomId);
             
-            videoElement.onplay = () => updateDoc(roomRef, { state: 'playing' });
-            videoElement.onpause = () => updateDoc(roomRef, { state: 'paused' });
+            const updateState = (state) => {
+                if(lastKnownState !== state) {
+                    lastKnownState = state;
+                    updateDoc(roomRef, { state });
+                }
+            };
+
+            videoElement.onplay = () => updateState('playing');
+            videoElement.onpause = () => updateState('paused');
             videoElement.onseeking = () => { isSeeking = true; };
             videoElement.onseeked = () => {
                 updateDoc(roomRef, { currentTime: videoElement.currentTime });
@@ -1477,6 +1446,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 });
                 chatInput.value = '';
+            }
+        };
+
+        const joinWithCode = async (e) => {
+            e.preventDefault();
+            const code = roomCodeInput.value.trim().toUpperCase();
+            joinCodeError.textContent = '';
+            if (code.length !== 6) {
+                joinCodeError.textContent = 'O código deve ter 6 dígitos.';
+                return;
+            }
+
+            const q = query(collection(db, "watch_parties"), where("roomCode", "==", code));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                joinCodeError.textContent = 'Sala não encontrada.';
+            } else {
+                const roomId = querySnapshot.docs[0].id;
+                window.location.hash = `#/watchparty/${roomId}`;
             }
         };
 
@@ -1665,6 +1654,7 @@ document.addEventListener('DOMContentLoaded', () => {
              setTimeout(() => { copyPartyLinkMsg.textContent = ''; }, 2000);
         });
         closeWatchPartyModalBtn.addEventListener('click', () => closeModal(watchPartyModalOverlay, watchPartyModal));
+        joinWithCodeForm.addEventListener('submit', joinWithCode);
 
 
         setupRealtimeListeners();

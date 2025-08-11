@@ -183,23 +183,6 @@ body {
     margin-bottom: 1rem; 
 }
 
-/* Estilos do Chat da Watch Party */
-#chat-messages, #watch-party-episode-selector {
-    scrollbar-width: thin;
-    scrollbar-color: #4b5563 #1f2937;
-}
-#chat-messages::-webkit-scrollbar, #watch-party-episode-selector::-webkit-scrollbar {
-    width: 8px;
-}
-#chat-messages::-webkit-scrollbar-track, #watch-party-episode-selector::-webkit-scrollbar-track {
-    background: #1f2937;
-}
-#chat-messages::-webkit-scrollbar-thumb, #watch-party-episode-selector::-webkit-scrollbar-thumb {
-    background-color: #4b5563;
-    border-radius: 10px;
-    border: 2px solid #1f2937;
-}
-
 /* Regras para imagens de fundo responsivas */
 #hero-bg-mobile, #details-bg-mobile {
     display: none; /* Esconde a imagem mobile por padrão */
