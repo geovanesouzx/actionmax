@@ -138,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let watchProgressInterval = null;
     let lastSelectedSeason = {}; // Objeto para memorizar a última temporada vista por série
     const markdownConverter = new showdown.Converter();
+    let isManagingProfiles = false;
+    let profileToEditIndex = null;
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -328,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         const userDocRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(userDocRef);
-        const profiles = docSnap.exists() ? docSnap.data().profiles : [];
+        const profiles = docSnap.exists() && docSnap.data().profiles ? docSnap.data().profiles : [];
         
         profiles[currentProfile.index] = {
             ...profiles[currentProfile.index],
