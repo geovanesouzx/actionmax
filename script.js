@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
+    let allRatings = {}; // NOVO: Cache para as avaliações médias
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
@@ -804,35 +805,84 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
+        // --- Lógica de Avaliação (Atualizada) ---
+        const updateStarColors = (rating) => {
+            const stars = userRatingStars.querySelectorAll('.fa-star');
+            stars.forEach((star, index) => {
+                star.classList.remove('selected', 'red', 'orange', 'yellow');
+                if (index < rating) {
+                    star.classList.add('selected');
+                    if (rating <= 2) star.classList.add('red');
+                    else if (rating <= 4) star.classList.add('orange');
+                    else star.classList.add('yellow');
+                }
+            });
+        };
+
         const handleStarRating = async (rating) => {
             const user = auth.currentUser;
             if (user && currentDetailsData) {
                 await setDoc(doc(db, "ratings", `${user.uid}_${currentDetailsData.id}`), {
                     contentId: currentDetailsData.id, userId: user.uid, rating: rating
                 });
-                loadRatingData(currentDetailsData.id);
+                updateStarColors(rating);
+                loadRatingData(currentDetailsData.id, true); // Força a atualização da média
             }
         };
 
-        const loadRatingData = async (contentId) => {
+        const loadRatingData = async (contentId, forceUpdate = false) => {
             const user = auth.currentUser;
-            averageRatingEl.textContent = 'N/A';
-            userRatingStars.querySelectorAll('.fa-star').forEach(star => star.className = 'far fa-star');
+            
+            // Carrega a avaliação do usuário logado
             if (user) {
                 const docSnap = await getDoc(doc(db, "ratings", `${user.uid}_${contentId}`));
                 if (docSnap.exists()) {
-                    const userRating = docSnap.data().rating;
-                    for (let i = 0; i < userRating; i++) userRatingStars.children[i].className = 'fas fa-star selected';
+                    updateStarColors(docSnap.data().rating);
+                } else {
+                    updateStarColors(0);
                 }
             }
-            const q = query(collection(db, "ratings"), where("contentId", "==", contentId));
+
+            // Calcula e exibe a média
+            if (forceUpdate || !allRatings[contentId]) {
+                const q = query(collection(db, "ratings"), where("contentId", "==", contentId));
+                const querySnapshot = await getDocs(q);
+                let totalRating = 0, count = 0;
+                querySnapshot.forEach((doc) => {
+                    totalRating += doc.data().rating;
+                    count++;
+                });
+                
+                if (count > 0) {
+                    const average = (totalRating / count).toFixed(1);
+                    allRatings[contentId] = average;
+                    averageRatingEl.textContent = average;
+                } else {
+                    allRatings[contentId] = 'N/A';
+                    averageRatingEl.textContent = 'N/A';
+                }
+            } else {
+                 averageRatingEl.textContent = allRatings[contentId];
+            }
+        };
+
+        const loadAllRatings = async () => {
+            const q = collection(db, "ratings");
             const querySnapshot = await getDocs(q);
-            let totalRating = 0, count = 0;
-            querySnapshot.forEach((doc) => {
-                totalRating += doc.data().rating;
-                count++;
+            const ratingsByContent = {};
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                if (!ratingsByContent[data.contentId]) {
+                    ratingsByContent[data.contentId] = { total: 0, count: 0 };
+                }
+                ratingsByContent[data.contentId].total += data.rating;
+                ratingsByContent[data.contentId].count++;
             });
-            if (count > 0) averageRatingEl.textContent = (totalRating / count).toFixed(1);
+
+            for (const contentId in ratingsByContent) {
+                const { total, count } = ratingsByContent[contentId];
+                allRatings[contentId] = (total / count).toFixed(1);
+            }
         };
 
         userRatingStars.addEventListener('click', (e) => {
@@ -1008,15 +1058,6 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
             
-            if (currentRoomId) {
-                if (unsubscribeFromRoom) unsubscribeFromRoom();
-                if (unsubscribeFromChat) unsubscribeFromChat();
-                clearInterval(hostSyncInterval);
-                currentRoomId = null;
-                isHost = false;
-                videoElement = null;
-            }
-
             if (e.state && e.state.page) {
                 showPage(e.state.page, false, e.state.data);
             } else {
@@ -1035,8 +1076,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="h-full bg-violet-500" style="width: ${progress}%;"></div>
                 </div>
             ` : '';
+
+            const rating = allRatings[data.id];
+            const ratingHTML = rating && rating !== 'N/A' ? `
+                <div class="card-rating">
+                    <i class="fas fa-star"></i>
+                    <span>${rating}</span>
+                </div>
+            ` : '';
+
             return `
                 <div class="movie-card" data-id="${data.id}">
+                    ${ratingHTML}
                     <img src="${data.img}" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                     ${progressHTML}
                 </div>
@@ -1250,227 +1301,6 @@ document.addEventListener('DOMContentLoaded', () => {
             initCarousel(continueWatchingContainer.querySelector('.content-carousel'));
         }
 
-        // --- Lógica da Watch Party ---
-        const generateRoomCode = () => {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let code = '';
-            for (let i = 0; i < 6; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
-        };
-
-        const createWatchParty = async () => {
-            const user = auth.currentUser;
-            if (!user || !currentDetailsData) return;
-
-            isHost = true;
-            const roomCode = generateRoomCode();
-            const roomRef = await addDoc(collection(db, 'watch_parties'), {
-                hostId: user.uid,
-                contentId: currentDetailsData.id,
-                createdAt: serverTimestamp(),
-                state: 'paused',
-                currentTime: 0,
-                currentSrc: currentDetailsData.type === 'Filme' ? currentDetailsData.videoSrc : null,
-                currentSeason: null,
-                currentEpisode: null,
-                roomCode: roomCode
-            });
-
-            currentRoomId = roomRef.id;
-            
-            const partyLink = `${window.location.origin}${window.location.pathname}#/watchparty/${currentRoomId}`;
-            watchPartyLinkInput.value = partyLink;
-            watchPartyCodeDisplay.textContent = `Ou use o código: ${roomCode}`;
-            openModal(watchPartyModalOverlay, watchPartyModal);
-            
-            showPage('player-page', true, { roomId: currentRoomId });
-        };
-
-        const joinWatchParty = async (roomId) => {
-            currentRoomId = roomId;
-            const roomRef = doc(db, 'watch_parties', roomId);
-            const roomSnap = await getDoc(roomRef);
-
-            if (!roomSnap.exists()) {
-                alert("Sala não encontrada!");
-                showPage('inicio-page');
-                return;
-            }
-
-            const roomData = roomSnap.data();
-            const user = auth.currentUser;
-            isHost = user.uid === roomData.hostId;
-            
-            currentDetailsData = allContent.find(c => c.id === roomData.contentId);
-            if (!currentDetailsData) {
-                alert("Conteúdo da sala não encontrado!");
-                showPage('inicio-page');
-                return;
-            }
-            
-            watchPartyChatSidebar.classList.remove('hidden');
-            renderWatchPartyUI(roomData); 
-
-            unsubscribeFromRoom = onSnapshot(roomRef, (doc) => {
-                const data = doc.data();
-                if (!videoElement && data.currentSrc) {
-                    loadVideoForWatchParty(data.currentSrc, data);
-                } else if (videoElement && playerReady) {
-                    if (videoElement.src.split('?')[0] !== data.currentSrc.split('?')[0]) {
-                        videoElement.src = data.currentSrc;
-                    }
-                    if (!isHost) {
-                        if (Math.abs(videoElement.currentTime - data.currentTime) > 2.5) {
-                            videoElement.currentTime = data.currentTime;
-                        }
-                        if (data.state === 'playing' && videoElement.paused) {
-                            videoElement.play().catch(e => console.error("Play error:", e));
-                        } else if (data.state === 'paused' && !videoElement.paused) {
-                            videoElement.pause();
-                        }
-                    }
-                    lastKnownState = data.state;
-                }
-            });
-
-            const chatQuery = query(collection(db, 'watch_parties', roomId, 'messages'), orderBy('createdAt'));
-            unsubscribeFromChat = onSnapshot(chatQuery, (snapshot) => {
-                chatMessages.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const msg = doc.data();
-                    const msgEl = document.createElement('div');
-                    msgEl.innerHTML = `<div class="flex items-start gap-2 mb-2"><img src="${msg.authorAvatar}" class="w-8 h-8 rounded-full object-cover"><div class="bg-gray-800 p-2 rounded-lg"><p class="text-sm font-semibold text-violet-300">${msg.authorName}</p><p class="text-white text-sm">${msg.text}</p></div></div>`;
-                    chatMessages.appendChild(msgEl);
-                });
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-        };
-
-        const loadVideoForWatchParty = (src, roomData) => {
-            playerContainer.innerHTML = '';
-            videoElement = document.createElement('video');
-            videoElement.className = 'w-full h-full';
-            videoElement.controls = isHost;
-            videoElement.muted = isHost; 
-            videoElement.src = src;
-            playerContainer.appendChild(videoElement);
-
-            videoElement.addEventListener('loadeddata', () => {
-                playerReady = true;
-                videoElement.currentTime = roomData.currentTime;
-                if (roomData.state === 'playing') {
-                    videoElement.play().catch(e => console.error("Autoplay failed", e));
-                }
-                if (isHost) {
-                    setupHostControls();
-                }
-            });
-        };
-
-        const setupHostControls = () => {
-            if (!videoElement) return;
-            const roomRef = doc(db, 'watch_parties', currentRoomId);
-            
-            const updateState = (state) => {
-                if(lastKnownState !== state) {
-                    lastKnownState = state;
-                    updateDoc(roomRef, { state });
-                }
-            };
-
-            videoElement.onplay = () => updateState('playing');
-            videoElement.onpause = () => updateState('paused');
-            videoElement.onseeking = () => { isSeeking = true; };
-            videoElement.onseeked = () => {
-                updateDoc(roomRef, { currentTime: videoElement.currentTime });
-                isSeeking = false;
-            };
-
-            clearInterval(hostSyncInterval);
-            hostSyncInterval = setInterval(() => {
-                if(videoElement && !videoElement.paused && !isSeeking) {
-                    updateDoc(roomRef, { currentTime: videoElement.currentTime });
-                }
-            }, 2000);
-        };
-
-        const renderWatchPartyUI = (roomData) => {
-            const content = allContent.find(c => c.id === roomData.contentId);
-            watchPartyEpisodeSelector.innerHTML = '';
-            
-            if (isHost && content.type === 'Série') {
-                watchPartyEpisodeSelector.classList.remove('hidden');
-                const seasons = content.seasons;
-                Object.keys(seasons).sort((a,b) => a-b).forEach(seasonNum => {
-                    const seasonTitle = document.createElement('h4');
-                    seasonTitle.className = 'text-lg font-bold mt-4 mb-2 px-2';
-                    seasonTitle.textContent = `Temporada ${seasonNum}`;
-                    watchPartyEpisodeSelector.appendChild(seasonTitle);
-                    
-                    Object.keys(seasons[seasonNum]).sort((a,b) => a-b).forEach(epNum => {
-                        const epData = seasons[seasonNum][epNum];
-                        const src = typeof epData === 'string' ? epData : epData.src;
-                        const title = typeof epData === 'object' ? epData.title : `Episódio ${epNum}`;
-                        const epButton = document.createElement('button');
-                        epButton.className = 'block w-full text-left p-2 rounded-md hover:bg-violet-600 transition';
-                        epButton.textContent = title;
-                        epButton.onclick = () => {
-                            const roomRef = doc(db, 'watch_parties', currentRoomId);
-                            updateDoc(roomRef, {
-                                currentSrc: src,
-                                currentTime: 0,
-                                state: 'paused',
-                                currentEpisode: epNum,
-                                currentSeason: seasonNum
-                            });
-                        };
-                        watchPartyEpisodeSelector.appendChild(epButton);
-                    });
-                });
-            } else {
-                watchPartyEpisodeSelector.classList.add('hidden');
-            }
-        };
-
-        const sendChatMessage = async () => {
-            const user = auth.currentUser;
-            const text = chatInput.value.trim();
-            if (text && user && currentRoomId) {
-                await addDoc(collection(db, 'watch_parties', currentRoomId, 'messages'), {
-                    text: text,
-                    authorId: user.uid,
-                    authorName: user.displayName,
-                    authorAvatar: profileAvatar.src,
-                    createdAt: serverTimestamp()
-                });
-                chatInput.value = '';
-            }
-        };
-
-        const joinWithCode = async (e) => {
-            e.preventDefault();
-            const code = roomCodeInput.value.trim().toUpperCase();
-            joinCodeError.textContent = '';
-            if (code.length !== 6) {
-                joinCodeError.textContent = 'O código deve ter 6 dígitos.';
-                return;
-            }
-
-            const q = query(collection(db, "watch_parties"), where("roomCode", "==", code));
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                joinCodeError.textContent = 'Sala não encontrada.';
-            } else {
-                const roomId = querySnapshot.docs[0].id;
-                window.location.hash = `#/watchparty/${roomId}`;
-            }
-        };
-
-        // --- FIM da Lógica da Watch Party ---
-
         const handleLikeDislike = async (action) => {
             const user = auth.currentUser;
             if (!user || !currentDetailsData) return;
@@ -1575,10 +1405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const handleRouting = (pushState = true) => {
             const hash = window.location.hash;
-            if (hash.startsWith('#/watchparty/')) {
-                const roomId = hash.split('/')[2];
-                showPage('player-page', pushState, { roomId });
-            } else if (hash.startsWith('#/details/')) {
+            if (hash.startsWith('#/details/')) {
                 const itemId = hash.split('/')[2];
                 const data = allContent.find(item => item.id === itemId);
                 if (data) showPage('details-page', pushState, data);
@@ -1595,6 +1422,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
+            await loadAllRatings(); // Carrega todas as avaliações primeiro
             loadMyList();
             loadAvatar(); 
             loadAvatars();
@@ -1642,20 +1470,6 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsLikeBtn.addEventListener('click', () => handleLikeDislike('like'));
         detailsDislikeBtn.addEventListener('click', () => handleLikeDislike('dislike'));
         socialShareContainer.addEventListener('click', handleSocialShare);
-        detailsWatchPartyBtn.addEventListener('click', createWatchParty);
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            sendChatMessage();
-        });
-        copyWatchPartyLinkBtn.addEventListener('click', () => {
-             watchPartyLinkInput.select();
-             document.execCommand('copy');
-             copyPartyLinkMsg.textContent = 'Link copiado!';
-             setTimeout(() => { copyPartyLinkMsg.textContent = ''; }, 2000);
-        });
-        closeWatchPartyModalBtn.addEventListener('click', () => closeModal(watchPartyModalOverlay, watchPartyModal));
-        joinWithCodeForm.addEventListener('submit', joinWithCode);
-
 
         setupRealtimeListeners();
     }
