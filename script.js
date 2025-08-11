@@ -115,8 +115,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const embreveContainer = document.getElementById('embreve-container');
     const upcomingEpisodesSection = document.getElementById('upcoming-episodes-section');
     const upcomingEpisodesList = document.getElementById('upcoming-episodes-list');
+    const profileGate = document.getElementById('profile-gate');
+    const profileGateTitle = document.getElementById('profile-gate-title');
+    const profilesList = document.getElementById('profiles-list');
+    const profileGateActions = document.getElementById('profile-gate-actions');
+    const manageProfilesBtn = document.getElementById('manage-profiles-btn');
+    const changeProfileBtn = document.getElementById('change-profile-btn');
+
 
     // --- Estado da Aplicação ---
+    let currentProfile = null;
     let myList = [];
     let watchHistory = {};
     let currentDetailsData = null;
@@ -135,14 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, user => {
         if (user) {
             authWrapper.classList.add('hidden');
-            appWrapper.classList.remove('hidden');
-            document.getElementById('profile-username').textContent = user.displayName || 'Usuário';
-            document.getElementById('profile-email').textContent = user.email;
-            if (!appWrapper.dataset.initialized) {
-                initializeAppLogic();
-                appWrapper.dataset.initialized = 'true';
-            }
+            handleUserProfileGate();
         } else {
+            profileGate.classList.add('hidden');
             appWrapper.classList.add('hidden');
             authWrapper.classList.remove('hidden');
             showAuthPage('welcome-page');
@@ -164,23 +167,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('signup-username').value.trim();
         const email = document.getElementById('signup-email').value.trim();
         const password = document.getElementById('signup-password').value;
         const errorEl = document.getElementById('signup-error');
         errorEl.textContent = '';
-        const usernameDocRef = doc(db, "usernames", username.toLowerCase());
-        const usernameDoc = await getDoc(usernameDocRef);
-        if (usernameDoc.exists()) {
-            errorEl.textContent = "Este nome de usuário já está em uso.";
-            return;
-        }
+
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            await updateProfile(user, { displayName: username });
-            await setDoc(doc(db, "usernames", username.toLowerCase()), { uid: user.uid });
-            location.reload();
+            // Após o cadastro, o onAuthStateChanged vai direcionar para a criação de perfil
         } catch (error) {
             errorEl.textContent = getFirebaseErrorMessage(error);
         }
@@ -199,7 +193,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    signOutBtnProfile.addEventListener('click', () => signOut(auth));
+    signOutBtnProfile.addEventListener('click', () => {
+        currentProfile = null;
+        signOut(auth);
+    });
 
 
     function getFirebaseErrorMessage(error) {
@@ -213,6 +210,134 @@ document.addEventListener('DOMContentLoaded', () => {
             default: return 'Ocorreu um erro. Tente novamente.';
         }
     }
+    
+    // --- Lógica de Perfis ---
+    
+    const handleUserProfileGate = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+    
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+    
+        if (docSnap.exists() && docSnap.data().profiles && docSnap.data().profiles.length > 0) {
+            displayProfiles(docSnap.data().profiles);
+        } else {
+            // Primeiro login ou sem perfis, força a criação do primeiro
+            displayProfileCreation(true);
+        }
+        
+        profileGate.classList.remove('hidden');
+        profileGate.classList.add('flex');
+        loadingScreen.classList.add('opacity-0');
+        loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
+    };
+
+    const displayProfiles = (profiles, isManaging = false) => {
+        profileGateTitle.textContent = isManaging ? 'Gerir Perfis' : 'Quem está a assistir?';
+        profilesList.innerHTML = '';
+    
+        profiles.forEach((profile, index) => {
+            const profileEl = document.createElement('div');
+            profileEl.className = 'profile-item text-center cursor-pointer group';
+            profileEl.dataset.profileIndex = index;
+    
+            profileEl.innerHTML = `
+                <div class="relative">
+                    <img src="${profile.avatarUrl}" alt="${profile.name}" class="w-24 h-24 sm:w-36 sm:h-36 rounded-md object-cover border-4 border-transparent group-hover:border-white transition">
+                    ${isManaging ? `<div class="absolute inset-0 bg-black/60 flex items-center justify-center"><i class="fas fa-pencil-alt text-3xl"></i></div>` : ''}
+                </div>
+                <p class="mt-2 text-gray-400 group-hover:text-white transition">${profile.name}</p>
+            `;
+            profilesList.appendChild(profileEl);
+        });
+    
+        if (profiles.length < 4 && !isManaging) {
+            const addProfileEl = document.createElement('div');
+            addProfileEl.className = 'profile-item text-center cursor-pointer group';
+            addProfileEl.id = 'add-profile-btn';
+            addProfileEl.innerHTML = `
+                <div class="w-24 h-24 sm:w-36 sm:h-36 rounded-md border-4 border-transparent group-hover:border-white transition bg-gray-800 flex items-center justify-center">
+                    <i class="fas fa-plus text-5xl text-gray-400 group-hover:text-white"></i>
+                </div>
+                <p class="mt-2 text-gray-400 group-hover:text-white transition">Adicionar Perfil</p>
+            `;
+            profilesList.appendChild(addProfileEl);
+        }
+    
+        manageProfilesBtn.textContent = isManaging ? 'Concluído' : 'Gerir Perfis';
+        profileGateActions.classList.remove('hidden');
+    };
+    
+    const displayProfileCreation = (isFirstProfile = false, profileToEdit = null) => {
+        profileGateTitle.textContent = profileToEdit ? 'Editar Perfil' : 'Criar Perfil';
+        profilesList.innerHTML = `
+            <div class="flex flex-col items-center">
+                <form id="profile-form" class="flex flex-col items-center gap-4">
+                    <div class="relative">
+                        <img id="profile-form-avatar" src="${profileToEdit?.avatarUrl || 'https://placehold.co/150x150/040714/a78bfa?text=?'}" class="w-36 h-36 rounded-md object-cover cursor-pointer">
+                        <div class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition">
+                            <i class="fas fa-pencil-alt text-3xl"></i>
+                        </div>
+                    </div>
+                    <input type="text" id="profile-form-name" placeholder="Nome" value="${profileToEdit?.name || ''}" required class="form-input text-center bg-gray-700 border-gray-600 rounded p-2 w-48">
+                    <p id="profile-form-error" class="text-red-400 text-sm h-4"></p>
+                    <div class="flex gap-4 mt-4">
+                        <button type="submit" class="btn-primary py-2 px-8 rounded">Salvar</button>
+                        ${!isFirstProfile ? `<button type="button" id="cancel-profile-form" class="btn-secondary py-2 px-6 rounded">Cancelar</button>` : ''}
+                    </div>
+                </form>
+            </div>
+        `;
+        profileGateActions.classList.add('hidden');
+    };
+    
+    const selectProfile = async (profileIndex) => {
+        const user = auth.currentUser;
+        const docSnap = await getDoc(doc(db, 'users', user.uid));
+        currentProfile = { ...docSnap.data().profiles[profileIndex], index: profileIndex };
+    
+        profileGate.classList.remove('flex');
+        profileGate.classList.add('hidden');
+        appWrapper.classList.remove('hidden');
+    
+        if (!appWrapper.dataset.initialized) {
+            initializeAppLogic();
+            appWrapper.dataset.initialized = 'true';
+        } else {
+            await loadProfileData();
+            await renderAllPages();
+        }
+    };
+    
+    const loadProfileData = async () => {
+        if (!currentProfile) return;
+        
+        myList = currentProfile.myList || [];
+        watchHistory = currentProfile.watchHistory || {};
+    
+        profileAvatar.src = currentProfile.avatarUrl;
+        profileAvatarLarge.src = currentProfile.avatarUrl;
+        commentAvatar.src = currentProfile.avatarUrl;
+        document.getElementById('profile-username').textContent = currentProfile.name;
+    };
+    
+    const saveProfileData = async () => {
+        const user = auth.currentUser;
+        if (!user || currentProfile === null) return;
+    
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+        const profiles = docSnap.exists() ? docSnap.data().profiles : [];
+        
+        profiles[currentProfile.index] = {
+            ...profiles[currentProfile.index],
+            myList: myList,
+            watchHistory: watchHistory
+        };
+    
+        await setDoc(userDocRef, { profiles }, { merge: true });
+    };
 
     // --- Lógica Principal da Aplicação ---
     function initializeAppLogic() {
@@ -253,23 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        const saveMyList = async () => {
-            const user = auth.currentUser;
-            if (user) await setDoc(doc(db, 'users', user.uid), { myList }, { merge: true });
-        };
-        const loadMyList = async () => {
-            const user = auth.currentUser;
-            if (user) {
-                const docSnap = await getDoc(doc(db, 'users', user.uid));
-                myList = (docSnap.exists() && docSnap.data().myList) ? docSnap.data().myList : [];
-            }
-        };
         const toggleMyList = (itemData) => {
             if (!itemData) return;
             const itemIndex = myList.findIndex(item => item.id === itemData.id);
             if (itemIndex > -1) myList.splice(itemIndex, 1);
             else myList.push(itemData);
-            saveMyList();
+            saveProfileData();
             updateAllListButtons(itemData.id);
         };
         
@@ -1030,7 +1144,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderAllPages = async () => {
-            await loadWatchHistory();
+            if (!currentProfile) return;
+            await loadProfileData();
             renderContinueWatchingCarousel();
             setupHero();
             renderHomeCarousels();
@@ -1144,20 +1259,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // --- Lógica de Continuar Assistindo ---
-        async function loadWatchHistory() {
-            const user = auth.currentUser;
-            if (user) {
-                const docRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                watchHistory = (docSnap.exists() && docSnap.data().watchHistory) ? docSnap.data().watchHistory : {};
-            }
-        }
-
         async function updateWatchHistory(contentId, currentTime, duration) {
             const user = auth.currentUser;
             if (user && contentId) {
                 const progress = (currentTime / duration) * 100;
-                // Não salva se estiver quase no final
                 if (progress > 95) {
                     delete watchHistory[contentId];
                 } else {
@@ -1167,8 +1272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         watchedAt: serverTimestamp()
                     };
                 }
-                const docRef = doc(db, 'users', user.uid);
-                await setDoc(docRef, { watchHistory }, { merge: true });
+                await saveProfileData();
             }
         }
 
@@ -1176,9 +1280,8 @@ document.addEventListener('DOMContentLoaded', () => {
             continueWatchingContainer.innerHTML = '';
             const historyItems = Object.entries(watchHistory)
                 .map(([id, data]) => ({ id, ...data }))
-                .filter(item => item.currentTime && item.duration); // Garante que temos dados válidos
+                .filter(item => item.currentTime && item.duration);
 
-            // Ordena por mais recente
             historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.watchedAt?.toDate() || 0));
 
             if (historyItems.length === 0) return;
@@ -1206,15 +1309,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
-            // Essas funções podem rodar em paralelo com o carregamento principal
-            loadMyList();
-            loadAvatar(); 
             loadAvatars();
             listenForNotifications();
             loadSiteSettings();
 
             try {
-                // 1. Busca os dados iniciais de forma garantida
                 const contentQuery = collection(db, 'content');
                 const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
 
@@ -1223,14 +1322,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     getDocs(categoriesQuery)
                 ]);
 
-                // 2. Popula os arrays de dados
                 allContent = contentSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                 allCategories = categoriesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-                // 3. Renderiza a página com os dados iniciais
-                await renderAllPages();
+                if (currentProfile) {
+                    await renderAllPages();
+                }
 
-                // 4. Lida com a rota inicial (URL com hash)
                 if (isInitialLoad) {
                     isInitialLoad = false;
                     const hash = window.location.hash;
@@ -1243,24 +1341,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         showGenrePage(decodeURIComponent(hash.split('/')[2]));
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
-                        if (document.getElementById(pageId)) showPage(pageId, false);
-                        else showPage('inicio-page', false);
+                        if (document.getElementById(pageId) && currentProfile) showPage(pageId, false);
+                        else if (currentProfile) showPage('inicio-page', false);
                     }
                 }
 
-                // 5. Esconde a tela de carregamento APÓS tudo estar pronto
-                loadingScreen.classList.add('opacity-0');
-                loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
-
-                // 6. Anexa os listeners para atualizações em tempo real
                 onSnapshot(contentQuery, (snapshot) => {
                     allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                    renderAllPages(); 
+                    if(currentProfile) renderAllPages(); 
                 });
 
                 onSnapshot(categoriesQuery, (snapshot) => {
                     allCategories = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                    renderAllPages();
+                    if(currentProfile) renderAllPages();
                 });
 
             } catch (error) {
@@ -1269,6 +1362,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        setupRealtimeListeners();
+        if(auth.currentUser && !appWrapper.dataset.initialized) {
+            initializeAppLogic();
+            appWrapper.dataset.initialized = 'true';
+        }
     }
 });
