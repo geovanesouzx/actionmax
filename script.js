@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeNotificationBtn = document.getElementById('close-notification-btn');
     const detailsAddListBtn = document.getElementById('details-add-list-btn');
     const detailsWatchBtn = document.getElementById('details-watch-btn');
+    const detailsTrailerBtn = document.getElementById('details-trailer-btn');
     const myListContainer = document.getElementById('my-list-container');
     const myListEmptyMsg = document.getElementById('my-list-empty');
     const changePhotoBtn = document.getElementById('change-photo-btn');
@@ -127,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
+    let lastSelectedSeason = {}; // Objeto para memorizar a última temporada vista por série
     const markdownConverter = new showdown.Converter();
 
     // --- Lógica de Autenticação do Firebase ---
@@ -349,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const populateDetailsPage = (data) => {
             document.getElementById('details-bg-desktop').src = data.bg || '';
-            document.getElementById('details-bg-mobile').src = data.bg_mobile || data.bg || '';
+            document.getElementById('details-bg-mobile').src = data.bg_mobile || data.img || data.bg || '';
             document.getElementById('details-poster').src = data.img || '';
             document.getElementById('details-title').textContent = data.title || 'Título não encontrado';
             document.getElementById('details-desc').textContent = data.desc || 'Descrição não disponível.';
@@ -357,11 +359,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('details-duration').textContent = data.duration || '';
             document.getElementById('details-genre').textContent = Array.isArray(data.genre) ? data.genre.join(', ') : (data.genre || '');
             
+            if (data.trailerSrc) {
+                detailsTrailerBtn.classList.remove('hidden');
+            } else {
+                detailsTrailerBtn.classList.add('hidden');
+            }
+
             if (data.type === 'Série' && data.seasons) {
                 currentDetailsData.parsedSeasons = data.seasons;
                 seasonsSection.classList.remove('hidden');
-                renderSeasonSelector(data.seasons);
-                renderEpisodes(data.seasons, Object.keys(data.seasons).sort((a,b) => a-b)[0]);
+                const seasonKeys = Object.keys(data.seasons).sort((a,b) => a-b);
+                const initialSeason = lastSelectedSeason[data.id] || seasonKeys[0];
+                renderSeasonSelector(data.seasons, initialSeason);
+                renderEpisodes(data.seasons, initialSeason);
             } else {
                 seasonsSection.classList.add('hidden');
             }
@@ -374,12 +384,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
         
-        const renderSeasonSelector = (seasons) => {
+        const renderSeasonSelector = (seasons, activeSeason) => {
             seasonSelector.innerHTML = '';
-            Object.keys(seasons).sort((a,b) => a - b).forEach((seasonNum, index) => {
+            Object.keys(seasons).sort((a,b) => a - b).forEach((seasonNum) => {
                 const btn = document.createElement('button');
                 btn.textContent = seasonNum;
-                btn.className = `season-btn font-semibold py-2 px-4 rounded-lg ${index === 0 ? 'active' : ''}`;
+                btn.className = `season-btn font-semibold py-2 px-4 rounded-lg ${seasonNum === activeSeason ? 'active' : ''}`;
                 btn.dataset.season = seasonNum;
                 seasonSelector.appendChild(btn);
             });
@@ -486,15 +496,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentId: currentDetailsData.id
             };
 
+            const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
             const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
 
             if (src.trim().startsWith('<iframe')) {
                 playerContainer.innerHTML = src;
             } else if (youtubeEmbedUrl) {
                 playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-            } else if (src.trim().startsWith('http')) {
-                playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-            } else {
+            } else if (isVideoFile) {
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
                 videoEl.controls = true;
@@ -517,6 +526,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
                 }, 10000); // Salva a cada 10 segundos
+            } else if (src.trim().startsWith('http')) {
+                // Fallback para outros links, tentando usar um iframe
+                playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            } else {
+                playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
             }
 
             showPage('player-page', true, currentDetailsData);
@@ -887,6 +901,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        detailsTrailerBtn?.addEventListener('click', () => {
+            if (currentDetailsData && currentDetailsData.trailerSrc) {
+                playContent(currentDetailsData.trailerSrc);
+            }
+        });
+
         const heroWatchBtn = document.getElementById('hero-watch-btn');
         const heroAddListBtn = document.getElementById('hero-add-list-btn');
         const heroTitle = document.getElementById('hero-title');
@@ -933,6 +953,9 @@ document.addEventListener('DOMContentLoaded', () => {
         seasonSelector.addEventListener('click', (e) => {
             if (e.target.matches('.season-btn')) {
                 const seasonNum = e.target.dataset.season;
+                if (currentDetailsData) {
+                    lastSelectedSeason[currentDetailsData.id] = seasonNum;
+                }
                 document.querySelectorAll('.season-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 renderEpisodes(currentDetailsData.parsedSeasons, seasonNum);
@@ -1043,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque'));
             if (heroContentData) {
                 document.getElementById('hero-bg-desktop').src = heroContentData.bg || '';
-                document.getElementById('hero-bg-mobile').src = heroContentData.bg_mobile || heroContentData.bg || '';
+                document.getElementById('hero-bg-mobile').src = heroContentData.bg_mobile || heroContentData.img || heroContentData.bg || '';
                 heroSection.dataset.id = heroContentData.id;
                 heroSection.dataset.videoSrc = heroContentData.videoSrc || '';
                 document.getElementById('hero-title').textContent = heroContentData.title;
