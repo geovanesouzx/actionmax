@@ -130,13 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
-    let allRatings = {}; // NOVO: Cache para as avaliações médias
+    let allRatings = {}; 
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
     let videoElement = null;
+    let trailerTimeout = null; // Para o trailer on hover
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -890,11 +891,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const listenForNotifications = () => {
-            const q = query(collection(db, "notifications"));
+            const user = auth.currentUser;
+            if (!user) return;
+            const q = query(collection(db, 'users', user.uid, 'notifications'), orderBy('createdAt', 'desc'));
             onSnapshot(q, (snapshot) => {
                 allNotifications = [];
                 snapshot.forEach(doc => allNotifications.push(doc.data()));
-                allNotifications.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                
                 const lastChecked = localStorage.getItem('lastCheckedNotifications');
                 const newNotifications = allNotifications.filter(n => !lastChecked || n.createdAt?.toDate() > new Date(lastChecked));
                 if (newNotifications.length > 0) {
@@ -1085,10 +1088,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
 
+            const trailerPreviewHTML = data.trailerPreviewUrl ? `<video class="trailer-preview" src="${data.trailerPreviewUrl}" muted loop playsinline></video>` : '';
+
             return `
                 <div class="movie-card" data-id="${data.id}">
                     ${ratingHTML}
                     <img src="${data.img}" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                    ${trailerPreviewHTML}
                     ${progressHTML}
                 </div>
             `;
@@ -1285,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const contentData = allContent.find(c => c.id === item.id);
                 if (!contentData) return '';
                 const progress = (item.currentTime / item.duration) * 100;
-                return `<div class="swiper-slide">${createCardHTML(contentData, progress)}</div>`;
+                return `<div class="swiper-slide">${createCardHTML(itemData, progress)}</div>`;
             }).join('');
 
             const carouselHTML = `
@@ -1470,6 +1476,34 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsLikeBtn.addEventListener('click', () => handleLikeDislike('like'));
         detailsDislikeBtn.addEventListener('click', () => handleLikeDislike('dislike'));
         socialShareContainer.addEventListener('click', handleSocialShare);
+
+        // Event Listeners para Trailer on Hover
+        document.body.addEventListener('mouseenter', (e) => {
+            const card = e.target.closest('.movie-card');
+            if (card) {
+                const video = card.querySelector('.trailer-preview');
+                if (video) {
+                    trailerTimeout = setTimeout(() => {
+                        video.style.opacity = '1';
+                        video.play();
+                    }, 1000);
+                }
+            }
+        }, true);
+
+        document.body.addEventListener('mouseleave', (e) => {
+            const card = e.target.closest('.movie-card');
+            if (card) {
+                clearTimeout(trailerTimeout);
+                const video = card.querySelector('.trailer-preview');
+                if (video) {
+                    video.style.opacity = '0';
+                    video.pause();
+                    video.currentTime = 0;
+                }
+            }
+        }, true);
+
 
         setupRealtimeListeners();
     }

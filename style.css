@@ -15,7 +15,7 @@ body {
 }
 
 .movie-card { 
-    position: relative; /* Necessário para o posicionamento da nota */
+    position: relative;
     border: 2px solid transparent; 
     cursor: pointer; 
     aspect-ratio: 2 / 3; 
@@ -37,7 +37,19 @@ body {
     transform: scale(1.05);
 }
 
-/* NOVO: Estilo para a nota no card */
+/* NOVO: Estilos para o trailer on hover */
+.trailer-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+    z-index: 5; /* Garante que o vídeo fique por cima da imagem */
+}
+
 .card-rating {
     position: absolute;
     top: 0.5rem;
@@ -52,9 +64,10 @@ body {
     font-size: 0.875rem;
     font-weight: 600;
     color: #f9f9f9;
+    z-index: 6; /* Garante que a nota fique por cima do vídeo */
 }
 .card-rating .fa-star {
-    color: #f6e05e; /* Estrela sempre amarela no card */
+    color: #f6e05e;
     font-size: 0.75rem;
 }
 
@@ -96,9 +109,8 @@ body {
     transform: scale(1.08); 
 }
 
-/* ATUALIZADO: Estilos de cores para as estrelas */
 .star-rating .fa-star { 
-    color: #4a5568; /* Cor padrão (cinza) */
+    color: #4a5568;
     cursor: pointer; 
     transition: color 0.2s, transform 0.1s; 
 }
@@ -109,8 +121,6 @@ body {
 .star-rating .fa-star.selected.orange { color: #f97316; }
 .star-rating .fa-star.selected.yellow { color: #f6e05e; }
 
-
-/* Estilos para botões de Gosto/Não Gosto */
 .like-dislike-btn.active {
     color: #a78bfa;
 }
@@ -184,9 +194,8 @@ body {
     border: none; 
 }
 .avatar-carousel.swiper {
-    overflow: visible; /* Allows hover effect to go outside the carousel bounds */
+    overflow: visible;
 }
-/* Estilos para o conteúdo do rodapé */
 .footer-content h2 { 
     font-size: 1.25rem; 
     font-weight: 600; 
@@ -206,17 +215,15 @@ body {
     margin-bottom: 1rem; 
 }
 
-/* Regras para imagens de fundo responsivas */
 #hero-bg-mobile, #details-bg-mobile {
-    display: none; /* Esconde a imagem mobile por padrão */
+    display: none;
 }
 
-/* Media query para telas menores (mobile) */
 @media (max-width: 768px) {
     #hero-bg-desktop, #details-bg-desktop {
-        display: none; /* Esconde a imagem de desktop em telas pequenas */
+        display: none;
     }
     #hero-bg-mobile, #details-bg-mobile {
-        display: block; /* Mostra a imagem de mobile em telas pequenas */
+        display: block;
     }
 }
