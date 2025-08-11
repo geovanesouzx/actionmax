@@ -116,11 +116,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const embreveContainer = document.getElementById('embreve-container');
     const upcomingEpisodesSection = document.getElementById('upcoming-episodes-section');
     const upcomingEpisodesList = document.getElementById('upcoming-episodes-list');
-    // NOVOS ELEMENTOS
     const detailsLikeBtn = document.getElementById('details-like-btn');
     const detailsDislikeBtn = document.getElementById('details-dislike-btn');
     const socialShareContainer = document.getElementById('social-share-container');
     const copyLinkMsg = document.getElementById('copy-link-msg');
+    // NOVOS ELEMENTOS WATCH PARTY
+    const detailsWatchPartyBtn = document.getElementById('details-watch-party-btn');
+    const watchPartyChatSidebar = document.getElementById('watch-party-chat-sidebar');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const watchPartyModalOverlay = document.getElementById('watch-party-modal-overlay');
+    const watchPartyModal = document.getElementById('watch-party-modal');
+    const closeWatchPartyModalBtn = document.getElementById('close-watch-party-modal-btn');
+    const watchPartyLinkInput = document.getElementById('watch-party-link-input');
+    const copyWatchPartyLinkBtn = document.getElementById('copy-watch-party-link-btn');
+    const copyPartyLinkMsg = document.getElementById('copy-party-link-msg');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -134,8 +145,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
-    let lastSelectedSeason = {}; // Objeto para memorizar a última temporada vista por série
+    let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
+    // NOVO ESTADO WATCH PARTY
+    let currentRoomId = null;
+    let unsubscribeFromRoom = null;
+    let unsubscribeFromChat = null;
+    let isHost = false;
+    let playerReady = false;
+    let videoElement = null; // Referência global para o elemento de vídeo
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -270,7 +288,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 myList = (docSnap.exists() && docSnap.data().myList) ? docSnap.data().myList : [];
             }
         };
-        // ATUALIZADO: toggleMyList para incluir notificações de lançamento
         const toggleMyList = async (itemData) => {
             if (!itemData) return;
             const user = auth.currentUser;
@@ -281,13 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
             if (itemIndex > -1) {
                 myList.splice(itemIndex, 1);
-                // Remove a subscrição se o item for removido da lista
                 if (itemData.emBreve) {
                     await deleteDoc(subRef).catch(err => console.error("Error removing subscription:", err));
                 }
             } else {
                 myList.push(itemData);
-                // Adiciona a subscrição se o item estiver "Em Breve"
                 if (itemData.emBreve) {
                     await setDoc(subRef, {
                         userId: user.uid,
@@ -332,9 +347,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
+            if (unsubscribeFromRoom) unsubscribeFromRoom();
+            if (unsubscribeFromChat) unsubscribeFromChat();
+
             const isDetailsPage = pageId === 'details-page';
             const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
+
             if (!isDetailsPage && !isAvatarPage && !isPlayerPage) lastPageId = pageId;
             pageContents.forEach(page => page.classList.add('hidden'));
             const targetPage = document.getElementById(pageId);
@@ -356,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAllListButtons(data.id);
                     loadComments(data.id);
                     loadRatingData(data.id);
-                    loadLikeDislikeStatus(data.id); // NOVO: Carrega estado de Gosto/Não Gosto
+                    loadLikeDislikeStatus(data.id);
                 } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
                 } else if (!isPlayerPage) {
@@ -368,7 +387,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'aovivo-page') renderAoVivoPage();
                 if (pageId === 'embreve-page') renderEmBrevePage();
                 if (pushState) {
-                    const url = data ? `#/details/${data.id}` : `#${pageId.replace('-page', '')}`;
+                    let url = `#${pageId.replace('-page', '')}`;
+                    if(isDetailsPage && data) url = `#/details/${data.id}`;
+                    if(data && data.roomId) url = `#/watchparty/${data.roomId}`;
                     history.pushState({ page: pageId, data: data }, '', url);
                 }
             } else {
@@ -535,26 +556,27 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (youtubeEmbedUrl) {
                 playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else if (isVideoFile) {
-                const videoEl = document.createElement('video');
-                videoEl.className = 'w-full h-full';
-                videoEl.controls = true;
-                videoEl.autoplay = true;
-                videoEl.controlsList = "nodownload";
-                videoEl.innerHTML = `<source src="${src}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
+                videoElement = document.createElement('video');
+                videoElement.className = 'w-full h-full';
+                videoElement.controls = true;
+                videoElement.autoplay = true;
+                videoElement.controlsList = "nodownload";
+                videoElement.innerHTML = `<source src="${src}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
                 
-                videoEl.addEventListener('loadedmetadata', () => {
+                videoElement.addEventListener('loadedmetadata', () => {
+                    playerReady = true;
                     const progress = watchHistory[currentPlaying.contentId];
                     if (progress && progress.currentTime) {
-                        videoEl.currentTime = progress.currentTime;
+                        videoElement.currentTime = progress.currentTime;
                     }
                 });
 
-                videoEl.addEventListener('ended', handleVideoEnd);
-                playerContainer.appendChild(videoEl);
+                videoElement.addEventListener('ended', handleVideoEnd);
+                playerContainer.appendChild(videoElement);
 
                 watchProgressInterval = setInterval(() => {
-                    if (!videoEl.paused) {
-                        updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
+                    if (!videoElement.paused) {
+                        updateWatchHistory(currentPlaying.contentId, videoElement.currentTime, videoElement.duration);
                     }
                 }, 10000); // Salva a cada 10 segundos
             } else if (src.trim().startsWith('http')) {
@@ -1044,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (recommendations.length > 0) {
                 const slidesHTML = recommendations.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
                 const carouselHTML = `
-                    <h2 class="text-2xl font-bold text-white mb-6">Recomendados para Si</h2>
+                    <h2 class="text-2xl font-bold text-white mb-6">Recomendados para Você</h2>
                     <div class="relative">
                         <div class="swiper content-carousel">
                             <div class="swiper-wrapper">${slidesHTML}</div>
