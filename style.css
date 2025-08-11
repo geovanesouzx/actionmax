@@ -63,20 +63,21 @@ body {
     box-shadow: 0 0 20px rgba(167, 139, 250, 0.7); 
     transform: scale(1.08); 
 }
+/* Estilos de Avaliação com Estrelas */
 .star-rating .fa-star { 
     color: #4a5568; 
     cursor: pointer; 
     transition: color 0.2s; 
 }
-.star-rating:hover .fa-star { 
-    color: #f6e05e; 
-}
-.star-rating .fa-star:hover ~ .fa-star { 
-    color: #4a5568; 
-}
-.star-rating .fa-star.selected { 
-    color: #f6e05e; 
-}
+.star-rating:hover .fa-star { color: #f6e05e; }
+.star-rating .fa-star:hover ~ .fa-star { color: #4a5568; }
+.star-rating .fa-star.selected,
+.star-rating.rating-5 .fa-star { color: #f6e05e; } /* Amarelo */
+.star-rating.rating-3 .fa-star,
+.star-rating.rating-4 .fa-star { color: #f97316; } /* Laranja */
+.star-rating.rating-1 .fa-star,
+.star-rating.rating-2 .fa-star { color: #ef4444; } /* Vermelho */
+
 .like-btn.liked { 
     color: #fb7185; 
 }
@@ -152,6 +153,27 @@ body {
     margin-left: 1.5rem; 
     margin-bottom: 1rem; 
 }
+/* Avaliação na capa do filme */
+.card-rating {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.card-rating .fa-star {
+    font-size: 0.75rem;
+}
+.rating-1 .fa-star, .rating-2 .fa-star { color: #ef4444; }
+.rating-3 .fa-star, .rating-4 .fa-star { color: #f97316; }
+.rating-5 .fa-star { color: #f6e05e; }
 
 /* ATUALIZADO: Regras para imagens de fundo responsivas */
 #hero-bg-mobile, #details-bg-mobile {
