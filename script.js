@@ -30,12 +30,12 @@ import {
 
 // Configuração do Firebase
 const firebaseConfig = {
- apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
- authDomain: "action-max.firebaseapp.com",
- projectId: "action-max",
- storageBucket: "action-max.appspot.com",
- messagingSenderId: "183609340889",
- appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
+    apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
+    authDomain: "action-max.firebaseapp.com",
+    projectId: "action-max",
+    storageBucket: "action-max.appspot.com",
+    messagingSenderId: "183609340889",
+    appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
 };
 
 // Inicialização do Firebase
@@ -488,23 +488,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const playContent = (src, seasonNum = null, epNum = null) => {
             playerContainer.innerHTML = '';
             if (!src) return;
-
+        
             clearInterval(watchProgressInterval);
-
+        
             currentPlaying = {
                 season: seasonNum,
                 episode: epNum,
                 nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
                 contentId: currentDetailsData.id
             };
-
+        
             const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
             const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
-
+        
+            // ATUALIZAÇÃO: Adicionado sandbox para todos os iframes para bloquear pop-ups
+            const sandboxAttributes = "allow-scripts allow-same-origin allow-presentation allow-fullscreen";
+        
             if (src.trim().startsWith('<iframe')) {
-                playerContainer.innerHTML = src;
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = src;
+                const iframeEl = tempDiv.querySelector('iframe');
+                if (iframeEl) {
+                    iframeEl.setAttribute('sandbox', sandboxAttributes);
+                    playerContainer.innerHTML = iframeEl.outerHTML;
+                } else {
+                    playerContainer.innerHTML = src; // Fallback se não conseguir parsear
+                }
             } else if (youtubeEmbedUrl) {
-                playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" sandbox="${sandboxAttributes}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else if (isVideoFile) {
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
@@ -519,22 +530,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         videoEl.currentTime = progress.currentTime;
                     }
                 });
-
+        
                 videoEl.addEventListener('ended', handleVideoEnd);
                 playerContainer.appendChild(videoEl);
-
+        
                 watchProgressInterval = setInterval(() => {
                     if (!videoEl.paused) {
                         updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
-                }, 10000); // Salva a cada 10 segundos
+                }, 10000);
             } else if (src.trim().startsWith('http')) {
-                // Fallback para outros links, tentando usar um iframe
-                playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                playerContainer.innerHTML = `<iframe src="${src}" sandbox="${sandboxAttributes}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
             }
-
+        
             showPage('player-page', true, currentDetailsData);
             if (window.innerWidth < 768) {
                 playerPage.requestFullscreen?.();
