@@ -120,6 +120,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsDislikeBtn = document.getElementById('details-dislike-btn');
     const socialShareContainer = document.getElementById('social-share-container');
     const copyLinkMsg = document.getElementById('copy-link-msg');
+    // Elementos de Listas Públicas
+    const createPublicListBtn = document.getElementById('create-public-list-btn');
+    const publicListModalOverlay = document.getElementById('public-list-modal-overlay');
+    const publicListModal = document.getElementById('public-list-modal');
+    const closePublicListBtn = document.getElementById('close-public-list-btn');
+    const publicListForm = document.getElementById('public-list-form');
+    const publicListsContainer = document.getElementById('public-lists-container');
+    const publicListPage = document.getElementById('public-list-page');
+    const publicListHeader = document.getElementById('public-list-header');
+    const publicListContent = document.getElementById('public-list-content');
+
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -137,7 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
     let videoElement = null;
-    let trailerTimeout = null; // Para o trailer on hover
+    let trailerTimeout = null;
+    let userPublicLists = []; // Cache para listas públicas do usuário
+    let unsubscribePublicLists = null;
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -207,7 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    signOutBtnProfile.addEventListener('click', () => signOut(auth));
+    signOutBtnProfile.addEventListener('click', () => {
+        if (unsubscribePublicLists) unsubscribePublicLists();
+        signOut(auth);
+    });
 
 
     function getFirebaseErrorMessage(error) {
@@ -360,10 +376,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadLikeDislikeStatus(data.id);
                 } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
+                } else if (pageId === 'public-list-page' && data) {
+                    renderPublicListPage(data.listId);
                 } else if (!isPlayerPage) {
                     currentDetailsData = null;
                 }
-                if (pageId === 'perfil-page') renderMyListPage();
+                if (pageId === 'perfil-page') {
+                    renderMyListPage();
+                    listenForPublicLists();
+                } else {
+                    if (unsubscribePublicLists) unsubscribePublicLists();
+                }
                 if (pageId === 'filmes-page') renderAllMoviesPage();
                 if (pageId === 'series-page') renderAllSeriesPage();
                 if (pageId === 'aovivo-page') renderAoVivoPage();
@@ -372,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pushState) {
                     let url = `#${pageId.replace('-page', '')}`;
                     if(isDetailsPage && data) url = `#/details/${data.id}`;
+                    if(pageId === 'public-list-page' && data) url = `#/list/${data.listId}`;
                     history.pushState({ page: pageId, data: data }, '', url);
                 }
             } else {
@@ -1418,6 +1442,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 else showPage('inicio-page', pushState);
             } else if (hash.startsWith('#/genre/')) {
                 showGenrePage(decodeURIComponent(hash.split('/')[2]));
+            } else if (hash.startsWith('#/list/')) {
+                const listId = hash.split('/')[2];
+                showPage('public-list-page', pushState, { listId });
             } else {
                 const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
                 if (document.getElementById(pageId)) showPage(pageId, pushState);
@@ -1428,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
-            await loadAllRatings(); // Carrega todas as avaliações primeiro
+            await loadAllRatings();
             loadMyList();
             loadAvatar(); 
             loadAvatars();
@@ -1503,6 +1530,154 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }, true);
+        
+        // --- Lógica de Listas Públicas ---
+        createPublicListBtn.addEventListener('click', () => openPublicListModal());
+        closePublicListBtn.addEventListener('click', () => closeModal(publicListModalOverlay, publicListModal));
+        publicListForm.addEventListener('submit', handleSavePublicList);
+        publicListsContainer.addEventListener('click', handlePublicListActions);
+
+        function listenForPublicLists() {
+            const user = auth.currentUser;
+            if (!user) return;
+            const q = query(collection(db, 'public_lists'), where('authorId', '==', user.uid), orderBy('createdAt', 'desc'));
+            unsubscribePublicLists = onSnapshot(q, (snapshot) => {
+                userPublicLists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderUserPublicLists();
+            });
+        }
+
+        function renderUserPublicLists() {
+            publicListsContainer.innerHTML = '';
+            if (userPublicLists.length === 0) {
+                publicListsContainer.innerHTML = `<p class="text-gray-400">Ainda não criou nenhuma lista pública.</p>`;
+                return;
+            }
+            userPublicLists.forEach(list => {
+                const listEl = document.createElement('div');
+                listEl.className = 'public-list-item bg-gray-800/50 p-4 rounded-lg flex justify-between items-center';
+                listEl.innerHTML = `
+                    <div>
+                        <a href="#/list/${list.id}" class="text-lg font-bold hover:text-violet-400 transition">${list.name}</a>
+                        <p class="text-sm text-gray-400">${list.itemIds.length} itens</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button data-action="edit" data-id="${list.id}" class="text-gray-400 hover:text-white"><i class="fas fa-edit"></i></button>
+                        <button data-action="delete" data-id="${list.id}" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                publicListsContainer.appendChild(listEl);
+            });
+        }
+
+        function openPublicListModal(listData = null) {
+            publicListForm.reset();
+            const modalTitle = document.getElementById('public-list-modal-title');
+            const listIdInput = document.getElementById('public-list-id');
+            const selector = document.getElementById('public-list-item-selector');
+            selector.innerHTML = '';
+
+            if (listData) {
+                modalTitle.textContent = 'Editar Lista';
+                listIdInput.value = listData.id;
+                document.getElementById('public-list-name').value = listData.name;
+                document.getElementById('public-list-desc').value = listData.description || '';
+            } else {
+                modalTitle.textContent = 'Criar Nova Lista';
+                listIdInput.value = '';
+            }
+
+            if (myList.length === 0) {
+                selector.innerHTML = `<p class="text-sm text-gray-400">Adicione itens à sua "Minha Lista" primeiro.</p>`;
+            } else {
+                myList.forEach(item => {
+                    const isChecked = listData ? listData.itemIds.includes(item.id) : false;
+                    selector.innerHTML += `
+                        <label class="flex items-center gap-2 p-2 rounded hover:bg-gray-700 cursor-pointer">
+                            <input type="checkbox" value="${item.id}" class="form-checkbox" ${isChecked ? 'checked' : ''}>
+                            <img src="${item.img}" class="w-8 h-12 object-cover rounded">
+                            <span>${item.title}</span>
+                        </label>
+                    `;
+                });
+            }
+            openModal(publicListModalOverlay, publicListModal);
+        }
+
+        async function handleSavePublicList(e) {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const listId = document.getElementById('public-list-id').value;
+            const name = document.getElementById('public-list-name').value.trim();
+            const description = document.getElementById('public-list-desc').value.trim();
+            const selectedItems = Array.from(document.querySelectorAll('#public-list-item-selector input:checked')).map(input => input.value);
+            const errorEl = document.getElementById('public-list-error');
+            errorEl.textContent = '';
+
+            if (!name) {
+                errorEl.textContent = 'O nome da lista é obrigatório.';
+                return;
+            }
+
+            const listData = {
+                name,
+                description,
+                authorId: user.uid,
+                authorName: user.displayName,
+                itemIds: selectedItems,
+                updatedAt: serverTimestamp()
+            };
+
+            if (listId) {
+                await updateDoc(doc(db, 'public_lists', listId), listData);
+            } else {
+                listData.createdAt = serverTimestamp();
+                await addDoc(collection(db, 'public_lists'), listData);
+            }
+
+            closeModal(publicListModalOverlay, publicListModal);
+        }
+        
+        function handlePublicListActions(e) {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const action = button.dataset.action;
+            const id = button.dataset.id;
+
+            if (action === 'edit') {
+                const listData = userPublicLists.find(list => list.id === id);
+                if (listData) openPublicListModal(listData);
+            } else if (action === 'delete') {
+                if (confirm('Tem a certeza que quer apagar esta lista?')) {
+                    deleteDoc(doc(db, 'public_lists', id));
+                }
+            }
+        }
+
+        async function renderPublicListPage(listId) {
+            const listDoc = await getDoc(doc(db, 'public_lists', listId));
+            if (!listDoc.exists()) {
+                publicListHeader.innerHTML = `<h1 class="text-3xl font-bold">Lista não encontrada</h1>`;
+                publicListContent.innerHTML = '';
+                return;
+            }
+
+            const listData = listDoc.data();
+            publicListHeader.innerHTML = `
+                <h1 class="text-4xl font-bold">${listData.name}</h1>
+                <p class="text-gray-400 mt-2">Criada por: ${listData.authorName}</p>
+                <p class="mt-4">${listData.description}</p>
+            `;
+
+            publicListContent.innerHTML = '';
+            const listItems = allContent.filter(item => listData.itemIds.includes(item.id));
+            listItems.forEach(item => {
+                publicListContent.innerHTML += createCardHTML(item);
+            });
+        }
 
 
         setupRealtimeListeners();
