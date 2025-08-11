@@ -537,6 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const playContent = (src, seasonNum = null, epNum = null) => {
             playerContainer.innerHTML = '';
+            playerReady = false;
             if (!src) return;
 
             clearInterval(watchProgressInterval);
@@ -578,9 +579,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!videoElement.paused) {
                         updateWatchHistory(currentPlaying.contentId, videoElement.currentTime, videoElement.duration);
                     }
-                }, 10000); // Salva a cada 10 segundos
+                }, 10000);
             } else if (src.trim().startsWith('http')) {
-                // Fallback para outros links, tentando usar um iframe
                 playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
