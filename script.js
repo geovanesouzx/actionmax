@@ -382,6 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 upcomingEpisodesSection.classList.add('hidden');
             }
+
+            renderRecommendedCarousel(data);
         };
         
         const renderSeasonSelector = (seasons, activeSeason) => {
@@ -991,6 +993,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         };
+        
+        const renderRecommendedCarousel = (currentItem) => {
+            const recommendedContainer = document.getElementById('recommended-section');
+            recommendedContainer.innerHTML = '';
+
+            if (!currentItem || !currentItem.genre || currentItem.genre.length === 0) {
+                return;
+            }
+
+            const primaryGenre = currentItem.genre[0];
+            let recommendations = allContent.filter(item =>
+                item.id !== currentItem.id &&
+                item.genre &&
+                item.genre.includes(primaryGenre)
+            );
+
+            recommendations.sort(() => 0.5 - Math.random());
+            recommendations = recommendations.slice(0, 15);
+
+            if (recommendations.length > 0) {
+                const slidesHTML = recommendations.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
+                const carouselHTML = `
+                    <h2 class="text-2xl font-bold text-white mb-6">Recomendados para Si</h2>
+                    <div class="relative">
+                        <div class="swiper content-carousel">
+                            <div class="swiper-wrapper">${slidesHTML}</div>
+                        </div>
+                        <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
+                        <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
+                    </div>
+                `;
+                recommendedContainer.innerHTML = carouselHTML;
+                initCarousel(recommendedContainer.querySelector('.content-carousel'));
+            }
+        };
 
         const renderAllPages = async () => {
             await loadWatchHistory();
@@ -1012,14 +1049,13 @@ document.addEventListener('DOMContentLoaded', () => {
             allCategories.forEach(category => {
                 let categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
                 
-                // Ordenar o conteúdo com base no contentOrder da categoria
                 const orderedIds = category.contentOrder || [];
                 categoryContent.sort((a, b) => {
                     const indexA = orderedIds.indexOf(a.id);
                     const indexB = orderedIds.indexOf(b.id);
-                    if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title); // both new
-                    if (indexA === -1) return 1; // a is new
-                    if (indexB === -1) return -1; // b is new
+                    if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title);
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
                     return indexA - indexB;
                 });
 
