@@ -158,14 +158,14 @@
                     </div>
                 </div>
             </div>
-              <div id="genre-page" class="page-content hidden">
-                   <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                       <h1 id="genre-title" class="text-3xl sm:text-4xl font-bold mb-8"></h1>
-                       <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                           <!-- Conteúdo do gênero será injetado aqui -->
-                       </div>
-                   </div>
-              </div>
+             <div id="genre-page" class="page-content hidden">
+                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                     <h1 id="genre-title" class="text-3xl sm:text-4xl font-bold mb-8"></h1>
+                     <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                         <!-- Conteúdo do gênero será injetado aqui -->
+                     </div>
+                 </div>
+             </div>
             <div id="aovivo-page" class="page-content hidden">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <h1 class="text-3xl sm:text-4xl font-bold mb-8">Canais Ao Vivo</h1>
@@ -203,18 +203,6 @@
                         </div>
                          <p id="my-list-empty" class="text-gray-400 hidden">Sua lista está vazia. Adicione filmes e séries para vê-los aqui.</p>
                     </div>
-                    <!-- NOVO: Seção de Listas Públicas -->
-                    <div class="mt-12">
-                        <div class="flex items-center justify-between mb-6">
-                            <h2 class="text-2xl font-bold text-white">Minhas Listas Públicas</h2>
-                            <button id="create-public-list-btn" class="btn-primary text-sm font-semibold py-2 px-4 rounded-lg flex items-center gap-2">
-                                <i class="fas fa-plus"></i> Criar Nova Lista
-                            </button>
-                        </div>
-                        <div id="public-lists-container" class="space-y-4">
-                            <!-- Listas públicas do usuário serão injetadas aqui -->
-                        </div>
-                    </div>
                     <div class="mt-12">
                          <h2 class="text-2xl font-bold text-white mb-6">Configurações da Conta</h2>
                          <div class="bg-gray-800/50 p-6 rounded-lg max-w-2xl">
@@ -228,17 +216,6 @@
                                  <button id="sign-out-btn-profile" class="inline-block w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-6 rounded-lg transition text-center">Sair</button>
                              </div>
                          </div>
-                    </div>
-                </div>
-            </div>
-            <!-- NOVO: Página para visualizar uma lista pública -->
-            <div id="public-list-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div id="public-list-header" class="mb-8">
-                        <!-- Cabeçalho da lista será injetado aqui -->
-                    </div>
-                    <div id="public-list-content" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        <!-- Conteúdo da lista será injetado aqui -->
                     </div>
                 </div>
             </div>
@@ -277,23 +254,6 @@
                                         <i id="details-add-list-icon" class="fas fa-plus"></i>
                                         <span id="details-add-list-text">Minha Lista</span>
                                     </button>
-                                    <button id="details-like-btn" class="like-dislike-btn btn-secondary text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2">
-                                        <i class="fa-regular fa-thumbs-up"></i><i class="fa-solid fa-thumbs-up"></i>
-                                        <span id="details-like-count">0</span>
-                                    </button>
-                                    <button id="details-dislike-btn" class="like-dislike-btn btn-secondary text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2">
-                                        <i class="fa-regular fa-thumbs-down"></i><i class="fa-solid fa-thumbs-down"></i>
-                                    </button>
-                                </div>
-                                <div class="mt-6">
-                                    <p class="text-gray-300 font-semibold mb-2">Partilhar:</p>
-                                    <div id="social-share-container" class="flex items-center gap-4">
-                                        <button data-network="whatsapp" class="social-share-btn text-2xl text-gray-400"><i class="fab fa-whatsapp"></i></button>
-                                        <button data-network="twitter" class="social-share-btn text-2xl text-gray-400"><i class="fab fa-twitter"></i></button>
-                                        <button data-network="facebook" class="social-share-btn text-2xl text-gray-400"><i class="fab fa-facebook"></i></button>
-                                        <button data-network="copy" class="social-share-btn text-2xl text-gray-400"><i class="fas fa-link"></i></button>
-                                    </div>
-                                    <p id="copy-link-msg" class="text-violet-400 text-sm mt-2 h-4"></p>
                                 </div>
                             </div>
                         </div>
@@ -380,7 +340,7 @@
                 </div>
             </div>
             <div id="player-page" class="page-content hidden bg-black">
-                <div class="w-full h-screen relative">
+                <div class="w-full h-screen flex flex-col items-center justify-center relative">
                     <div id="player-container" class="w-full h-full">
                         <!-- Player de Vídeo ou Iframe será injetado aqui -->
                     </div>
@@ -519,29 +479,6 @@
             <div id="notification-list" class="space-y-4 max-h-[60vh] overflow-y-auto">
                  <!-- Notificações do Firebase serão injetadas aqui -->
             </div>
-        </div>
-    </div>
-    
-    <!-- NOVO: Modal para Criar/Editar Lista Pública -->
-    <div id="public-list-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="public-list-modal" class="modal w-full max-w-lg bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
-            <div class="flex justify-between items-center mb-4">
-                <h2 id="public-list-modal-title" class="text-xl font-bold">Criar Nova Lista</h2>
-                <button id="close-public-list-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-            </div>
-            <form id="public-list-form" class="space-y-4">
-                <input type="hidden" id="public-list-id">
-                <input type="text" id="public-list-name" placeholder="Nome da Lista (ex: Top 10 Terror)" required class="form-input">
-                <textarea id="public-list-desc" placeholder="Uma pequena descrição sobre a sua lista..." class="form-input" rows="3"></textarea>
-                <div class="h-64 overflow-y-auto p-2 border border-gray-600 rounded-lg">
-                    <p class="text-sm text-gray-400 mb-2">Selecione os itens da sua "Minha Lista" para adicionar:</p>
-                    <div id="public-list-item-selector" class="space-y-2">
-                        <!-- Itens da "Minha Lista" para seleção -->
-                    </div>
-                </div>
-                <p id="public-list-error" class="text-red-400 text-sm h-4"></p>
-                <button type="submit" class="btn-primary w-full font-bold py-3 rounded-lg">Salvar Lista</button>
-            </form>
         </div>
     </div>
 
