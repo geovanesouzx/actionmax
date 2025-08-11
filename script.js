@@ -85,14 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsAddListBtn = document.getElementById('details-add-list-btn');
     const detailsWatchBtn = document.getElementById('details-watch-btn');
     const detailsTrailerBtn = document.getElementById('details-trailer-btn');
-    const detailsShareBtn = document.getElementById('details-share-btn');
-    const heroShareBtn = document.getElementById('hero-share-btn');
-    const shareModalOverlay = document.getElementById('share-modal-overlay');
-    const shareModal = document.getElementById('share-modal');
-    const closeShareBtn = document.getElementById('close-share-btn');
-    const copyLinkBtn = document.getElementById('copy-link-btn');
-    const shareLinkInput = document.getElementById('share-link-input');
-    const copyLinkFeedback = document.getElementById('copy-link-feedback');
     const myListContainer = document.getElementById('my-list-container');
     const myListEmptyMsg = document.getElementById('my-list-empty');
     const changePhotoBtn = document.getElementById('change-photo-btn');
@@ -116,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentAvatar = document.getElementById('comment-avatar');
     const userRatingStars = document.getElementById('user-rating-stars');
     const averageRatingEl = document.getElementById('average-rating');
-    const averageRatingDisplay = document.getElementById('average-rating-display');
     const genreResultsContainer = document.getElementById('genre-results-container');
     const filmesContainer = document.getElementById('filmes-container');
     const seriesContainer = document.getElementById('series-container');
@@ -134,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
-    let allRatings = {}; // Cache para as avaliações médias
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
@@ -783,58 +773,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
-        const getRatingColorClass = (rating) => {
-            if (rating <= 2.5) return 'rating-bad';
-            if (rating <= 4) return 'rating-ok';
-            return 'rating-good';
-        };
-
         const handleStarRating = async (rating) => {
             const user = auth.currentUser;
             if (user && currentDetailsData) {
                 await setDoc(doc(db, "ratings", `${user.uid}_${currentDetailsData.id}`), {
                     contentId: currentDetailsData.id, userId: user.uid, rating: rating
-                }, { merge: true });
-                loadRatingData(currentDetailsData.id, true); // Força a atualização do cache
+                });
+                loadRatingData(currentDetailsData.id);
             }
         };
 
-        const loadRatingData = async (contentId, forceUpdate = false) => {
+        const loadRatingData = async (contentId) => {
             const user = auth.currentUser;
-            // Limpa a avaliação do usuário
-            userRatingStars.querySelectorAll('.fa-star').forEach(star => star.className = 'far fa-star');
-            // Limpa a avaliação média
             averageRatingEl.textContent = 'N/A';
-            averageRatingDisplay.className = 'flex items-center gap-2';
-
+            userRatingStars.querySelectorAll('.fa-star').forEach(star => star.className = 'far fa-star');
             if (user) {
                 const docSnap = await getDoc(doc(db, "ratings", `${user.uid}_${contentId}`));
                 if (docSnap.exists()) {
                     const userRating = docSnap.data().rating;
-                    const colorClass = getRatingColorClass(userRating);
-                    for (let i = 0; i < 5; i++) {
-                        userRatingStars.children[i].className = i < userRating ? `fas fa-star selected ${colorClass}` : 'far fa-star';
-                    }
+                    for (let i = 0; i < userRating; i++) userRatingStars.children[i].className = 'fas fa-star selected';
                 }
             }
-
-            if (forceUpdate || !allRatings[contentId]) {
-                const q = query(collection(db, "ratings"), where("contentId", "==", contentId));
-                const querySnapshot = await getDocs(q);
-                let totalRating = 0, count = 0;
-                querySnapshot.forEach((doc) => {
-                    totalRating += doc.data().rating;
-                    count++;
-                });
-                const avg = count > 0 ? (totalRating / count) : 0;
-                allRatings[contentId] = { avg: avg.toFixed(1), count: count };
-            }
-
-            const ratingData = allRatings[contentId];
-            if (ratingData && ratingData.count > 0) {
-                averageRatingEl.textContent = ratingData.avg;
-                averageRatingDisplay.className = `flex items-center gap-2 ${getRatingColorClass(ratingData.avg)}`;
-            }
+            const q = query(collection(db, "ratings"), where("contentId", "==", contentId));
+            const querySnapshot = await getDocs(q);
+            let totalRating = 0, count = 0;
+            querySnapshot.forEach((doc) => {
+                totalRating += doc.data().rating;
+                count++;
+            });
+            if (count > 0) averageRatingEl.textContent = (totalRating / count).toFixed(1);
         };
 
         userRatingStars.addEventListener('click', (e) => {
@@ -1019,22 +986,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="h-full bg-violet-500" style="width: ${progress}%;"></div>
                 </div>
             ` : '';
-            const ratingData = allRatings[data.id];
-            let ratingHTML = '';
-            if (ratingData && ratingData.count > 0) {
-                const colorClass = getRatingColorClass(ratingData.avg);
-                ratingHTML = `
-                    <div class="card-rating ${colorClass}">
-                        <i class="fas fa-star"></i>
-                        <span>${ratingData.avg}</span>
-                    </div>
-                `;
-            }
             return `
-                <div class="movie-card rounded-lg" data-id="${data.id}">
-                    <img src="${data.img}" class="card-image w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                <div class="movie-card rounded-lg overflow-hidden relative" data-id="${data.id}">
+                    <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                     ${progressHTML}
-                    ${ratingHTML}
                 </div>
             `;
         };
@@ -1091,10 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderHomeCarousels = () => {
             homeCarousels.innerHTML = '';
-            // Ordena as categorias localmente
-            const sortedCategories = [...allCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            sortedCategories.forEach(category => {
+            allCategories.forEach(category => {
                 let categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
                 
                 const orderedIds = category.contentOrder || [];
@@ -1264,38 +1216,21 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // 1. Busca os dados iniciais de forma garantida
                 const contentQuery = collection(db, 'content');
-                const categoriesQuery = query(collection(db, 'categories')); // Removido o orderBy
-                const ratingsQuery = collection(db, 'ratings');
+                const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
 
-                const [contentSnapshot, categoriesSnapshot, ratingsSnapshot] = await Promise.all([
+                const [contentSnapshot, categoriesSnapshot] = await Promise.all([
                     getDocs(contentQuery),
-                    getDocs(categoriesQuery),
-                    getDocs(ratingsSnapshot)
+                    getDocs(categoriesQuery)
                 ]);
 
-                // 2. Processa e armazena em cache as avaliações médias
-                const ratingsByContent = {};
-                ratingsSnapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (!ratingsByContent[data.contentId]) {
-                        ratingsByContent[data.contentId] = { total: 0, count: 0 };
-                    }
-                    ratingsByContent[data.contentId].total += data.rating;
-                    ratingsByContent[data.contentId].count++;
-                });
-                for (const contentId in ratingsByContent) {
-                    const { total, count } = ratingsByContent[contentId];
-                    allRatings[contentId] = { avg: (total / count).toFixed(1), count };
-                }
-
-                // 3. Popula os arrays de dados
+                // 2. Popula os arrays de dados
                 allContent = contentSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                 allCategories = categoriesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-                // 4. Renderiza a página com os dados iniciais
+                // 3. Renderiza a página com os dados iniciais
                 await renderAllPages();
 
-                // 5. Lida com a rota inicial (URL com hash)
+                // 4. Lida com a rota inicial (URL com hash)
                 if (isInitialLoad) {
                     isInitialLoad = false;
                     const hash = window.location.hash;
@@ -1313,11 +1248,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // 6. Esconde a tela de carregamento APÓS tudo estar pronto
+                // 5. Esconde a tela de carregamento APÓS tudo estar pronto
                 loadingScreen.classList.add('opacity-0');
                 loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
 
-                // 7. Anexa os listeners para atualizações em tempo real
+                // 6. Anexa os listeners para atualizações em tempo real
                 onSnapshot(contentQuery, (snapshot) => {
                     allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                     renderAllPages(); 
@@ -1328,41 +1263,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderAllPages();
                 });
 
-                 onSnapshot(ratingsQuery, (snapshot) => {
-                    loadRatingData(currentDetailsData?.id, true);
-                });
-
-
             } catch (error) {
                 console.error("Erro ao carregar dados iniciais:", error);
                 loadingScreen.innerHTML = '<h2 class="text-red-500 text-center p-4">Falha ao carregar o site. Por favor, recarregue a página.</h2>';
             }
         };
-
-        // --- Lógica de Compartilhamento ---
-        const openShareModal = (contentData) => {
-            if (!contentData) return;
-            const link = `${window.location.origin}${window.location.pathname}#/details/${contentData.id}`;
-            shareLinkInput.value = link;
-            copyLinkFeedback.textContent = '';
-            openModal(shareModalOverlay, shareModal);
-        };
-
-        detailsShareBtn.addEventListener('click', () => openShareModal(currentDetailsData));
-        heroShareBtn.addEventListener('click', () => {
-             const heroData = allContent.find(item => item.id === heroSection.dataset.id);
-             if(heroData) openShareModal(heroData);
-        });
-        closeShareBtn.addEventListener('click', () => closeModal(shareModalOverlay, shareModal));
-        shareModalOverlay.addEventListener('click', (e) => {
-            if (e.target === shareModalOverlay) closeModal(shareModalOverlay, shareModal);
-        });
-        copyLinkBtn.addEventListener('click', () => {
-            shareLinkInput.select();
-            document.execCommand('copy');
-            copyLinkFeedback.textContent = 'Link copiado!';
-            setTimeout(() => { copyLinkFeedback.textContent = ''; }, 2000);
-        });
 
         setupRealtimeListeners();
     }

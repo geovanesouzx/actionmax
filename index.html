@@ -133,10 +133,6 @@
                                      <i id="hero-add-list-icon" class="fas fa-plus"></i>
                                      <span id="hero-add-list-text">Minha Lista</span>
                                  </button>
-                                 <button id="hero-share-btn" class="btn-secondary text-white font-bold py-3 px-6 sm:px-8 rounded-lg flex items-center space-x-2 text-sm sm:text-base">
-                                    <i class="fas fa-share-alt"></i>
-                                    <span>Compartilhar</span>
-                                </button>
                              </div>
                         </div>
                     </div>
@@ -258,10 +254,6 @@
                                         <i id="details-add-list-icon" class="fas fa-plus"></i>
                                         <span id="details-add-list-text">Minha Lista</span>
                                     </button>
-                                    <button id="details-share-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
-                                        <i class="fas fa-share-alt"></i>
-                                        <span>Compartilhar</span>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -301,8 +293,8 @@
                                     </div>
                                     <div class="border-l border-gray-600 pl-4">
                                         <p class="text-lg font-semibold">Média:</p>
-                                        <div id="average-rating-display" class="flex items-center gap-2">
-                                            <i class="fas fa-star text-2xl"></i>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-star text-yellow-400 text-2xl"></i>
                                             <span id="average-rating" class="text-2xl font-bold">N/A</span>
                                         </div>
                                     </div>
@@ -489,25 +481,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal de Compartilhar -->
-    <div id="share-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="share-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold">Compartilhar</h2>
-                <button id="close-share-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-            </div>
-            <div class="space-y-4">
-                <p class="text-gray-300">Compartilhe este título com seus amigos!</p>
-                <div class="flex items-center bg-gray-900/50 rounded-lg">
-                    <input id="share-link-input" type="text" readonly class="w-full bg-transparent px-4 py-2 text-gray-200 outline-none">
-                    <button id="copy-link-btn" class="bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2 px-4 rounded-r-lg transition">Copiar</button>
-                </div>
-                <p id="copy-link-feedback" class="text-green-400 text-sm h-4"></p>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Link para o seu arquivo JavaScript -->
     <script type="module" src="script.js"></script>
