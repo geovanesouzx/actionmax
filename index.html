@@ -254,6 +254,25 @@
                                         <i id="details-add-list-icon" class="fas fa-plus"></i>
                                         <span id="details-add-list-text">Minha Lista</span>
                                     </button>
+                                    <!-- NOVO: Botões de Gosto/Não Gosto -->
+                                    <button id="details-like-btn" class="like-dislike-btn btn-secondary text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2">
+                                        <i class="fa-regular fa-thumbs-up"></i><i class="fa-solid fa-thumbs-up"></i>
+                                        <span id="details-like-count">0</span>
+                                    </button>
+                                    <button id="details-dislike-btn" class="like-dislike-btn btn-secondary text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2">
+                                        <i class="fa-regular fa-thumbs-down"></i><i class="fa-solid fa-thumbs-down"></i>
+                                    </button>
+                                </div>
+                                <!-- NOVO: Secção de Partilha Social -->
+                                <div class="mt-6">
+                                    <p class="text-gray-300 font-semibold mb-2">Partilhar:</p>
+                                    <div id="social-share-container" class="flex items-center gap-4">
+                                        <button data-network="whatsapp" class="social-share-btn text-2xl text-gray-400"><i class="fab fa-whatsapp"></i></button>
+                                        <button data-network="twitter" class="social-share-btn text-2xl text-gray-400"><i class="fab fa-twitter"></i></button>
+                                        <button data-network="facebook" class="social-share-btn text-2xl text-gray-400"><i class="fab fa-facebook"></i></button>
+                                        <button data-network="copy" class="social-share-btn text-2xl text-gray-400"><i class="fas fa-link"></i></button>
+                                    </div>
+                                    <p id="copy-link-msg" class="text-violet-400 text-sm mt-2 h-4"></p>
                                 </div>
                             </div>
                         </div>

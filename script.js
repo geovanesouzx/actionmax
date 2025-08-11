@@ -25,17 +25,18 @@ import {
     arrayUnion,
     arrayRemove,
     getDocs,
-    orderBy
+    orderBy,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Configuração do Firebase
 const firebaseConfig = {
- apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
- authDomain: "action-max.firebaseapp.com",
- projectId: "action-max",
- storageBucket: "action-max.appspot.com",
- messagingSenderId: "183609340889",
- appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
+    apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
+    authDomain: "action-max.firebaseapp.com",
+    projectId: "action-max",
+    storageBucket: "action-max.appspot.com",
+    messagingSenderId: "183609340889",
+    appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
 };
 
 // Inicialização do Firebase
@@ -115,6 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const embreveContainer = document.getElementById('embreve-container');
     const upcomingEpisodesSection = document.getElementById('upcoming-episodes-section');
     const upcomingEpisodesList = document.getElementById('upcoming-episodes-list');
+    // NOVOS ELEMENTOS
+    const detailsLikeBtn = document.getElementById('details-like-btn');
+    const detailsDislikeBtn = document.getElementById('details-dislike-btn');
+    const socialShareContainer = document.getElementById('social-share-container');
+    const copyLinkMsg = document.getElementById('copy-link-msg');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -264,11 +270,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 myList = (docSnap.exists() && docSnap.data().myList) ? docSnap.data().myList : [];
             }
         };
-        const toggleMyList = (itemData) => {
+        // ATUALIZADO: toggleMyList para incluir notificações de lançamento
+        const toggleMyList = async (itemData) => {
             if (!itemData) return;
+            const user = auth.currentUser;
+            if (!user) return;
+        
             const itemIndex = myList.findIndex(item => item.id === itemData.id);
-            if (itemIndex > -1) myList.splice(itemIndex, 1);
-            else myList.push(itemData);
+            const subRef = doc(db, 'subscriptions', `${user.uid}_${itemData.id}`);
+        
+            if (itemIndex > -1) {
+                myList.splice(itemIndex, 1);
+                // Remove a subscrição se o item for removido da lista
+                if (itemData.emBreve) {
+                    await deleteDoc(subRef).catch(err => console.error("Error removing subscription:", err));
+                }
+            } else {
+                myList.push(itemData);
+                // Adiciona a subscrição se o item estiver "Em Breve"
+                if (itemData.emBreve) {
+                    await setDoc(subRef, {
+                        userId: user.uid,
+                        contentId: itemData.id,
+                        contentTitle: itemData.title,
+                        subscribedAt: serverTimestamp()
+                    }).catch(err => console.error("Error adding subscription:", err));
+                }
+            }
             saveMyList();
             updateAllListButtons(itemData.id);
         };
@@ -328,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAllListButtons(data.id);
                     loadComments(data.id);
                     loadRatingData(data.id);
+                    loadLikeDislikeStatus(data.id); // NOVO: Carrega estado de Gosto/Não Gosto
                 } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
                 } else if (!isPlayerPage) {
@@ -987,8 +1016,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
             return `
-                <div class="movie-card rounded-lg overflow-hidden relative" data-id="${data.id}">
-                    <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                <div class="movie-card" data-id="${data.id}">
+                    <img src="${data.img}" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                     ${progressHTML}
                 </div>
             `;
@@ -1203,6 +1232,113 @@ document.addEventListener('DOMContentLoaded', () => {
             initCarousel(continueWatchingContainer.querySelector('.content-carousel'));
         }
 
+        // --- NOVAS FUNÇÕES ---
+
+        const handleLikeDislike = async (action) => {
+            const user = auth.currentUser;
+            if (!user || !currentDetailsData) return;
+        
+            const contentRef = doc(db, 'content', currentDetailsData.id);
+            const userId = user.uid;
+        
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const contentDoc = await transaction.get(contentRef);
+                    if (!contentDoc.exists()) {
+                        throw "Document does not exist!";
+                    }
+        
+                    const data = contentDoc.data();
+                    const likes = data.likes || [];
+                    const dislikes = data.dislikes || [];
+        
+                    const hasLiked = likes.includes(userId);
+                    const hasDisliked = dislikes.includes(userId);
+        
+                    let newLikes = [...likes];
+                    let newDislikes = [...dislikes];
+        
+                    if (action === 'like') {
+                        if (hasLiked) {
+                            newLikes = newLikes.filter(id => id !== userId); // Unlike
+                        } else {
+                            newLikes.push(userId); // Like
+                            if (hasDisliked) {
+                                newDislikes = newDislikes.filter(id => id !== userId); // Remove from dislikes
+                            }
+                        }
+                    } else if (action === 'dislike') {
+                        if (hasDisliked) {
+                            newDislikes = newDislikes.filter(id => id !== userId); // Undislike
+                        } else {
+                            newDislikes.push(userId); // Dislike
+                            if (hasLiked) {
+                                newLikes = newLikes.filter(id => id !== userId); // Remove from likes
+                            }
+                        }
+                    }
+        
+                    transaction.update(contentRef, { likes: newLikes, dislikes: newDislikes });
+                });
+        
+                // Atualiza a UI após a transação
+                loadLikeDislikeStatus(currentDetailsData.id);
+            } catch (e) {
+                console.error("Transaction failed: ", e);
+            }
+        };
+
+        const loadLikeDislikeStatus = async (contentId) => {
+            const user = auth.currentUser;
+            const contentRef = doc(db, 'content', contentId);
+            const contentSnap = await getDoc(contentRef);
+        
+            if (contentSnap.exists()) {
+                const data = contentSnap.data();
+                const likes = data.likes || [];
+                const dislikes = data.dislikes || [];
+        
+                document.getElementById('details-like-count').textContent = likes.length;
+        
+                if (user) {
+                    detailsLikeBtn.classList.toggle('active', likes.includes(user.uid));
+                    detailsDislikeBtn.classList.toggle('active', dislikes.includes(user.uid));
+                }
+            }
+        };
+
+        const handleSocialShare = (e) => {
+            const button = e.target.closest('.social-share-btn');
+            if (!button || !currentDetailsData) return;
+        
+            const network = button.dataset.network;
+            const shareUrl = window.location.href;
+            const title = `Vê só isto: ${currentDetailsData.title} no ActionMax!`;
+            let url = '';
+        
+            switch (network) {
+                case 'whatsapp':
+                    url = `https://api.whatsapp.com/send?text=${encodeURIComponent(title + ' ' + shareUrl)}`;
+                    break;
+                case 'twitter':
+                    url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`;
+                    break;
+                case 'facebook':
+                    url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                    break;
+                case 'copy':
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        copyLinkMsg.textContent = 'Link copiado!';
+                        setTimeout(() => { copyLinkMsg.textContent = ''; }, 2000);
+                    });
+                    return;
+            }
+        
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+        
+        // --- FIM DAS NOVAS FUNÇÕES ---
+
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
@@ -1268,6 +1404,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingScreen.innerHTML = '<h2 class="text-red-500 text-center p-4">Falha ao carregar o site. Por favor, recarregue a página.</h2>';
             }
         };
+
+        // Adiciona os novos event listeners
+        detailsLikeBtn.addEventListener('click', () => handleLikeDislike('like'));
+        detailsDislikeBtn.addEventListener('click', () => handleLikeDislike('dislike'));
+        socialShareContainer.addEventListener('click', handleSocialShare);
 
         setupRealtimeListeners();
     }

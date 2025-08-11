@@ -13,17 +13,29 @@ body {
     -webkit-backdrop-filter: blur(10px); 
     border-color: rgba(255, 255, 255, 0.1); 
 }
+/* ATUALIZADO: Correção da animação do card */
 .movie-card { 
-    transition: transform 0.3s ease, box-shadow 0.3s ease; 
     border: 2px solid transparent; 
     cursor: pointer; 
     aspect-ratio: 2 / 3; 
+    border-radius: 0.5rem; /* Garante que o raio da borda seja consistente */
+    overflow: hidden; /* Essencial para conter a imagem com zoom */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.movie-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
 }
 .movie-card:hover { 
-    transform: scale(1.05); 
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); 
     border-color: rgba(167, 139, 250, 0.8); 
 }
+.movie-card:hover img {
+    transform: scale(1.05); /* Aplica o zoom apenas na imagem */
+}
+
 .btn-primary { 
     background-color: #8b5cf6; 
     transition: background-color 0.3s ease, transform 0.2s ease; 
@@ -74,6 +86,26 @@ body {
 }
 .star-rating .fa-star.selected { 
     color: #f6e05e; 
+}
+/* Estilos para botões de Gosto/Não Gosto */
+.like-dislike-btn.active {
+    color: #a78bfa;
+}
+.like-dislike-btn .fa-solid {
+    display: none;
+}
+.like-dislike-btn.active .fa-regular {
+    display: none;
+}
+.like-dislike-btn.active .fa-solid {
+    display: inline-block;
+}
+.social-share-btn {
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.social-share-btn:hover {
+    color: #a78bfa;
+    transform: scale(1.1);
 }
 .like-btn.liked { 
     color: #fb7185; 
