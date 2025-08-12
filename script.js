@@ -1359,7 +1359,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const setupHero = () => {
-            const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque') && !(item.type === 'Filme' && item.emBreve));
+            const heroWatchBtn = document.getElementById('hero-watch-btn');
+            const heroAddListBtn = document.getElementById('hero-add-list-btn');
+        
+            const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque'));
+        
             if (heroContentData) {
                 document.getElementById('hero-bg-desktop').src = heroContentData.bg || '';
                 document.getElementById('hero-bg-mobile').src = heroContentData.bg_mobile || heroContentData.img || heroContentData.bg || '';
@@ -1370,9 +1374,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('hero-genre').textContent = Array.isArray(heroContentData.genre) ? heroContentData.genre.join(', ') : (heroContentData.genre || '');
                 document.getElementById('hero-year').textContent = heroContentData.year || '';
                 document.getElementById('hero-duration').textContent = heroContentData.duration || '';
+        
+                heroWatchBtn.classList.remove('hidden');
+                heroAddListBtn.classList.remove('hidden');
+
+                if (heroContentData.type === 'Filme' && heroContentData.emBreve) {
+                    heroWatchBtn.disabled = true;
+                    heroWatchBtn.innerHTML = '<i class="fas fa-clock"></i><span>Em Breve</span>';
+                    heroWatchBtn.classList.add('btn-disabled');
+                } else {
+                    heroWatchBtn.disabled = false;
+                    heroWatchBtn.innerHTML = '<i class="fas fa-play"></i><span>Assistir Agora</span>';
+                    heroWatchBtn.classList.remove('btn-disabled');
+                }
+                
+                updateAllListButtons(heroContentData.id);
+        
             } else {
                 document.getElementById('hero-title').textContent = "Bem-vindo ao ActionMax";
                 document.getElementById('hero-desc').textContent = "Navegue pelas seções para encontrar algo para assistir.";
+                heroWatchBtn.classList.add('hidden');
+                heroAddListBtn.classList.add('hidden');
             }
         };
 
