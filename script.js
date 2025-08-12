@@ -782,15 +782,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 await setDoc(doc(db, "ratings", `${user.uid}_${currentDetailsData.id}`), {
                     contentId: currentDetailsData.id, userId: user.uid, rating: rating
                 });
-                // A atualização da UI agora é tratada pelo listener em loadRatingData
             }
         };
         
         const getRatingColorClass = (rating) => {
             const roundedRating = Math.round(rating);
             if (roundedRating >= 5) return 'rating-5';
-            if (roundedRating >= 3) return 'rating-3'; // Abrange 3 e 4
-            if (roundedRating >= 1) return 'rating-1'; // Abrange 1 e 2
+            if (roundedRating >= 3) return 'rating-3';
+            if (roundedRating >= 1) return 'rating-1';
             return '';
         };
 
@@ -863,11 +862,36 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderNotifications = () => {
-            notificationList.innerHTML = allNotifications.length === 0 ? `<p class="text-gray-400 text-center">Nenhuma notificação.</p>` : allNotifications.map(notif => {
-                const contentLink = notif.contentId ? `data-content-id="${notif.contentId}"` : '';
-                const cursorClass = notif.contentId ? 'cursor-pointer hover:bg-gray-700' : '';
-                return `<div class="p-3 bg-gray-700/50 rounded-lg notification-item ${cursorClass}" ${contentLink}><p class="font-semibold">${notif.title}</p><p class="text-sm text-gray-400">${notif.message}</p></div>`;
-            }).join('');
+            notificationList.innerHTML = '';
+            if (allNotifications.length === 0) {
+                notificationList.innerHTML = `<p class="text-gray-400 text-center">Nenhuma notificação.</p>`;
+                return;
+            }
+
+            allNotifications.forEach(notif => {
+                const contentHTML = `<p class="font-semibold pointer-events-none">${notif.title}</p><p class="text-sm text-gray-400 pointer-events-none">${notif.message}</p>`;
+                
+                if (notif.linkUrl) {
+                    const linkEl = document.createElement('a');
+                    linkEl.href = notif.linkUrl;
+                    linkEl.target = '_blank';
+                    linkEl.rel = 'noopener noreferrer';
+                    linkEl.className = 'block p-3 bg-gray-700/50 rounded-lg notification-item cursor-pointer hover:bg-gray-700';
+                    linkEl.innerHTML = contentHTML;
+                    notificationList.appendChild(linkEl);
+                } else if (notif.contentId) {
+                    const divEl = document.createElement('div');
+                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg notification-item cursor-pointer hover:bg-gray-700';
+                    divEl.dataset.contentId = notif.contentId;
+                    divEl.innerHTML = contentHTML;
+                    notificationList.appendChild(divEl);
+                } else {
+                    const divEl = document.createElement('div');
+                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg notification-item';
+                    divEl.innerHTML = contentHTML;
+                    notificationList.appendChild(divEl);
+                }
+            });
         };
 
         notificationList.addEventListener('click', (e) => {
