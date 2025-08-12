@@ -25,7 +25,7 @@ body {
 .movie-card img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain; /* Alterado de 'cover' para 'contain' para evitar cortes */
     transition: transform 0.3s ease;
 }
 .movie-card:hover { 
