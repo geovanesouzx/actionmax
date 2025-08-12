@@ -864,10 +864,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const getRatingColorClass = (rating) => {
-            const roundedRating = Math.round(rating);
-            if (roundedRating >= 5) return 'rating-5';
-            if (roundedRating >= 3) return 'rating-3';
-            if (roundedRating >= 1) return 'rating-1';
+            if (rating >= 4.5) return 'rating-5';
+            if (rating >= 3) return 'rating-3';
+            if (rating > 0) return 'rating-1';
             return '';
         };
 
@@ -898,13 +897,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const averageRatingContainer = averageRatingEl.closest('.flex').parentElement;
+                averageRatingContainer.className = 'border-l border-gray-600 pl-4'; // Reset
                 if (count > 0) {
                     const average = totalRating / count;
                     averageRatingEl.textContent = average.toFixed(1);
-                    averageRatingContainer.className = `border-l border-gray-600 pl-4 ${getRatingColorClass(average)}`;
+                    averageRatingContainer.classList.add(getRatingColorClass(average));
                 } else {
                     averageRatingEl.textContent = 'N/A';
-                    averageRatingContainer.className = 'border-l border-gray-600 pl-4';
                 }
             });
         };
@@ -929,15 +928,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, "notifications"));
             onSnapshot(q, (snapshot) => {
                 const allFetchedNotifications = [];
-                snapshot.forEach(doc => allFetchedNotifications.push(doc.data()));
+                snapshot.forEach(doc => allFetchedNotifications.push({id: doc.id, ...doc.data()}));
 
-                // Filtra as notificações para o utilizador atual
                 allNotifications = allFetchedNotifications.filter(notif => {
-                    // Se não houver 'targetUids', é uma notificação global
                     if (!notif.targetUids || notif.targetUids.length === 0) {
                         return true;
                     }
-                    // Se houver 'targetUids', verifica se o ID do utilizador atual está na lista
                     return notif.targetUids.includes(user.uid);
                 });
 
@@ -963,33 +959,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             allNotifications.forEach(notif => {
-                const contentHTML = `<p class="font-semibold pointer-events-none">${notif.title}</p><p class="text-sm text-gray-400 pointer-events-none">${notif.message}</p>`;
+                const contentHTML = `
+                    <div>
+                        <p class="font-semibold pointer-events-none">${notif.title}</p>
+                        <p class="text-sm text-gray-400 pointer-events-none">${notif.message}</p>
+                    </div>
+                    <button data-id="${notif.id}" class="delete-notification-btn"><i class="fas fa-times"></i></button>
+                `;
                 
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'notification-item';
+
                 if (notif.linkUrl) {
                     const linkEl = document.createElement('a');
                     linkEl.href = notif.linkUrl;
                     linkEl.target = '_blank';
                     linkEl.rel = 'noopener noreferrer';
-                    linkEl.className = 'block p-3 bg-gray-700/50 rounded-lg notification-item cursor-pointer hover:bg-gray-700';
+                    linkEl.className = 'block p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700';
                     linkEl.innerHTML = contentHTML;
-                    notificationList.appendChild(linkEl);
+                    itemWrapper.appendChild(linkEl);
                 } else if (notif.contentId) {
                     const divEl = document.createElement('div');
-                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg notification-item cursor-pointer hover:bg-gray-700';
+                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700';
                     divEl.dataset.contentId = notif.contentId;
                     divEl.innerHTML = contentHTML;
-                    notificationList.appendChild(divEl);
+                    itemWrapper.appendChild(divEl);
                 } else {
                     const divEl = document.createElement('div');
-                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg notification-item';
+                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg';
                     divEl.innerHTML = contentHTML;
-                    notificationList.appendChild(divEl);
+                    itemWrapper.appendChild(divEl);
                 }
+                notificationList.appendChild(itemWrapper);
             });
         };
 
+        async function deleteNotification(id) {
+            try {
+                await deleteDoc(doc(db, "notifications", id));
+            } catch (error) {
+                console.error("Erro ao apagar notificação:", error);
+            }
+        }
+
         notificationList.addEventListener('click', (e) => {
-            const item = e.target.closest('.notification-item');
+            const item = e.target.closest('.notification-item > *');
+            const deleteBtn = e.target.closest('.delete-notification-btn');
+
+            if (deleteBtn) {
+                const notifId = deleteBtn.dataset.id;
+                deleteNotification(notifId);
+                return;
+            }
+            
             if(item && item.dataset.contentId) {
                 const contentData = allContent.find(c => c.id === item.dataset.contentId);
                 if(contentData) {

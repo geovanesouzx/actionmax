@@ -20,6 +20,7 @@ body {
     border-radius: 0.5rem;
     overflow: hidden;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    position: relative; /* Necessário para o posicionamento da avaliação */
 }
 .movie-card img {
     width: 100%;
@@ -52,10 +53,9 @@ body {
     transform: scale(1.03); 
 }
 
-/* ESTILOS DE NAVEGAÇÃO ATIVA */
 .nav-link.active {
-    color: #f9f9f9; /* Garante que o texto fique branco */
-    border-color: #8b5cf6; /* Borda inferior roxa para desktop */
+    color: #f9f9f9;
+    border-color: #8b5cf6;
 }
 
 .mobile-nav-link {
@@ -67,8 +67,8 @@ body {
 }
 
 .mobile-nav-link.active { 
-    background-color: #8b5cf6; /* Fundo roxo para mobile */
-    color: #f9f9f9; /* Ícone e texto brancos */
+    background-color: #8b5cf6;
+    color: #f9f9f9;
 }
 
 
@@ -96,32 +96,30 @@ body {
     transition: color 0.2s; 
 }
 .star-rating:hover .fa-star { 
-    color: #f6e05e; 
+    color: #facc15; /* Amarelo no hover geral */
 }
 .star-rating .fa-star:hover ~ .fa-star { 
     color: #4a5568; 
 }
-.star-rating .fa-star.selected { 
-    color: #f6e05e; 
-}
-.like-dislike-btn.active {
-    color: #a78bfa;
-}
-.like-dislike-btn .fa-solid {
-    display: none;
-}
-.like-dislike-btn.active .fa-regular {
-    display: none;
-}
-.like-dislike-btn.active .fa-solid {
-    display: inline-block;
-}
-.social-share-btn {
-    transition: color 0.2s ease, transform 0.2s ease;
-}
-.social-share-btn:hover {
-    color: #a78bfa;
-    transform: scale(1.1);
+/* Cores baseadas na classificação */
+.star-rating.rating-1 .fa-star.selected, .card-rating.rating-1, .rating-1 .fa-star { color: #ef4444 !important; } /* Vermelho */
+.star-rating.rating-3 .fa-star.selected, .card-rating.rating-3, .rating-3 .fa-star { color: #f97316 !important; } /* Laranja */
+.star-rating.rating-5 .fa-star.selected, .card-rating.rating-5, .rating-5 .fa-star { color: #facc15 !important; } /* Amarelo */
+
+/* Estilo para a avaliação no card */
+.card-rating {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 .like-btn.liked { 
     color: #fb7185; 
@@ -224,7 +222,6 @@ body {
     }
 }
 
-/* NOVOS ESTILOS PARA A PÁGINA DE GÊNEROS */
 .genre-select-btn {
     background-color: rgba(255, 255, 255, 0.1);
     transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
@@ -239,4 +236,20 @@ body {
     color: white;
     border-color: #a78bfa;
     box-shadow: 0 0 15px rgba(167, 139, 250, 0.5);
+}
+.notification-item {
+    position: relative;
+}
+.delete-notification-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.delete-notification-btn:hover {
+    color: #ef4444;
 }
