@@ -113,8 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const seriesContainer = document.getElementById('series-container');
     const aovivoContainer = document.getElementById('aovivo-container');
     const embreveContainer = document.getElementById('embreve-container');
-    const upcomingEpisodesSection = document.getElementById('upcoming-episodes-section');
-    const upcomingEpisodesList = document.getElementById('upcoming-episodes-list');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -398,12 +396,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 seasonsSection.classList.add('hidden');
             }
 
-            if (data.emBreve && typeof data.emBreve === 'object') {
-                upcomingEpisodesSection.classList.remove('hidden');
-                renderUpcomingEpisodes(data.emBreve);
-            } else {
-                upcomingEpisodesSection.classList.add('hidden');
-            }
+            // A lógica para a seção separada de "em breve" foi removida daqui,
+            // pois agora os episódios em breve são mostrados dentro de suas temporadas.
+            document.getElementById('upcoming-episodes-section')?.classList.add('hidden');
+
 
             renderRecommendedCarousel(data);
         };
@@ -427,57 +423,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
                 const episodeTitle = (typeof episodeData === 'object' && episodeData.title) ? episodeData.title : '';
                 const openInNewTab = (typeof episodeData === 'object' && episodeData.openInNewTab === true);
+                const releaseDate = (typeof episodeData === 'object' && episodeData.releaseDate) ? episodeData.releaseDate : null;
 
                 const epCard = document.createElement('div');
-                epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
-                epCard.dataset.videoSrc = videoSrc;
-                epCard.dataset.episode = epNum;
-                epCard.dataset.openInNewTab = openInNewTab;
-                epCard.innerHTML = `
-                    <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
-                    <p class="font-semibold text-sm">Episódio ${epNum}</p>
-                    <p class="text-xs text-gray-400 text-center mt-1 w-full truncate" title="${episodeTitle}">${episodeTitle}</p>
-                `;
-                episodesList.appendChild(epCard);
-            });
-        };
 
-        const renderUpcomingEpisodes = (upcomingData) => {
-            upcomingEpisodesList.innerHTML = '';
-            Object.entries(upcomingData).forEach(([epNum, epInfo]) => {
-                const item = document.createElement('div');
-                item.className = 'bg-gray-800/50 rounded-lg p-3 flex justify-between items-center';
-                item.innerHTML = `
-                    <p class="font-semibold">Episódio ${epNum}: ${epInfo.title || ''}</p>
-                    <p class="text-sm text-gray-400">${epInfo.releaseDate || ''}</p>
-                `;
-                upcomingEpisodesList.appendChild(item);
+                if (releaseDate) {
+                    // Card de episódio "Em Breve"
+                    epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-not-allowed flex flex-col justify-center items-center opacity-60';
+                    epCard.innerHTML = `
+                        <i class="fas fa-clock text-3xl mb-2 text-gray-400"></i>
+                        <p class="font-semibold text-sm">Episódio ${epNum}</p>
+                        <p class="text-xs text-gray-400 text-center mt-1 w-full truncate" title="${episodeTitle}">${episodeTitle}</p>
+                        <p class="text-xs font-bold text-violet-300 mt-1">${releaseDate}</p>
+                    `;
+                } else {
+                    // Card de episódio normal (reproduzível)
+                    epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
+                    epCard.dataset.videoSrc = videoSrc;
+                    epCard.dataset.episode = epNum;
+                    epCard.dataset.openInNewTab = openInNewTab;
+                    epCard.innerHTML = `
+                        <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
+                        <p class="font-semibold text-sm">Episódio ${epNum}</p>
+                        <p class="text-xs text-gray-400 text-center mt-1 w-full truncate" title="${episodeTitle}">${episodeTitle}</p>
+                    `;
+                }
+                episodesList.appendChild(epCard);
             });
         };
 
         const findNextEpisode = (seasonNum, epNum) => {
             if (!seasonNum || !epNum || !currentDetailsData?.parsedSeasons) return null;
-            const seasons = currentDetailsData.parsedSeasons;
-            const seasonKeys = Object.keys(seasons).sort((a, b) => a - b);
-            const currentSeasonIndex = seasonKeys.indexOf(String(seasonNum));
             
-            const episodeKeys = Object.keys(seasons[seasonNum]).sort((a, b) => a - b);
-            const currentEpisodeIndex = episodeKeys.indexOf(String(epNum));
+            const seasons = currentDetailsData.parsedSeasons;
+            const seasonKeys = Object.keys(seasons).sort((a, b) => parseInt(a) - parseInt(b));
+            let currentSeasonIndex = seasonKeys.indexOf(String(seasonNum));
 
-            if (currentEpisodeIndex > -1 && currentEpisodeIndex < episodeKeys.length - 1) {
-                const nextEpNum = episodeKeys[currentEpisodeIndex + 1];
+            let episodeKeys = Object.keys(seasons[seasonNum]).sort((a, b) => parseInt(a) - parseInt(b));
+            let currentEpisodeIndex = episodeKeys.indexOf(String(epNum));
+
+            // Procura o próximo episódio na mesma temporada
+            for (let i = currentEpisodeIndex + 1; i < episodeKeys.length; i++) {
+                const nextEpNum = episodeKeys[i];
                 const nextEpData = seasons[seasonNum][nextEpNum];
-                return { src: nextEpData.src, season: seasonNum, episode: nextEpNum, openInNewTab: nextEpData.openInNewTab };
-            } else if (currentSeasonIndex > -1 && currentSeasonIndex < seasonKeys.length - 1) {
-                const nextSeasonNum = seasonKeys[currentSeasonIndex + 1];
-                const nextSeasonEpisodeKeys = Object.keys(seasons[nextSeasonNum]).sort((a, b) => a - b);
-                if(nextSeasonEpisodeKeys.length > 0) {
-                    const nextEpNum = nextSeasonEpisodeKeys[0];
-                    const nextEpData = seasons[nextSeasonNum][nextEpNum];
-                    return { src: nextEpData.src, season: nextSeasonNum, episode: nextEpNum, openInNewTab: nextEpData.openInNewTab };
+                // Verifica se o próximo episódio é reproduzível
+                if (nextEpData && !nextEpData.releaseDate) {
+                    return { 
+                        src: (typeof nextEpData === 'string') ? nextEpData : nextEpData.src, 
+                        season: seasonNum, 
+                        episode: nextEpNum, 
+                        openInNewTab: nextEpData.openInNewTab 
+                    };
                 }
             }
-            return null;
+
+            // Procura na próxima temporada
+            for (let i = currentSeasonIndex + 1; i < seasonKeys.length; i++) {
+                const nextSeasonNum = seasonKeys[i];
+                const nextSeasonEpisodeKeys = Object.keys(seasons[nextSeasonNum]).sort((a, b) => parseInt(a) - parseInt(b));
+                for (let j = 0; j < nextSeasonEpisodeKeys.length; j++) {
+                    const nextEpNum = nextSeasonEpisodeKeys[j];
+                    const nextEpData = seasons[nextSeasonNum][nextEpNum];
+                    // Verifica se o episódio é reproduzível
+                    if (nextEpData && !nextEpData.releaseDate) {
+                        return { 
+                            src: (typeof nextEpData === 'string') ? nextEpData : nextEpData.src, 
+                            season: nextSeasonNum, 
+                            episode: nextEpNum, 
+                            openInNewTab: nextEpData.openInNewTab 
+                        };
+                    }
+                }
+            }
+            
+            return null; // Nenhum próximo episódio reproduzível encontrado
         };
 
         const handleVideoEnd = () => {
@@ -975,20 +994,22 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsAddListBtn?.addEventListener('click', () => toggleMyList(currentDetailsData));
         
         detailsWatchBtn?.addEventListener('click', () => {
-            if (currentDetailsData) {
-                if (currentDetailsData.type === 'Filme' && currentDetailsData.videoSrc) {
-                    playContent(currentDetailsData.videoSrc, null, null, currentDetailsData.videoSrcNewTab);
-                } else if (currentDetailsData.type === 'Série') {
-                    const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => a-b)[0];
-                    if (firstSeasonNum) {
-                        const firstEpisodeNum = Object.keys(currentDetailsData.parsedSeasons[firstSeasonNum]).sort((a,b) => a-b)[0];
-                        if (firstEpisodeNum) {
-                            const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][firstEpisodeNum];
+            if (currentDetailsData && currentDetailsData.type === 'Série') {
+                const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => parseInt(a) - parseInt(b))[0];
+                if (firstSeasonNum) {
+                    const episodeKeys = Object.keys(currentDetailsData.parsedSeasons[firstSeasonNum]).sort((a,b) => parseInt(a) - parseInt(b));
+                    // Encontra o primeiro episódio que não está "em breve"
+                    for (const epNum of episodeKeys) {
+                        const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][epNum];
+                        if (!episodeData.releaseDate) {
                             const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
-                            playContent(videoSrc, firstSeasonNum, firstEpisodeNum, episodeData.openInNewTab);
+                            playContent(videoSrc, firstSeasonNum, epNum, episodeData.openInNewTab);
+                            return; // Sai depois de encontrar o primeiro reproduzível
                         }
                     }
                 }
+            } else if (currentDetailsData && currentDetailsData.type === 'Filme' && currentDetailsData.videoSrc) {
+                playContent(currentDetailsData.videoSrc, null, null, currentDetailsData.videoSrcNewTab);
             }
         });
 
@@ -1055,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         episodesList.addEventListener('click', (e) => {
             const epCard = e.target.closest('.episode-card');
-            if (epCard) {
+            if (epCard && epCard.dataset.videoSrc) { // Apenas clica se tiver videoSrc
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
                 playContent(epCard.dataset.videoSrc, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
             }
