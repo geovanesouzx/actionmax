@@ -128,7 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeRatings = null;
     let allContent = [];
     let allCategories = [];
-    let allNotifications = [];
+    let allNotifications = []; // Lista filtrada para o utilizador atual
+    let allFetchedNotifications = []; // Lista bruta da base de dados
+    let dismissedNotificationIds = new Set(); // IDs das notificações que o utilizador eliminou
+    let unsubscribeUserDoc = null; // Listener para o documento do utilizador
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
@@ -150,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appWrapper.classList.add('hidden');
             authWrapper.classList.remove('hidden');
             showAuthPage('welcome-page');
+            if (unsubscribeUserDoc) unsubscribeUserDoc(); // Limpa o listener ao fazer logout
             setTimeout(() => {
                 loadingScreen.classList.add('opacity-0');
                 loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
@@ -925,31 +929,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             if (!user) return;
 
+            if (unsubscribeUserDoc) unsubscribeUserDoc();
+
+            const userDocRef = doc(db, "users", user.uid);
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                const userData = docSnap.data();
+                dismissedNotificationIds = new Set(userData?.dismissedNotifications || []);
+                filterAndDisplayNotifications();
+            });
+
             const q = query(collection(db, "notifications"));
             onSnapshot(q, (snapshot) => {
-                const allFetchedNotifications = [];
-                snapshot.forEach(doc => allFetchedNotifications.push({id: doc.id, ...doc.data()}));
-
-                allNotifications = allFetchedNotifications.filter(notif => {
-                    if (!notif.targetUids || notif.targetUids.length === 0) {
-                        return true;
-                    }
-                    return notif.targetUids.includes(user.uid);
-                });
-
-                allNotifications.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-                
-                const lastChecked = localStorage.getItem('lastCheckedNotifications');
-                const newNotifications = allNotifications.filter(n => !lastChecked || n.createdAt?.toDate() > new Date(lastChecked));
-                
-                if (newNotifications.length > 0) {
-                    notificationBadge.textContent = newNotifications.length;
-                    notificationBadge.classList.remove('hidden');
-                } else {
-                    notificationBadge.classList.add('hidden');
-                }
+                allFetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                filterAndDisplayNotifications();
             });
         };
+
+        function filterAndDisplayNotifications() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            allNotifications = allFetchedNotifications.filter(notif => {
+                const isTargeted = !notif.targetUids || notif.targetUids.length === 0 || notif.targetUids.includes(user.uid);
+                const isDismissed = dismissedNotificationIds.has(notif.id);
+                return isTargeted && !isDismissed;
+            });
+
+            allNotifications.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            
+            const lastChecked = localStorage.getItem('lastCheckedNotifications');
+            const newNotifications = allNotifications.filter(n => !lastChecked || n.createdAt?.toDate() > new Date(lastChecked));
+            
+            if (newNotifications.length > 0) {
+                notificationBadge.textContent = newNotifications.length;
+                notificationBadge.classList.remove('hidden');
+            } else {
+                notificationBadge.classList.add('hidden');
+            }
+            
+            if (!notificationModalOverlay.classList.contains('hidden')) {
+                renderNotifications();
+            }
+        }
 
         const renderNotifications = () => {
             notificationList.innerHTML = '';
@@ -994,11 +1015,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        async function deleteNotification(id) {
+        async function dismissNotification(id) {
+            const user = auth.currentUser;
+            if (!user || !id) return;
             try {
-                await deleteDoc(doc(db, "notifications", id));
+                const userDocRef = doc(db, "users", user.uid);
+                await updateDoc(userDocRef, {
+                    dismissedNotifications: arrayUnion(id)
+                });
             } catch (error) {
-                console.error("Erro ao apagar notificação:", error);
+                if (error.code === 'not-found' || error.message.includes("No document to update")) {
+                     const userDocRef = doc(db, "users", user.uid);
+                     await setDoc(userDocRef, { dismissedNotifications: [id] }, { merge: true });
+                } else {
+                    console.error("Erro ao dispensar notificação:", error);
+                }
             }
         }
 
@@ -1008,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (deleteBtn) {
                 const notifId = deleteBtn.dataset.id;
-                deleteNotification(notifId);
+                dismissNotification(notifId);
                 return;
             }
             
