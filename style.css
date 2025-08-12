@@ -201,6 +201,11 @@ body {
     border: 2px solid #1f2937;
 }
 
+/* Correção para as imagens de fundo não serem cortadas */
+#hero-bg-desktop, #hero-bg-mobile, #details-bg-desktop, #details-bg-mobile {
+    object-fit: contain; /* Garante que a imagem inteira seja visível */
+}
+
 /* Regras para imagens de fundo responsivas */
 #hero-bg-mobile, #details-bg-mobile {
     display: none; /* Esconde a imagem mobile por padrão */
