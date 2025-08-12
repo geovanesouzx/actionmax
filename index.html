@@ -257,7 +257,6 @@
                                         <i id="details-add-list-icon" class="fas fa-plus"></i>
                                         <span id="details-add-list-text">Minha Lista</span>
                                     </button>
-                                    <!-- NOVO BOTÃO DE PARTILHA -->
                                     <button id="details-share-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
                                         <i class="fas fa-share-alt"></i>
                                         <span>Partilhar</span>
@@ -465,19 +464,19 @@
     </div>
 
     <!-- Modal de Notificações -->
-    <div id="notification-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0">
-        <div id="notification-modal" class="modal fixed top-24 right-4 sm:right-8 lg:right-12 w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
-            <div class="flex justify-between items-center mb-4">
+    <div id="notification-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
+        <div id="notification-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl text-white transform scale-95 opacity-0">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h2 class="text-xl font-bold">Notificações</h2>
                 <button id="close-notification-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
-            <div id="notification-list" class="space-y-4 max-h-[60vh] overflow-y-auto">
+            <div id="notification-list" class="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
                  <!-- Notificações do Firebase serão injetadas aqui -->
             </div>
         </div>
     </div>
 
-    <!-- NOVO MODAL DE PARTILHA -->
+    <!-- Modal de Partilha -->
     <div id="share-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
         <div id="share-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
             <div class="flex justify-between items-center mb-4">
