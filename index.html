@@ -257,6 +257,11 @@
                                         <i id="details-add-list-icon" class="fas fa-plus"></i>
                                         <span id="details-add-list-text">Minha Lista</span>
                                     </button>
+                                    <!-- NOVO BOTÃO DE PARTILHA -->
+                                    <button id="details-share-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
+                                        <i class="fas fa-share-alt"></i>
+                                        <span>Partilhar</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -469,6 +474,22 @@
             <div id="notification-list" class="space-y-4 max-h-[60vh] overflow-y-auto">
                  <!-- Notificações do Firebase serão injetadas aqui -->
             </div>
+        </div>
+    </div>
+
+    <!-- NOVO MODAL DE PARTILHA -->
+    <div id="share-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
+        <div id="share-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Partilhar</h2>
+                <button id="close-share-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <p class="text-gray-300 mb-4">Copie o link abaixo para partilhar:</p>
+            <div class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg">
+                <input type="text" id="share-link-input" readonly class="w-full bg-transparent border-none text-gray-300 focus:ring-0 p-2">
+                <button id="copy-link-btn" class="btn-primary text-white font-semibold py-2 px-4 rounded-lg whitespace-nowrap">Copiar</button>
+            </div>
+            <p id="copy-feedback" class="text-green-400 text-sm h-4 mt-2 text-center"></p>
         </div>
     </div>
 

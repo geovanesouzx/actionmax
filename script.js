@@ -110,6 +110,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const genreResultsContainer = document.getElementById('genre-results-container');
     const genreResultsTitle = document.getElementById('genre-results-title');
     const genreResultsEmpty = document.getElementById('genre-results-empty');
+    // Seletores para a funcionalidade de partilha
+    const detailsShareBtn = document.getElementById('details-share-btn');
+    const shareModalOverlay = document.getElementById('share-modal-overlay');
+    const shareModal = document.getElementById('share-modal');
+    const closeShareBtn = document.getElementById('close-share-btn');
+    const shareLinkInput = document.getElementById('share-link-input');
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    const copyFeedback = document.getElementById('copy-feedback');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -230,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
             new Swiper(container, {
                 slidesPerView: 2.2, 
                 spaceBetween: 16,
-                // OPÇÕES PARA SUAVIDADE
                 freeMode: true,
                 freeModeMomentum: true,
                 speed: 600, 
@@ -257,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loop: true,
                 slidesPerView: 'auto',
                 spaceBetween: 16,
-                // OPÇÕES PARA SUAVIDADE
                 freeMode: true,
                 freeModeMomentum: true,
                 speed: 600,
@@ -1083,6 +1089,38 @@ document.addEventListener('DOMContentLoaded', () => {
         changeUsernameBtn.addEventListener('click', () => openModal(usernameModalOverlay, usernameModal));
         closeUsernameBtn.addEventListener('click', () => closeModal(usernameModalOverlay, usernameModal));
         usernameModalOverlay.addEventListener('click', (e) => { if (e.target === usernameModalOverlay) closeModal(usernameModalOverlay, usernameModal); });
+
+        // Event listeners de partilha
+        detailsShareBtn?.addEventListener('click', () => {
+            if (currentDetailsData) {
+                const shareUrl = `${window.location.origin}${window.location.pathname}#/details/${currentDetailsData.id}`;
+                shareLinkInput.value = shareUrl;
+                copyFeedback.textContent = '';
+                openModal(shareModalOverlay, shareModal);
+            }
+        });
+
+        copyLinkBtn?.addEventListener('click', () => {
+            shareLinkInput.select();
+            shareLinkInput.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                copyFeedback.textContent = 'Link copiado!';
+            } catch (err) {
+                console.error('Falha ao copiar o link: ', err);
+                copyFeedback.textContent = 'Erro ao copiar.';
+            }
+
+            setTimeout(() => {
+                copyFeedback.textContent = '';
+            }, 2000);
+        });
+
+        closeShareBtn?.addEventListener('click', () => closeModal(shareModalOverlay, shareModal));
+        shareModalOverlay?.addEventListener('click', (e) => { 
+            if (e.target === shareModalOverlay) closeModal(shareModalOverlay, shareModal); 
+        });
 
         seasonSelector.addEventListener('click', (e) => {
             if (e.target.matches('.season-btn')) {
