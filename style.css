@@ -13,19 +13,29 @@ body {
     -webkit-backdrop-filter: blur(10px); 
     border-color: rgba(255, 255, 255, 0.1); 
 }
+/* ATUALIZADO: Correção da animação do card */
 .movie-card { 
-    transition: transform 0.3s ease, box-shadow 0.3s ease; 
     border: 2px solid transparent; 
     cursor: pointer; 
     aspect-ratio: 2 / 3; 
-    border-radius: 0.5rem; /* Garante que os cantos sejam sempre arredondados */
-    overflow: hidden;      /* Garante que a imagem interna seja cortada */
+    border-radius: 0.5rem; /* Garante que o raio da borda seja consistente */
+    overflow: hidden; /* Essencial para conter a imagem com zoom */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.movie-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
 }
 .movie-card:hover { 
-    transform: scale(1.05); 
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); 
     border-color: rgba(167, 139, 250, 0.8); 
 }
+.movie-card:hover img {
+    transform: scale(1.05); /* Aplica o zoom apenas na imagem */
+}
+
 .btn-primary { 
     background-color: #8b5cf6; 
     transition: background-color 0.3s ease, transform 0.2s ease; 
@@ -63,21 +73,40 @@ body {
     box-shadow: 0 0 20px rgba(167, 139, 250, 0.7); 
     transform: scale(1.08); 
 }
-/* Estilos de Avaliação com Estrelas */
 .star-rating .fa-star { 
     color: #4a5568; 
     cursor: pointer; 
     transition: color 0.2s; 
 }
-.star-rating:hover .fa-star { color: #f6e05e; }
-.star-rating .fa-star:hover ~ .fa-star { color: #4a5568; }
-.star-rating .fa-star.selected,
-.star-rating.rating-5 .fa-star { color: #f6e05e; } /* Amarelo */
-.star-rating.rating-3 .fa-star,
-.star-rating.rating-4 .fa-star { color: #f97316; } /* Laranja */
-.star-rating.rating-1 .fa-star,
-.star-rating.rating-2 .fa-star { color: #ef4444; } /* Vermelho */
-
+.star-rating:hover .fa-star { 
+    color: #f6e05e; 
+}
+.star-rating .fa-star:hover ~ .fa-star { 
+    color: #4a5568; 
+}
+.star-rating .fa-star.selected { 
+    color: #f6e05e; 
+}
+/* Estilos para botões de Gosto/Não Gosto */
+.like-dislike-btn.active {
+    color: #a78bfa;
+}
+.like-dislike-btn .fa-solid {
+    display: none;
+}
+.like-dislike-btn.active .fa-regular {
+    display: none;
+}
+.like-dislike-btn.active .fa-solid {
+    display: inline-block;
+}
+.social-share-btn {
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.social-share-btn:hover {
+    color: #a78bfa;
+    transform: scale(1.1);
+}
 .like-btn.liked { 
     color: #fb7185; 
 }
@@ -126,7 +155,7 @@ body {
     transform: translateY(-4px); 
     background-color: rgba(255, 255, 255, 0.15); 
 }
-#player-container iframe { 
+#player-container iframe, #player-container video { 
     width: 100%; 
     height: 100%; 
     border: none; 
@@ -153,29 +182,25 @@ body {
     margin-left: 1.5rem; 
     margin-bottom: 1rem; 
 }
-/* Avaliação na capa do filme */
-.card-rating {
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    border-radius: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-.card-rating .fa-star {
-    font-size: 0.75rem;
-}
-.rating-1 .fa-star, .rating-2 .fa-star { color: #ef4444; }
-.rating-3 .fa-star, .rating-4 .fa-star { color: #f97316; }
-.rating-5 .fa-star { color: #f6e05e; }
 
-/* ATUALIZADO: Regras para imagens de fundo responsivas */
+/* Estilos do Chat da Watch Party */
+#chat-messages {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937;
+}
+#chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+#chat-messages::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+#chat-messages::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 10px;
+    border: 2px solid #1f2937;
+}
+
+/* Regras para imagens de fundo responsivas */
 #hero-bg-mobile, #details-bg-mobile {
     display: none; /* Esconde a imagem mobile por padrão */
 }
