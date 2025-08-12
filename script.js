@@ -1444,6 +1444,3 @@ document.addEventListener('DOMContentLoaded', () => {
         setupRealtimeListeners();
     }
 });
-</script>
-</body>
-</html>
