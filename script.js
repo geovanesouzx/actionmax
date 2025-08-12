@@ -319,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pageContents.forEach(page => page.classList.add('hidden'));
             
             if (isDetailsPage) {
-                // Limpa as imagens antigas para evitar o "flash" de conteúdo anterior
                 document.getElementById('details-bg-desktop').src = '';
                 document.getElementById('details-bg-mobile').src = '';
                 document.getElementById('details-poster').src = '';
@@ -364,6 +363,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 document.getElementById('inicio-page')?.classList.remove('hidden');
             }
+            
+            // ATUALIZAÇÃO: Adicionado controle da classe 'active' para desktop
+            const desktopNavLinks = document.querySelectorAll('header nav > a.nav-link');
+            desktopNavLinks.forEach(link => {
+                link.classList.toggle('active', link.dataset.target === pageId);
+            });
             mobileNavLinks.forEach(link => link.classList.toggle('active', link.dataset.target === pageId));
             window.scrollTo(0, 0);
         };
@@ -747,7 +752,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // --- NOVA LÓGICA DE GÊNEROS ---
         const renderGenresPage = () => {
             const allGenres = [...new Set(allContent.flatMap(item => item.genre || []))].sort();
             genresSelectionContainer.innerHTML = '';
@@ -760,21 +764,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 genresSelectionContainer.appendChild(btn);
             });
 
-            // Limpa resultados anteriores ao carregar a página
             genreResultsContainer.innerHTML = '';
             genreResultsTitle.classList.add('hidden');
             genreResultsEmpty.classList.add('hidden');
         };
 
         const displayGenreResults = (genre) => {
-            // Atualiza o título e o torna visível
             genreResultsTitle.textContent = `Resultados para: ${genre}`;
             genreResultsTitle.classList.remove('hidden');
 
-            // Filtra o conteúdo
             const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre));
             
-            // Renderiza os resultados ou a mensagem de vazio
             if (genreContent.length > 0) {
                 genreResultsContainer.innerHTML = genreContent.map(itemData => createCardHTML(itemData)).join('');
                 genreResultsEmpty.classList.add('hidden');
@@ -783,7 +783,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 genreResultsEmpty.classList.remove('hidden');
             }
 
-            // Destaca o botão de gênero ativo
             document.querySelectorAll('.genre-select-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.genre === genre);
             });
@@ -1394,7 +1393,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (hash.startsWith('#/generos/')) {
                         const genreName = decodeURIComponent(hash.split('/')[2]);
                         showPage('generos-page', false);
-                        // A pequena espera garante que a página de gêneros e os botões sejam renderizados antes de tentarmos clicar em um
                         setTimeout(() => displayGenreResults(genreName), 100);
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
