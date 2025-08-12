@@ -106,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const seriesContainer = document.getElementById('series-container');
     const aovivoContainer = document.getElementById('aovivo-container');
     const embreveContainer = document.getElementById('embreve-container');
-    // Novos seletores para a página de Gêneros
     const genresSelectionContainer = document.getElementById('genres-selection-container');
     const genreResultsContainer = document.getElementById('genre-results-container');
     const genreResultsTitle = document.getElementById('genre-results-title');
@@ -126,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
-    let lastSelectedSeason = {}; // Objeto para memorizar a última temporada vista por série
+    let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
 
     // --- Lógica de Autenticação do Firebase ---
@@ -364,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('inicio-page')?.classList.remove('hidden');
             }
             
-            // ATUALIZAÇÃO: Adicionado controle da classe 'active' para desktop
             const desktopNavLinks = document.querySelectorAll('header nav > a.nav-link');
             desktopNavLinks.forEach(link => {
                 link.classList.toggle('active', link.dataset.target === pageId);
@@ -524,7 +522,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         };
 
-        const playContent = (src, seasonNum = null, epNum = null, openInNewTab = false) => {
+        // FUNÇÃO ATUALIZADA PARA CORRIGIR O BUG DOS CANAIS AO VIVO
+        const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
             if (openInNewTab) {
                 window.open(src, '_blank');
                 return;
@@ -535,12 +534,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             clearInterval(watchProgressInterval);
 
-            currentPlaying = {
-                season: seasonNum,
-                episode: epNum,
-                nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
-                contentId: currentDetailsData.id
-            };
+            // Garante que currentDetailsData seja definido, importante para a lógica do botão 'voltar'
+            if (!currentDetailsData || currentDetailsData.id !== contentData.id) {
+                currentDetailsData = contentData;
+            }
+            
+            if (isTrailer) {
+                currentPlaying = { contentId: `${contentData.id}-trailer`, season: null, episode: null, nextEpisodeInfo: null };
+            } else {
+                currentPlaying = {
+                    season: seasonNum,
+                    episode: epNum,
+                    nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
+                    contentId: contentData.id
+                };
+            }
 
             const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
             const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
@@ -557,28 +565,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoEl.controlsList = "nodownload";
                 videoEl.innerHTML = `<source src="${src}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
                 
-                videoEl.addEventListener('loadedmetadata', () => {
-                    const progress = watchHistory[currentPlaying.contentId];
-                    if (progress && progress.currentTime) {
-                        videoEl.currentTime = progress.currentTime;
-                    }
-                });
+                if (!isTrailer) {
+                    videoEl.addEventListener('loadedmetadata', () => {
+                        const progress = watchHistory[currentPlaying.contentId];
+                        if (progress && progress.currentTime) {
+                            videoEl.currentTime = progress.currentTime;
+                        }
+                    });
 
-                videoEl.addEventListener('ended', handleVideoEnd);
+                    videoEl.addEventListener('ended', handleVideoEnd);
+                    watchProgressInterval = setInterval(() => {
+                        if (!videoEl.paused) {
+                            updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
+                        }
+                    }, 10000);
+                }
                 playerContainer.appendChild(videoEl);
 
-                watchProgressInterval = setInterval(() => {
-                    if (!videoEl.paused) {
-                        updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
-                    }
-                }, 10000);
             } else if (src.trim().startsWith('http')) {
                 playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
             }
 
-            showPage('player-page', true, currentDetailsData);
+            showPage('player-page', true, contentData);
             if (window.innerWidth < 768) {
                 playerPage.requestFullscreen?.();
                 screen.orientation?.lock('landscape').catch(err => console.log("Falha ao travar orientação:", err));
@@ -590,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nextEpisodeOverlay.classList.add('hidden');
             nextEpisodeOverlay.classList.remove('flex');
             const next = currentPlaying.nextEpisodeInfo;
-            if (next) playContent(next.src, next.season, next.episode, next.openInNewTab);
+            if (next) playContent(next.src, currentDetailsData, next.season, next.episode, next.openInNewTab);
         });
 
         cancelNextBtn.addEventListener('click', () => {
@@ -973,7 +983,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cardData = allContent.find(item => item.id === card.dataset.id);
                 if (cardData) {
                     if (cardData.type === 'Canal') {
-                        playContent(cardData.videoSrc, null, null, cardData.videoSrcNewTab);
+                        // CORREÇÃO: Passa o objeto `cardData` completo para a função playContent
+                        playContent(cardData.videoSrc, cardData, null, null, cardData.videoSrcNewTab);
                     } else {
                         if (!searchModalOverlay.classList.contains('hidden')) {
                             closeModal(searchModalOverlay);
@@ -1008,19 +1019,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][epNum];
                         if (!episodeData.releaseDate) {
                             const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
-                            playContent(videoSrc, firstSeasonNum, epNum, episodeData.openInNewTab);
+                            playContent(videoSrc, currentDetailsData, firstSeasonNum, epNum, episodeData.openInNewTab);
                             return;
                         }
                     }
                 }
-            } else if (currentDetailsData && currentDetailsData.type === 'Filme' && currentDetailsData.videoSrc) {
-                playContent(currentDetailsData.videoSrc, null, null, currentDetailsData.videoSrcNewTab);
+            } else if (currentDetailsData && currentDetailsData.type === 'Filme') {
+                playContent(currentDetailsData.videoSrc, currentDetailsData, null, null, currentDetailsData.videoSrcNewTab);
             }
         });
 
         detailsTrailerBtn?.addEventListener('click', () => {
             if (currentDetailsData && currentDetailsData.trailerSrc) {
-                playContent(currentDetailsData.trailerSrc);
+                playContent(currentDetailsData.trailerSrc, currentDetailsData, null, null, false, true);
             }
         });
 
@@ -1030,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         heroWatchBtn.addEventListener('click', () => {
             const heroData = allContent.find(item => item.id === heroSection.dataset.id);
-            if (heroData) playContent(heroData.videoSrc, null, null, heroData.videoSrcNewTab);
+            if (heroData) playContent(heroData.videoSrc, heroData, null, null, heroData.videoSrcNewTab);
         });
         heroAddListBtn.addEventListener('click', () => {
              const heroData = allContent.find(item => item.id === heroSection.dataset.id);
@@ -1080,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const epCard = e.target.closest('.episode-card');
             if (epCard && epCard.dataset.videoSrc) {
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
-                playContent(epCard.dataset.videoSrc, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
+                playContent(epCard.dataset.videoSrc, currentDetailsData, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
             }
         });
 
