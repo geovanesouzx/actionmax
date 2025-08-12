@@ -407,11 +407,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const episodeData = episodes[epNum];
                 const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
                 const episodeTitle = (typeof episodeData === 'object' && episodeData.title) ? episodeData.title : '';
+                const openInNewTab = (typeof episodeData === 'object' && episodeData.openInNewTab === true);
 
                 const epCard = document.createElement('div');
                 epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
                 epCard.dataset.videoSrc = videoSrc;
                 epCard.dataset.episode = epNum;
+                epCard.dataset.openInNewTab = openInNewTab;
                 epCard.innerHTML = `
                     <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
                     <p class="font-semibold text-sm">Episódio ${epNum}</p>
@@ -445,13 +447,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (currentEpisodeIndex > -1 && currentEpisodeIndex < episodeKeys.length - 1) {
                 const nextEpNum = episodeKeys[currentEpisodeIndex + 1];
-                return { src: seasons[seasonNum][nextEpNum], season: seasonNum, episode: nextEpNum };
+                const nextEpData = seasons[seasonNum][nextEpNum];
+                return { src: nextEpData.src, season: seasonNum, episode: nextEpNum, openInNewTab: nextEpData.openInNewTab };
             } else if (currentSeasonIndex > -1 && currentSeasonIndex < seasonKeys.length - 1) {
                 const nextSeasonNum = seasonKeys[currentSeasonIndex + 1];
                 const nextSeasonEpisodeKeys = Object.keys(seasons[nextSeasonNum]).sort((a, b) => a - b);
                 if(nextSeasonEpisodeKeys.length > 0) {
                     const nextEpNum = nextSeasonEpisodeKeys[0];
-                    return { src: seasons[nextSeasonNum][nextEpNum], season: nextSeasonNum, episode: nextEpNum };
+                    const nextEpData = seasons[nextSeasonNum][nextEpNum];
+                    return { src: nextEpData.src, season: nextSeasonNum, episode: nextEpNum, openInNewTab: nextEpData.openInNewTab };
                 }
             }
             return null;
@@ -488,7 +492,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         };
 
-        const playContent = (src, seasonNum = null, epNum = null) => {
+        const playContent = (src, seasonNum = null, epNum = null, openInNewTab = false) => {
+            if (openInNewTab) {
+                window.open(src, '_blank');
+                return;
+            }
+
             playerContainer.innerHTML = '';
             if (!src) return;
 
@@ -550,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nextEpisodeOverlay.classList.add('hidden');
             nextEpisodeOverlay.classList.remove('flex');
             const next = currentPlaying.nextEpisodeInfo;
-            if (next) playContent(next.src, next.season, next.episode);
+            if (next) playContent(next.src, next.season, next.episode, next.openInNewTab);
         });
 
         cancelNextBtn.addEventListener('click', () => {
@@ -920,7 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cardData = allContent.find(item => item.id === card.dataset.id);
                 if (cardData) {
                     if (cardData.type === 'Canal') {
-                        playContent(cardData.videoSrc);
+                        playContent(cardData.videoSrc, null, null, cardData.videoSrcNewTab);
                     } else {
                         if (!searchModalOverlay.classList.contains('hidden')) {
                             closeModal(searchModalOverlay);
@@ -949,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsWatchBtn?.addEventListener('click', () => {
             if (currentDetailsData) {
                 if (currentDetailsData.type === 'Filme' && currentDetailsData.videoSrc) {
-                    playContent(currentDetailsData.videoSrc);
+                    playContent(currentDetailsData.videoSrc, null, null, currentDetailsData.videoSrcNewTab);
                 } else if (currentDetailsData.type === 'Série') {
                     const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => a-b)[0];
                     if (firstSeasonNum) {
@@ -957,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (firstEpisodeNum) {
                             const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][firstEpisodeNum];
                             const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
-                            playContent(videoSrc, firstSeasonNum, firstEpisodeNum);
+                            playContent(videoSrc, firstSeasonNum, firstEpisodeNum, episodeData.openInNewTab);
                         }
                     }
                 }
@@ -976,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         heroWatchBtn.addEventListener('click', () => {
             const heroData = allContent.find(item => item.id === heroSection.dataset.id);
-            if (heroData) playContent(heroData.videoSrc);
+            if (heroData) playContent(heroData.videoSrc, null, null, heroData.videoSrcNewTab);
         });
         heroAddListBtn.addEventListener('click', () => {
              const heroData = allContent.find(item => item.id === heroSection.dataset.id);
@@ -1029,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const epCard = e.target.closest('.episode-card');
             if (epCard) {
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
-                playContent(epCard.dataset.videoSrc, activeSeasonBtn.dataset.season, epCard.dataset.episode);
+                playContent(epCard.dataset.videoSrc, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
             }
         });
 
