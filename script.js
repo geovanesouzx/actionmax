@@ -652,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                     avatarCategoryContainer.appendChild(catDiv);
-                    initAvatarCarousel(catDiv.querySelector('.avatar-carousel'));
+                    initCarousel(catDiv.querySelector('.avatar-carousel'));
                 }
                 updateSelectedAvatarVisual();
             });
@@ -1365,6 +1365,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 onSnapshot(contentQuery, (snapshot) => {
                     allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                     renderAllPages(); 
+                    // ATUALIZAÇÃO: Verifica se a página de detalhes precisa ser atualizada
+                    if (currentDetailsData) {
+                        const updatedData = allContent.find(item => item.id === currentDetailsData.id);
+                        if(updatedData) {
+                            currentDetailsData = updatedData;
+                            populateDetailsPage(updatedData);
+                        } else {
+                            // O item foi excluído, volta para a página anterior
+                            history.back();
+                        }
+                    }
                 });
 
                 onSnapshot(categoriesQuery, (snapshot) => {
