@@ -230,7 +230,13 @@ document.addEventListener('DOMContentLoaded', () => {
             new Swiper(container, {
                 slidesPerView: 2.2, 
                 spaceBetween: 16,
-                mousewheel: true,
+                // OPÇÕES PARA SUAVIDADE
+                freeMode: true,
+                freeModeMomentum: true,
+                speed: 600, 
+                mousewheel: {
+                    forceToAxis: true,
+                },
                 navigation: {
                     nextEl: container.parentElement.querySelector('.swiper-button-next'),
                     prevEl: container.parentElement.querySelector('.swiper-button-prev'),
@@ -251,7 +257,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 loop: true,
                 slidesPerView: 'auto',
                 spaceBetween: 16,
-                mousewheel: true,
+                // OPÇÕES PARA SUAVIDADE
+                freeMode: true,
+                freeModeMomentum: true,
+                speed: 600,
+                mousewheel: {
+                    forceToAxis: true,
+                },
                 navigation: {
                     nextEl: container.parentElement.querySelector('.swiper-button-next'),
                     prevEl: container.parentElement.querySelector('.swiper-button-prev'),
@@ -691,7 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                     avatarCategoryContainer.appendChild(catDiv);
-                    // CORREÇÃO: Chamando a função correta do carrossel com loop infinito
                     initAvatarCarousel(catDiv.querySelector('.avatar-carousel'));
                 }
                 updateSelectedAvatarVisual();
@@ -1319,7 +1330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(([id, data]) => ({ id, ...data }))
                 .filter(item => item.currentTime && item.duration);
 
-            historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.watchedAt?.toDate() || 0));
+            historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
             if (historyItems.length === 0) return;
 
