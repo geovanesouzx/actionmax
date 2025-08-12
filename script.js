@@ -30,12 +30,12 @@ import {
 
 // Configuração do Firebase
 const firebaseConfig = {
- apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
- authDomain: "action-max.firebaseapp.com",
- projectId: "action-max",
- storageBucket: "action-max.appspot.com",
- messagingSenderId: "183609340889",
- appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
+    apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
+    authDomain: "action-max.firebaseapp.com",
+    projectId: "action-max",
+    storageBucket: "action-max.appspot.com",
+    messagingSenderId: "183609340889",
+    appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
 };
 
 // Inicialização do Firebase
@@ -219,6 +219,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lógica Principal da Aplicação ---
     function initializeAppLogic() {
         appWrapper.classList.remove('opacity-0');
+
+        // --- Funções Auxiliares ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
 
         const initCarousel = (container) => {
             if (!container) return;
@@ -1140,17 +1149,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderHomeCarousels = () => {
             homeCarousels.innerHTML = '';
             allCategories.forEach(category => {
-                let categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
-                
-                const orderedIds = category.contentOrder || [];
-                categoryContent.sort((a, b) => {
-                    const indexA = orderedIds.indexOf(a.id);
-                    const indexB = orderedIds.indexOf(b.id);
-                    if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title);
-                    if (indexA === -1) return 1;
-                    if (indexB === -1) return -1;
-                    return indexA - indexB;
-                });
+                let categoryContent = [];
+
+                // LÓGICA DE ROTAÇÃO AUTOMÁTICA
+                if (category.autoRotate && category.rotateGenre) {
+                    const potentialContent = allContent.filter(item => 
+                        Array.isArray(item.genre) && item.genre.includes(category.rotateGenre)
+                    );
+                    categoryContent = shuffleArray([...potentialContent]).slice(0, 20); // Pega até 20 itens aleatórios
+                } 
+                // LÓGICA EXISTENTE
+                else {
+                    categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
+                    
+                    const orderedIds = category.contentOrder || [];
+                    categoryContent.sort((a, b) => {
+                        const indexA = orderedIds.indexOf(a.id);
+                        const indexB = orderedIds.indexOf(b.id);
+                        if (indexA === -1 && indexB === -1) return a.title.localeCompare(b.title);
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+                        return indexA - indexB;
+                    });
+                }
 
                 if (categoryContent.length > 0) {
                      const slidesHTML = categoryContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
@@ -1402,3 +1423,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupRealtimeListeners();
     }
 });
+</script>
+</body>
+</html>
