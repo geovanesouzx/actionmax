@@ -21,11 +21,12 @@ body {
     border-radius: 0.5rem; /* Garante que o raio da borda seja consistente */
     overflow: hidden; /* Essencial para conter a imagem com zoom */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: #000; /* Adicionado para preencher espaços vazios */
 }
 .movie-card img {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* Alterado de 'cover' para 'contain' para evitar cortes */
+    object-fit: contain; /* Mantido para evitar cortes na imagem */
     transition: transform 0.3s ease;
 }
 .movie-card:hover { 
