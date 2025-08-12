@@ -13,20 +13,19 @@ body {
     -webkit-backdrop-filter: blur(10px); 
     border-color: rgba(255, 255, 255, 0.1); 
 }
-/* Estilo dos cards dos filmes (revertido para o original) */
+/* ATUALIZADO: Correção da animação do card */
 .movie-card { 
     border: 2px solid transparent; 
     cursor: pointer; 
     aspect-ratio: 2 / 3; 
-    border-radius: 0.5rem;
-    overflow: hidden;
+    border-radius: 0.5rem; /* Garante que o raio da borda seja consistente */
+    overflow: hidden; /* Essencial para conter a imagem com zoom */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    background-color: #000;
 }
 .movie-card img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Revertido para 'cover' para preencher o card */
+    object-fit: cover;
     transition: transform 0.3s ease;
 }
 .movie-card:hover { 
@@ -34,7 +33,7 @@ body {
     border-color: rgba(167, 139, 250, 0.8); 
 }
 .movie-card:hover img {
-    transform: scale(1.05);
+    transform: scale(1.05); /* Aplica o zoom apenas na imagem */
 }
 
 .btn-primary { 
@@ -199,11 +198,6 @@ body {
     background-color: #4b5563;
     border-radius: 10px;
     border: 2px solid #1f2937;
-}
-
-/* Correção para as imagens de fundo não serem cortadas */
-#hero-bg-desktop, #hero-bg-mobile, #details-bg-desktop, #details-bg-mobile {
-    object-fit: contain; /* Garante que a imagem inteira seja visível */
 }
 
 /* Regras para imagens de fundo responsivas */
