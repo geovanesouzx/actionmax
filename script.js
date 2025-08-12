@@ -128,10 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeRatings = null;
     let allContent = [];
     let allCategories = [];
-    let allNotifications = []; // Lista filtrada para o utilizador atual
-    let allFetchedNotifications = []; // Lista bruta da base de dados
-    let dismissedNotificationIds = new Set(); // IDs das notificações que o utilizador eliminou
-    let unsubscribeUserDoc = null; // Listener para o documento do utilizador
+    let allNotifications = [];
+    let allFetchedNotifications = [];
+    let dismissedNotificationIds = new Set();
+    let unsubscribeUserDoc = null;
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appWrapper.classList.add('hidden');
             authWrapper.classList.remove('hidden');
             showAuthPage('welcome-page');
-            if (unsubscribeUserDoc) unsubscribeUserDoc(); // Limpa o listener ao fazer logout
+            if (unsubscribeUserDoc) unsubscribeUserDoc();
             setTimeout(() => {
                 loadingScreen.classList.add('opacity-0');
                 loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 searchNoResults.classList.add('hidden');
                 return;
             }
-            const matchingContent = allContent.filter(item => item.title.toLowerCase().includes(query));
+            const matchingContent = allContent.filter(item => item.title.toLowerCase().includes(query) && !(item.type === 'Filme' && item.emBreve));
             if (matchingContent.length > 0) {
                 searchNoResults.classList.add('hidden');
                 const slidesHTML = matchingContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
             genreResultsTitle.textContent = `Resultados para: ${genre}`;
             genreResultsTitle.classList.remove('hidden');
 
-            const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre));
+            const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre) && !(item.type === 'Filme' && item.emBreve));
             
             if (genreContent.length > 0) {
                 genreResultsContainer.innerHTML = genreContent.map(itemData => createCardHTML(itemData)).join('');
@@ -1256,7 +1256,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let recommendations = allContent.filter(item =>
                 item.id !== currentItem.id &&
                 item.genre &&
-                item.genre.includes(primaryGenre)
+                item.genre.includes(primaryGenre) &&
+                !(item.type === 'Filme' && item.emBreve)
             );
 
             recommendations.sort(() => 0.5 - Math.random());
@@ -1300,12 +1301,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (category.autoRotate && category.rotateGenre) {
                     const potentialContent = allContent.filter(item => 
-                        Array.isArray(item.genre) && item.genre.includes(category.rotateGenre)
+                        Array.isArray(item.genre) && item.genre.includes(category.rotateGenre) && !(item.type === 'Filme' && item.emBreve)
                     );
                     categoryContent = shuffleArray([...potentialContent]).slice(0, 20);
                 } 
                 else {
-                    categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
+                    categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag) && !(item.type === 'Filme' && item.emBreve));
                     
                     const orderedIds = category.contentOrder || [];
                     categoryContent.sort((a, b) => {
@@ -1336,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const renderAllMoviesPage = () => {
-            const movies = allContent.filter(item => item.type === 'Filme');
+            const movies = allContent.filter(item => item.type === 'Filme' && !item.emBreve);
             const contentHTML = movies.map(itemData => createCardHTML(itemData)).join('');
             filmesContainer.innerHTML = contentHTML;
         };
@@ -1358,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         const setupHero = () => {
-            const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque'));
+            const heroContentData = allContent.find(item => Array.isArray(item.tags) && item.tags.includes('destaque') && !(item.type === 'Filme' && item.emBreve));
             if (heroContentData) {
                 document.getElementById('hero-bg-desktop').src = heroContentData.bg || '';
                 document.getElementById('hero-bg-mobile').src = heroContentData.bg_mobile || heroContentData.img || heroContentData.bg || '';
