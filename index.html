@@ -87,12 +87,7 @@
                         <a href="#inicio" data-target="inicio-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Início</a>
                         <a href="#series" data-target="series-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Séries</a>
                         <a href="#filmes" data-target="filmes-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Filmes</a>
-                        <div class="relative group py-6">
-                            <button class="text-gray-300 hover:text-white font-semibold border-b-2 border-transparent group-hover:border-violet-400 transition-all duration-300">Gêneros</button>
-                            <div id="genres-dropdown" class="absolute hidden group-hover:block bg-gray-800 rounded-md shadow-lg top-full -mt-2 py-2 w-48">
-                                <!-- Gêneros serão injetados aqui -->
-                            </div>
-                        </div>
+                        <a href="#generos" data-target="generos-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Gêneros</a>
                         <a href="#aovivo" data-target="aovivo-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Ao Vivo</a>
                         <a href="#embreve" data-target="embreve-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Em Breve</a>
                     </nav>
@@ -158,14 +153,22 @@
                     </div>
                 </div>
             </div>
-             <div id="genre-page" class="page-content hidden">
-                  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                       <h1 id="genre-title" class="text-3xl sm:text-4xl font-bold mb-8"></h1>
-                       <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                           <!-- Conteúdo do gênero será injetado aqui -->
-                       </div>
-                  </div>
-             </div>
+            <div id="generos-page" class="page-content hidden">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Explorar por Gênero</h1>
+                    <!-- Container para os botões de gênero -->
+                    <div id="genres-selection-container" class="flex flex-wrap gap-3 sm:gap-4 mb-12">
+                        <!-- Botões de gênero serão injetados aqui -->
+                    </div>
+    
+                    <!-- Container para os resultados -->
+                    <h2 id="genre-results-title" class="text-2xl sm:text-3xl font-bold mb-8 hidden"></h2>
+                    <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        <!-- Conteúdo do gênero será injetado aqui -->
+                    </div>
+                    <p id="genre-results-empty" class="text-gray-400 hidden">Nenhum item encontrado para este gênero.</p>
+                </div>
+            </div>
             <div id="aovivo-page" class="page-content hidden">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <h1 class="text-3xl sm:text-4xl font-bold mb-8">Canais Ao Vivo</h1>
@@ -409,6 +412,10 @@
                 <i class="fas fa-tv text-2xl"></i>
                 <span class="text-xs font-medium mt-1">Séries</span>
             </a>
+            <a href="#generos" data-target="generos-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
+                <i class="fas fa-grip-horizontal text-2xl"></i>
+                <span class="text-xs font-medium mt-1">Gêneros</span>
+            </a>
             <a href="#aovivo" data-target="aovivo-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
                 <i class="fas fa-broadcast-tower text-2xl"></i>
                 <span class="text-xs font-medium mt-1">Ao Vivo</span>
@@ -417,24 +424,7 @@
                 <i class="fas fa-clock text-2xl"></i>
                 <span class="text-xs font-medium mt-1">Em Breve</span>
             </a>
-            <button id="mobile-genres-btn" class="text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-grip-horizontal text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Gêneros</span>
-            </button>
         </nav>
-    </div>
-
-    <!-- Modal de Gêneros (Mobile) -->
-    <div id="genres-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="genres-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
-             <div class="flex justify-between items-center mb-4">
-                 <h2 class="text-xl font-bold">Gêneros</h2>
-                 <button id="close-genres-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-             </div>
-            <div id="mobile-genres-container" class="flex flex-col space-y-2">
-                <!-- Gêneros mobile serão injetados aqui -->
-            </div>
-        </div>
     </div>
 
     <!-- Modal de Alterar Nome de Usuário -->

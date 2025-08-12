@@ -97,22 +97,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameModal = document.getElementById('username-modal');
     const closeUsernameBtn = document.getElementById('close-username-btn');
     const usernameForm = document.getElementById('username-form');
-    const genresDropdown = document.getElementById('genres-dropdown');
-    const mobileGenresBtn = document.getElementById('mobile-genres-btn');
-    const genresModalOverlay = document.getElementById('genres-modal-overlay');
-    const genresModal = document.getElementById('genres-modal');
-    const closeGenresBtn = document.getElementById('close-genres-btn');
-    const mobileGenresContainer = document.getElementById('mobile-genres-container');
     const commentForm = document.getElementById('comment-form');
     const commentsContainer = document.getElementById('comments-container');
     const commentAvatar = document.getElementById('comment-avatar');
     const userRatingStars = document.getElementById('user-rating-stars');
     const averageRatingEl = document.getElementById('average-rating');
-    const genreResultsContainer = document.getElementById('genre-results-container');
     const filmesContainer = document.getElementById('filmes-container');
     const seriesContainer = document.getElementById('series-container');
     const aovivoContainer = document.getElementById('aovivo-container');
     const embreveContainer = document.getElementById('embreve-container');
+    // Novos seletores para a página de Gêneros
+    const genresSelectionContainer = document.getElementById('genres-selection-container');
+    const genreResultsContainer = document.getElementById('genre-results-container');
+    const genreResultsTitle = document.getElementById('genre-results-title');
+    const genreResultsEmpty = document.getElementById('genre-results-empty');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -356,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pageId === 'perfil-page') renderMyListPage();
                 if (pageId === 'filmes-page') renderAllMoviesPage();
                 if (pageId === 'series-page') renderAllSeriesPage();
+                if (pageId === 'generos-page') renderGenresPage();
                 if (pageId === 'aovivo-page') renderAoVivoPage();
                 if (pageId === 'embreve-page') renderEmBrevePage();
                 if (pushState) {
@@ -396,11 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 seasonsSection.classList.add('hidden');
             }
 
-            // A lógica para a seção separada de "em breve" foi removida daqui,
-            // pois agora os episódios em breve são mostrados dentro de suas temporadas.
             document.getElementById('upcoming-episodes-section')?.classList.add('hidden');
-
-
             renderRecommendedCarousel(data);
         };
         
@@ -428,7 +423,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const epCard = document.createElement('div');
 
                 if (releaseDate) {
-                    // Card de episódio "Em Breve"
                     epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-not-allowed flex flex-col justify-center items-center opacity-60';
                     epCard.innerHTML = `
                         <i class="fas fa-clock text-3xl mb-2 text-gray-400"></i>
@@ -437,7 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-xs font-bold text-violet-300 mt-1">${releaseDate}</p>
                     `;
                 } else {
-                    // Card de episódio normal (reproduzível)
                     epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
                     epCard.dataset.videoSrc = videoSrc;
                     epCard.dataset.episode = epNum;
@@ -462,11 +455,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let episodeKeys = Object.keys(seasons[seasonNum]).sort((a, b) => parseInt(a) - parseInt(b));
             let currentEpisodeIndex = episodeKeys.indexOf(String(epNum));
 
-            // Procura o próximo episódio na mesma temporada
             for (let i = currentEpisodeIndex + 1; i < episodeKeys.length; i++) {
                 const nextEpNum = episodeKeys[i];
                 const nextEpData = seasons[seasonNum][nextEpNum];
-                // Verifica se o próximo episódio é reproduzível
                 if (nextEpData && !nextEpData.releaseDate) {
                     return { 
                         src: (typeof nextEpData === 'string') ? nextEpData : nextEpData.src, 
@@ -477,14 +468,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Procura na próxima temporada
             for (let i = currentSeasonIndex + 1; i < seasonKeys.length; i++) {
                 const nextSeasonNum = seasonKeys[i];
                 const nextSeasonEpisodeKeys = Object.keys(seasons[nextSeasonNum]).sort((a, b) => parseInt(a) - parseInt(b));
                 for (let j = 0; j < nextSeasonEpisodeKeys.length; j++) {
                     const nextEpNum = nextSeasonEpisodeKeys[j];
                     const nextEpData = seasons[nextSeasonNum][nextEpNum];
-                    // Verifica se o episódio é reproduzível
                     if (nextEpData && !nextEpData.releaseDate) {
                         return { 
                             src: (typeof nextEpData === 'string') ? nextEpData : nextEpData.src, 
@@ -496,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            return null; // Nenhum próximo episódio reproduzível encontrado
+            return null;
         };
 
         const handleVideoEnd = () => {
@@ -577,9 +566,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!videoEl.paused) {
                         updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
-                }, 10000); // Salva a cada 10 segundos
+                }, 10000);
             } else if (src.trim().startsWith('http')) {
-                // Fallback para outros links, tentando usar um iframe
                 playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
@@ -759,33 +747,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const populateGenres = () => {
-            const allGenres = allContent.flatMap(item => item.genre || []);
-            const uniqueGenres = [...new Set(allGenres)].sort();
+        // --- NOVA LÓGICA DE GÊNEROS ---
+        const renderGenresPage = () => {
+            const allGenres = [...new Set(allContent.flatMap(item => item.genre || []))].sort();
+            genresSelectionContainer.innerHTML = '';
             
-            genresDropdown.innerHTML = '';
-            mobileGenresContainer.innerHTML = '';
-            uniqueGenres.forEach(genre => {
-                const linkHTML = `<a href="#/genre/${genre}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-violet-500 hover:text-white genre-link" data-genre="${genre}">${genre}</a>`;
-                genresDropdown.innerHTML += linkHTML;
-                mobileGenresContainer.innerHTML += linkHTML;
+            allGenres.forEach(genre => {
+                const btn = document.createElement('button');
+                btn.className = 'genre-select-btn font-semibold py-2 px-5 rounded-lg';
+                btn.textContent = genre;
+                btn.dataset.genre = genre;
+                genresSelectionContainer.appendChild(btn);
+            });
+
+            // Limpa resultados anteriores ao carregar a página
+            genreResultsContainer.innerHTML = '';
+            genreResultsTitle.classList.add('hidden');
+            genreResultsEmpty.classList.add('hidden');
+        };
+
+        const displayGenreResults = (genre) => {
+            // Atualiza o título e o torna visível
+            genreResultsTitle.textContent = `Resultados para: ${genre}`;
+            genreResultsTitle.classList.remove('hidden');
+
+            // Filtra o conteúdo
+            const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre));
+            
+            // Renderiza os resultados ou a mensagem de vazio
+            if (genreContent.length > 0) {
+                genreResultsContainer.innerHTML = genreContent.map(itemData => createCardHTML(itemData)).join('');
+                genreResultsEmpty.classList.add('hidden');
+            } else {
+                genreResultsContainer.innerHTML = '';
+                genreResultsEmpty.classList.remove('hidden');
+            }
+
+            // Destaca o botão de gênero ativo
+            document.querySelectorAll('.genre-select-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.genre === genre);
             });
         };
         
-        const showGenrePage = (genre) => {
-            showPage('genre-page', true, {genre});
-            document.getElementById('genre-title').textContent = genre;
-            genreResultsContainer.innerHTML = '';
-            const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre));
-            const contentHTML = genreContent.map(itemData => createCardHTML(itemData)).join('');
-            genreResultsContainer.innerHTML = contentHTML;
-        };
-
-        document.body.addEventListener('click', (e) => {
-            if (e.target.classList.contains('genre-link')) {
-                e.preventDefault();
-                closeModal(genresModalOverlay, genresModal);
-                showGenrePage(e.target.dataset.genre);
+        genresSelectionContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('genre-select-btn')) {
+                const genre = e.target.dataset.genre;
+                displayGenreResults(genre);
             }
         });
 
@@ -998,13 +1005,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => parseInt(a) - parseInt(b))[0];
                 if (firstSeasonNum) {
                     const episodeKeys = Object.keys(currentDetailsData.parsedSeasons[firstSeasonNum]).sort((a,b) => parseInt(a) - parseInt(b));
-                    // Encontra o primeiro episódio que não está "em breve"
                     for (const epNum of episodeKeys) {
                         const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][epNum];
                         if (!episodeData.releaseDate) {
                             const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
                             playContent(videoSrc, firstSeasonNum, epNum, episodeData.openInNewTab);
-                            return; // Sai depois de encontrar o primeiro reproduzível
+                            return;
                         }
                     }
                 }
@@ -1058,9 +1064,6 @@ document.addEventListener('DOMContentLoaded', () => {
         changeUsernameBtn.addEventListener('click', () => openModal(usernameModalOverlay, usernameModal));
         closeUsernameBtn.addEventListener('click', () => closeModal(usernameModalOverlay, usernameModal));
         usernameModalOverlay.addEventListener('click', (e) => { if (e.target === usernameModalOverlay) closeModal(usernameModalOverlay, usernameModal); });
-        mobileGenresBtn.addEventListener('click', () => openModal(genresModalOverlay, genresModal));
-        closeGenresBtn.addEventListener('click', () => closeModal(genresModalOverlay, genresModal));
-        genresModalOverlay.addEventListener('click', (e) => { if (e.target === genresModalOverlay) closeModal(genresModalOverlay, genresModal); });
 
         seasonSelector.addEventListener('click', (e) => {
             if (e.target.matches('.season-btn')) {
@@ -1076,14 +1079,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         episodesList.addEventListener('click', (e) => {
             const epCard = e.target.closest('.episode-card');
-            if (epCard && epCard.dataset.videoSrc) { // Apenas clica se tiver videoSrc
+            if (epCard && epCard.dataset.videoSrc) {
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
                 playContent(epCard.dataset.videoSrc, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
             }
         });
 
         window.addEventListener('popstate', (e) => {
-            playerContainer.innerHTML = ''; // Limpa o player ao voltar
+            playerContainer.innerHTML = '';
             clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
             if (e.state && e.state.page) showPage(e.state.page, false, e.state.data);
@@ -1157,7 +1160,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderContinueWatchingCarousel();
             setupHero();
             renderHomeCarousels();
-            populateGenres();
             renderAllMoviesPage();
             renderAllSeriesPage();
             renderAoVivoPage();
@@ -1172,14 +1174,12 @@ document.addEventListener('DOMContentLoaded', () => {
             allCategories.forEach(category => {
                 let categoryContent = [];
 
-                // LÓGICA DE ROTAÇÃO AUTOMÁTICA
                 if (category.autoRotate && category.rotateGenre) {
                     const potentialContent = allContent.filter(item => 
                         Array.isArray(item.genre) && item.genre.includes(category.rotateGenre)
                     );
-                    categoryContent = shuffleArray([...potentialContent]).slice(0, 20); // Pega até 20 itens aleatórios
+                    categoryContent = shuffleArray([...potentialContent]).slice(0, 20);
                 } 
-                // LÓGICA EXISTENTE
                 else {
                     categoryContent = allContent.filter(item => Array.isArray(item.tags) && item.tags.includes(category.tag));
                     
@@ -1278,7 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        // --- Lógica de Continuar Assistindo ---
         async function loadWatchHistory() {
             const user = auth.currentUser;
             if (user) {
@@ -1292,7 +1291,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             if (user && contentId) {
                 const progress = (currentTime / duration) * 100;
-                // Não salva se estiver quase no final
                 if (progress > 95) {
                     delete watchHistory[contentId];
                 } else {
@@ -1311,9 +1309,8 @@ document.addEventListener('DOMContentLoaded', () => {
             continueWatchingContainer.innerHTML = '';
             const historyItems = Object.entries(watchHistory)
                 .map(([id, data]) => ({ id, ...data }))
-                .filter(item => item.currentTime && item.duration); // Garante que temos dados válidos
+                .filter(item => item.currentTime && item.duration);
 
-            // Ordena por mais recente
             historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.watchedAt?.toDate() || 0));
 
             if (historyItems.length === 0) return;
@@ -1351,14 +1348,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     ratingsByContent[ratingData.contentId].count++;
                 });
 
-                allAverageRatings = {}; // Reset before recalculating
+                allAverageRatings = {};
                 for (const contentId in ratingsByContent) {
                     allAverageRatings[contentId] = {
                         average: ratingsByContent[contentId].total / ratingsByContent[contentId].count,
                         count: ratingsByContent[contentId].count
                     };
                 }
-                // Re-render relevant parts of the UI
                 renderAllPages();
             });
         }
@@ -1366,16 +1362,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
-            // Essas funções podem rodar em paralelo com o carregamento principal
             loadMyList();
             loadAvatar(); 
             loadAvatars();
             listenForNotifications();
             loadSiteSettings();
-            listenForAllAverageRatings(); // Substituído para ser em tempo real
+            listenForAllAverageRatings();
 
             try {
-                // 1. Busca os dados iniciais de forma garantida
                 const contentQuery = collection(db, 'content');
                 const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
 
@@ -1384,14 +1378,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     getDocs(categoriesQuery)
                 ]);
 
-                // 2. Popula os arrays de dados
                 allContent = contentSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                 allCategories = categoriesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
-                // 3. Renderiza a página com os dados iniciais
                 await renderAllPages();
 
-                // 4. Lida com a rota inicial (URL com hash)
                 if (isInitialLoad) {
                     isInitialLoad = false;
                     const hash = window.location.hash;
@@ -1400,8 +1391,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = allContent.find(item => item.id === itemId);
                         if (data) showPage('details-page', false, data);
                         else showPage('inicio-page', false);
-                    } else if (hash.startsWith('#/genre/')) {
-                        showGenrePage(decodeURIComponent(hash.split('/')[2]));
+                    } else if (hash.startsWith('#/generos/')) {
+                        const genreName = decodeURIComponent(hash.split('/')[2]);
+                        showPage('generos-page', false);
+                        // A pequena espera garante que a página de gêneros e os botões sejam renderizados antes de tentarmos clicar em um
+                        setTimeout(() => displayGenreResults(genreName), 100);
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
                         if (document.getElementById(pageId)) showPage(pageId, false);
@@ -1409,22 +1403,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // 5. Esconde a tela de carregamento APÓS tudo estar pronto
                 loadingScreen.classList.add('opacity-0');
                 loadingScreen.addEventListener('transitionend', () => loadingScreen.style.display = 'none', { once: true });
 
-                // 6. Anexa os listeners para atualizações em tempo real
                 onSnapshot(contentQuery, (snapshot) => {
                     allContent = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                     renderAllPages(); 
-                    // ATUALIZAÇÃO: Verifica se a página de detalhes precisa ser atualizada
                     if (currentDetailsData) {
                         const updatedData = allContent.find(item => item.id === currentDetailsData.id);
                         if(updatedData) {
                             currentDetailsData = updatedData;
                             populateDetailsPage(updatedData);
                         } else {
-                            // O item foi excluído, volta para a página anterior
                             history.back();
                         }
                     }
