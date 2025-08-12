@@ -522,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         };
 
-        // FUNÇÃO ATUALIZADA PARA CORRIGIR O BUG DOS CANAIS AO VIVO
         const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
             if (openInNewTab) {
                 window.open(src, '_blank');
@@ -534,7 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             clearInterval(watchProgressInterval);
 
-            // Garante que currentDetailsData seja definido, importante para a lógica do botão 'voltar'
             if (!currentDetailsData || currentDetailsData.id !== contentData.id) {
                 currentDetailsData = contentData;
             }
@@ -693,7 +691,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                     avatarCategoryContainer.appendChild(catDiv);
-                    initCarousel(catDiv.querySelector('.avatar-carousel'));
+                    // CORREÇÃO: Chamando a função correta do carrossel com loop infinito
+                    initAvatarCarousel(catDiv.querySelector('.avatar-carousel'));
                 }
                 updateSelectedAvatarVisual();
             });
@@ -983,7 +982,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cardData = allContent.find(item => item.id === card.dataset.id);
                 if (cardData) {
                     if (cardData.type === 'Canal') {
-                        // CORREÇÃO: Passa o objeto `cardData` completo para a função playContent
                         playContent(cardData.videoSrc, cardData, null, null, cardData.videoSrcNewTab);
                     } else {
                         if (!searchModalOverlay.classList.contains('hidden')) {
