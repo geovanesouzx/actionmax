@@ -110,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const genreResultsContainer = document.getElementById('genre-results-container');
     const genreResultsTitle = document.getElementById('genre-results-title');
     const genreResultsEmpty = document.getElementById('genre-results-empty');
-    // Seletores para a funcionalidade de partilha
     const detailsShareBtn = document.getElementById('details-share-btn');
     const shareModalOverlay = document.getElementById('share-modal-overlay');
     const shareModal = document.getElementById('share-modal');
@@ -924,13 +923,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const listenForNotifications = () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
             const q = query(collection(db, "notifications"));
             onSnapshot(q, (snapshot) => {
-                allNotifications = [];
-                snapshot.forEach(doc => allNotifications.push(doc.data()));
+                const allFetchedNotifications = [];
+                snapshot.forEach(doc => allFetchedNotifications.push(doc.data()));
+
+                // Filtra as notificações para o utilizador atual
+                allNotifications = allFetchedNotifications.filter(notif => {
+                    // Se não houver 'targetUids', é uma notificação global
+                    if (!notif.targetUids || notif.targetUids.length === 0) {
+                        return true;
+                    }
+                    // Se houver 'targetUids', verifica se o ID do utilizador atual está na lista
+                    return notif.targetUids.includes(user.uid);
+                });
+
                 allNotifications.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                
                 const lastChecked = localStorage.getItem('lastCheckedNotifications');
                 const newNotifications = allNotifications.filter(n => !lastChecked || n.createdAt?.toDate() > new Date(lastChecked));
+                
                 if (newNotifications.length > 0) {
                     notificationBadge.textContent = newNotifications.length;
                     notificationBadge.classList.remove('hidden');
@@ -1090,7 +1105,6 @@ document.addEventListener('DOMContentLoaded', () => {
         closeUsernameBtn.addEventListener('click', () => closeModal(usernameModalOverlay, usernameModal));
         usernameModalOverlay.addEventListener('click', (e) => { if (e.target === usernameModalOverlay) closeModal(usernameModalOverlay, usernameModal); });
 
-        // Event listeners de partilha
         detailsShareBtn?.addEventListener('click', () => {
             if (currentDetailsData) {
                 const shareUrl = `${window.location.origin}${window.location.pathname}#/details/${currentDetailsData.id}`;
