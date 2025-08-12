@@ -312,6 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const isPlayerPage = pageId === 'player-page';
             if (!isDetailsPage && !isAvatarPage && !isPlayerPage) lastPageId = pageId;
             pageContents.forEach(page => page.classList.add('hidden'));
+            
+            if (isDetailsPage) {
+                // Limpa as imagens antigas para evitar o "flash" de conteúdo anterior
+                document.getElementById('details-bg-desktop').src = '';
+                document.getElementById('details-bg-mobile').src = '';
+                document.getElementById('details-poster').src = '';
+                document.getElementById('details-title').textContent = 'Carregando...';
+                document.getElementById('details-desc').textContent = '';
+            }
+
             const targetPage = document.getElementById(pageId);
             mobileNav.classList.toggle('hidden', isDetailsPage || isAvatarPage || isPlayerPage);
             mainHeader.classList.toggle('hidden', isDetailsPage || isAvatarPage || isPlayerPage);
