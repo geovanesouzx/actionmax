@@ -1229,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }
-
+        
             const progressHTML = progress ? `
                 <div class="absolute bottom-0 left-0 w-full h-1.5 bg-gray-500/50">
                     <div class="h-full bg-violet-500" style="width: ${progress}%;"></div>
@@ -1239,6 +1239,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="movie-card" data-id="${data.id}">
                     <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                     ${ratingHTML}
+                    <div class="card-info">
+                        <p class="card-title" title="${data.title}">${data.title}</p>
+                    </div>
                     ${progressHTML}
                 </div>
             `;

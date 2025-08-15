@@ -36,6 +36,37 @@ body {
     transform: scale(1.05);
 }
 
+/* Estilos para o título no card */
+.movie-card .card-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 2rem 0.75rem 0.75rem; /* Mais padding no topo para o gradiente */
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 20%, transparent 100%);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.movie-card:hover .card-info {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.card-title {
+    color: #f9f9f9;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    text-align: center;
+    /* Trunca títulos longos */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
 .btn-primary { 
     background-color: #8b5cf6; 
     transition: background-color 0.3s ease, transform 0.2s ease; 
