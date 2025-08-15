@@ -552,65 +552,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.open(src, '_blank');
                 return;
             }
-
+        
             if (isTrailer) {
                 openTrailerModal(src);
                 return;
             }
-
+        
             playerContainer.innerHTML = '';
             if (!src) return;
-
+        
             clearInterval(watchProgressInterval);
-
+        
             if (!currentDetailsData || currentDetailsData.id !== contentData.id) {
                 currentDetailsData = contentData;
             }
-            
+        
             currentPlaying = {
                 season: seasonNum,
                 episode: epNum,
                 nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
                 contentId: contentData.id
             };
-
+        
             const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
-            const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
-
+            let finalSrc = src;
+        
+            // Se o src for um iframe completo, extrai a URL do 'src'
             if (src.trim().startsWith('<iframe')) {
-                playerContainer.innerHTML = src;
-            } else if (youtubeEmbedUrl) {
-                playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                const match = src.match(/src="([^"]+)"/);
+                if (match) {
+                    finalSrc = match[1];
+                }
+            }
+        
+            const youtubeEmbedUrl = getYoutubeEmbedUrl(finalSrc);
+        
+            if (youtubeEmbedUrl) {
+                // Para YouTube, usamos o URL de embed com autoplay=1 e o atributo allow
+                playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else if (isVideoFile) {
+                // Para arquivos de vídeo diretos, usamos a tag <video> com autoplay
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
                 videoEl.controls = true;
                 videoEl.autoplay = true;
                 videoEl.controlsList = "nodownload";
-                videoEl.innerHTML = `<source src="${src}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
-                
+                videoEl.innerHTML = `<source src="${finalSrc}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
+        
                 videoEl.addEventListener('loadedmetadata', () => {
                     const progress = watchHistory[currentPlaying.contentId];
                     if (progress && progress.currentTime) {
                         videoEl.currentTime = progress.currentTime;
                     }
                 });
-
+        
                 videoEl.addEventListener('ended', handleVideoEnd);
                 watchProgressInterval = setInterval(() => {
                     if (!videoEl.paused) {
                         updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
                 }, 10000);
-                
+        
                 playerContainer.appendChild(videoEl);
-
-            } else if (src.trim().startsWith('http')) {
-                playerContainer.innerHTML = `<iframe src="${src}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            } else if (finalSrc.trim().startsWith('http')) {
+                // Para todos os outros links, usamos um iframe genérico com allow="autoplay"
+                playerContainer.innerHTML = `<iframe src="${finalSrc}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
             }
-
+        
             showPage('player-page', true, contentData);
             if (window.innerWidth < 768) {
                 playerPage.requestFullscreen?.();
