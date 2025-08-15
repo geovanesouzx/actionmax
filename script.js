@@ -798,7 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
             genreResultsEmpty.classList.add('hidden');
         };
 
-        const displayGenreResults = (genre) => {
+        const displayGenreResults = (genre, pushState = true) => {
             genreResultsTitle.textContent = `Resultados para: ${genre}`;
             genreResultsTitle.classList.remove('hidden');
 
@@ -815,6 +815,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.genre-select-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.genre === genre);
             });
+
+            if (pushState) {
+                const url = `#/generos/${encodeURIComponent(genre)}`;
+                history.pushState({ page: 'generos-page', genre: genre }, '', url);
+            }
         };
         
         genresSelectionContainer.addEventListener('click', (e) => {
@@ -1213,8 +1218,32 @@ document.addEventListener('DOMContentLoaded', () => {
             playerContainer.innerHTML = '';
             clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
-            if (e.state && e.state.page) showPage(e.state.page, false, e.state.data);
-            else showPage(lastPageId || 'inicio-page', false);
+        
+            const hash = window.location.hash;
+            if (hash.startsWith('#/details/')) {
+                const itemId = hash.split('/')[2];
+                const data = allContent.find(item => item.id === itemId);
+                if (data) showPage('details-page', false, data);
+                else showPage('inicio-page', false);
+            } else if (hash.startsWith('#/generos/')) {
+                const genreName = decodeURIComponent(hash.split('/')[2]);
+                showPage('generos-page', false);
+                setTimeout(() => displayGenreResults(genreName, false), 100);
+            } else {
+                const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
+                if (document.getElementById(pageId)) {
+                    showPage(pageId, false);
+                    if (pageId === 'generos-page') {
+                        // Limpa os resultados se voltarmos para a página principal de gêneros
+                        genreResultsContainer.innerHTML = '';
+                        genreResultsTitle.classList.add('hidden');
+                        genreResultsEmpty.classList.add('hidden');
+                        document.querySelectorAll('.genre-select-btn.active').forEach(btn => btn.classList.remove('active'));
+                    }
+                } else {
+                    showPage('inicio-page', false);
+                }
+            }
         });
 
         const createCardHTML = (data, progress = null) => {
@@ -1544,9 +1573,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (hash.startsWith('#/generos/')) {
                         const genreName = decodeURIComponent(hash.split('/')[2]);
                         showPage('generos-page', false);
-                        setTimeout(() => displayGenreResults(genreName), 100);
+                        // Usa um timeout para garantir que os botões de gênero sejam renderizados antes de selecionar um
+                        setTimeout(() => displayGenreResults(genreName, false), 100);
                     } else {
-                        const pageId = (hash && hash !== '#') ? hash.substring(1) + '-page' : 'inicio-page';
+                        const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
                         if (document.getElementById(pageId)) showPage(pageId, false);
                         else showPage('inicio-page', false);
                     }
