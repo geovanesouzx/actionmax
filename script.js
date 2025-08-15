@@ -247,11 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 mousewheel: {
                     forceToAxis: true,
                 },
-                scrollbar: {
-                    el: container.parentElement.querySelector('.swiper-scrollbar'),
-                    hide: false,
-                    draggable: true,
-                },
                 navigation: {
                     nextEl: container.parentElement.querySelector('.swiper-button-next'),
                     prevEl: container.parentElement.querySelector('.swiper-button-prev'),
@@ -330,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             myListEmptyMsg?.classList.add('hidden');
             const slidesHTML = myList.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
-            myListContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-scrollbar"></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
+            myListContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
             initCarousel(myListContainer.querySelector('.content-carousel'));
         };
 
@@ -667,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (matchingContent.length > 0) {
                 searchNoResults.classList.add('hidden');
                 const slidesHTML = matchingContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
-                searchResultsContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-scrollbar"></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
+                searchResultsContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
                 initCarousel(searchResultsContainer.querySelector('.content-carousel'));
             } else {
                 searchNoResults.classList.remove('hidden');
@@ -1273,9 +1268,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="movie-card" data-id="${data.id}">
                     <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                     ${ratingHTML}
-                    <div class="card-info">
-                        <p class="card-title" title="${data.title}">${data.title}</p>
-                    </div>
                     ${progressHTML}
                 </div>
             `;
@@ -1308,7 +1300,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="swiper content-carousel">
                             <div class="swiper-wrapper">${slidesHTML}</div>
                         </div>
-                        <div class="swiper-scrollbar"></div>
                         <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                         <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                     </div>
@@ -1364,7 +1355,6 @@ document.addEventListener('DOMContentLoaded', () => {
                              <h2 class="text-2xl font-bold text-white">${category.title}</h2>
                              <div class="relative">
                                  <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
-                                 <div class="swiper-scrollbar"></div>
                                  <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                                  <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                              </div>
@@ -1513,7 +1503,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h2 class="text-2xl font-bold text-white">Continuar Assistindo</h2>
                     <div class="relative">
                         <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
-                        <div class="swiper-scrollbar"></div>
                         <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                         <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                     </div>
