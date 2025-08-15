@@ -239,13 +239,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!container) return;
             if (container.swiper) container.swiper.destroy(true, true);
             new Swiper(container, {
-                slidesPerView: 2.2, 
+                slidesPerView: 2.2,
                 spaceBetween: 16,
                 freeMode: true,
                 freeModeMomentum: true,
-                speed: 600, 
+                speed: 600,
                 mousewheel: {
                     forceToAxis: true,
+                },
+                scrollbar: {
+                    el: container.parentElement.querySelector('.swiper-scrollbar'),
+                    hide: false,
+                    draggable: true,
                 },
                 navigation: {
                     nextEl: container.parentElement.querySelector('.swiper-button-next'),
@@ -325,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             myListEmptyMsg?.classList.add('hidden');
             const slidesHTML = myList.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
-            myListContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
+            myListContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-scrollbar"></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
             initCarousel(myListContainer.querySelector('.content-carousel'));
         };
 
@@ -662,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (matchingContent.length > 0) {
                 searchNoResults.classList.add('hidden');
                 const slidesHTML = matchingContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
-                searchResultsContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
+                searchResultsContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-scrollbar"></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
                 initCarousel(searchResultsContainer.querySelector('.content-carousel'));
             } else {
                 searchNoResults.classList.remove('hidden');
@@ -1303,6 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="swiper content-carousel">
                             <div class="swiper-wrapper">${slidesHTML}</div>
                         </div>
+                        <div class="swiper-scrollbar"></div>
                         <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                         <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                     </div>
@@ -1358,6 +1364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                              <h2 class="text-2xl font-bold text-white">${category.title}</h2>
                              <div class="relative">
                                  <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
+                                 <div class="swiper-scrollbar"></div>
                                  <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                                  <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                              </div>
@@ -1506,6 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h2 class="text-2xl font-bold text-white">Continuar Assistindo</h2>
                     <div class="relative">
                         <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
+                        <div class="swiper-scrollbar"></div>
                         <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                         <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                     </div>

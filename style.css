@@ -185,6 +185,25 @@ body {
 .swiper-slide { 
     height: auto; 
 }
+/* Estilos para a barra de rolagem do Swiper */
+.swiper-container-horizontal > .swiper-scrollbar {
+    height: 8px;
+    bottom: 4px;
+    left: 10%;
+    width: 80%;
+}
+.swiper-scrollbar {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+.swiper-scrollbar-drag {
+    background: #a78bfa;
+    border-radius: 10px;
+}
+.swiper-scrollbar-drag:hover {
+    background: #c4b5fd;
+}
+
 .season-btn { 
     background-color: rgba(255, 255, 255, 0.1); 
     transition: background-color 0.3s ease; 
