@@ -492,6 +492,17 @@
         </div>
     </div>
 
+    <!-- Modal de Trailer -->
+    <div id="trailer-modal-overlay" class="modal-overlay fixed inset-0 bg-black/80 z-[70] hidden opacity-0 items-center justify-center p-4">
+        <div id="trailer-modal" class="modal w-full max-w-4xl bg-black rounded-lg shadow-2xl transform scale-95 opacity-0 relative">
+            <div class="aspect-w-16 aspect-h-9" style="padding-bottom: 56.25%;"> <!-- Proporção 16:9 -->
+                <div id="trailer-player-container" class="absolute inset-0"></div>
+            </div>
+            <button id="close-trailer-btn" class="absolute -top-3 -right-3 text-white bg-gray-800 rounded-full h-10 w-10 flex items-center justify-center text-2xl leading-none z-10">&times;</button>
+        </div>
+    </div>
+
+
     <!-- Link para o seu arquivo JavaScript -->
     <script type="module" src="script.js"></script>
 </body>

@@ -117,6 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareLinkInput = document.getElementById('share-link-input');
     const copyLinkBtn = document.getElementById('copy-link-btn');
     const copyFeedback = document.getElementById('copy-feedback');
+    const trailerModalOverlay = document.getElementById('trailer-modal-overlay');
+    const trailerModal = document.getElementById('trailer-modal');
+    const trailerPlayerContainer = document.getElementById('trailer-player-container');
+    const closeTrailerBtn = document.getElementById('close-trailer-btn');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -549,6 +553,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if (isTrailer) {
+                openTrailerModal(src);
+                return;
+            }
+
             playerContainer.innerHTML = '';
             if (!src) return;
 
@@ -558,16 +567,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDetailsData = contentData;
             }
             
-            if (isTrailer) {
-                currentPlaying = { contentId: `${contentData.id}-trailer`, season: null, episode: null, nextEpisodeInfo: null };
-            } else {
-                currentPlaying = {
-                    season: seasonNum,
-                    episode: epNum,
-                    nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
-                    contentId: contentData.id
-                };
-            }
+            currentPlaying = {
+                season: seasonNum,
+                episode: epNum,
+                nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
+                contentId: contentData.id
+            };
 
             const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
             const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
@@ -584,21 +589,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoEl.controlsList = "nodownload";
                 videoEl.innerHTML = `<source src="${src}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
                 
-                if (!isTrailer) {
-                    videoEl.addEventListener('loadedmetadata', () => {
-                        const progress = watchHistory[currentPlaying.contentId];
-                        if (progress && progress.currentTime) {
-                            videoEl.currentTime = progress.currentTime;
-                        }
-                    });
+                videoEl.addEventListener('loadedmetadata', () => {
+                    const progress = watchHistory[currentPlaying.contentId];
+                    if (progress && progress.currentTime) {
+                        videoEl.currentTime = progress.currentTime;
+                    }
+                });
 
-                    videoEl.addEventListener('ended', handleVideoEnd);
-                    watchProgressInterval = setInterval(() => {
-                        if (!videoEl.paused) {
-                            updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
-                        }
-                    }, 10000);
-                }
+                videoEl.addEventListener('ended', handleVideoEnd);
+                watchProgressInterval = setInterval(() => {
+                    if (!videoEl.paused) {
+                        updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
+                    }
+                }, 10000);
+                
                 playerContainer.appendChild(videoEl);
 
             } else if (src.trim().startsWith('http')) {
@@ -612,6 +616,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerPage.requestFullscreen?.();
                 screen.orientation?.lock('landscape').catch(err => console.log("Falha ao travar orientação:", err));
             }
+        };
+
+        const openTrailerModal = (src) => {
+            const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
+            if (youtubeEmbedUrl) {
+                trailerPlayerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                openModal(trailerModalOverlay, trailerModal);
+            } else {
+                // Se não for um link do YouTube, podemos mostrar uma mensagem de erro ou tentar outro player.
+                console.error("Formato de trailer não suportado:", src);
+            }
+        };
+
+        const closeTrailerModal = () => {
+            trailerPlayerContainer.innerHTML = ''; // Importante para parar o vídeo
+            closeModal(trailerModalOverlay, trailerModal);
         };
 
         playNextBtn.addEventListener('click', () => {
@@ -1192,6 +1212,11 @@ document.addEventListener('DOMContentLoaded', () => {
         closeShareBtn?.addEventListener('click', () => closeModal(shareModalOverlay, shareModal));
         shareModalOverlay?.addEventListener('click', (e) => { 
             if (e.target === shareModalOverlay) closeModal(shareModalOverlay, shareModal); 
+        });
+
+        closeTrailerBtn?.addEventListener('click', closeTrailerModal);
+        trailerModalOverlay?.addEventListener('click', (e) => { 
+            if (e.target === trailerModalOverlay) closeTrailerModal(); 
         });
 
         seasonSelector.addEventListener('click', (e) => {
