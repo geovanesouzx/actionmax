@@ -17,482 +17,395 @@
     <!-- Link para o seu arquivo de CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="min-h-screen pb-24 lg:pb-0">
+<body class="bg-primary text-gray-100">
 
     <!-- Tela de Carregamento Universal -->
-    <div id="loading-screen" class="fixed inset-0 bg-[#040714] z-[9999] flex flex-col items-center justify-center transition-opacity duration-500 ease-out">
-        <h1 class="text-5xl font-black tracking-wider text-white">ACTION<span class="text-violet-400">MAX</span></h1>
+    <div id="loading-screen" class="fixed inset-0 bg-primary z-[9999] flex flex-col items-center justify-center transition-opacity duration-500 ease-out">
+        <h1 class="text-5xl font-black tracking-wider text-white">ACTION<span class="text-accent">MAX</span></h1>
         <div class="loader mt-8"></div>
     </div>
 
     <!-- Wrapper de Autenticação -->
     <div id="auth-wrapper" class="hidden">
         <!-- Página de Boas-Vindas -->
-        <div id="welcome-page" class="auth-page min-h-screen flex flex-col items-center justify-center text-center p-4">
-              <h1 class="text-6xl md:text-8xl font-black tracking-wider text-white">ACTION<span class="text-violet-400">MAX</span></h1>
-              <p class="text-gray-300 mt-4 mb-12 max-w-md">Filmes, séries e muito mais, sem limites. Assista onde quiser. Cancele quando quiser.</p>
-              <div class="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
-                  <button data-target="login-page" class="auth-nav-btn btn-primary w-full text-white font-bold py-4 px-8 rounded-lg text-lg">Entrar</button>
-                  <button data-target="signup-page" class="auth-nav-btn btn-secondary w-full text-white font-bold py-4 px-8 rounded-lg text-lg">Criar Conta</button>
-              </div>
+        <div id="welcome-page" class="auth-page min-h-screen flex flex-col items-center justify-center text-center p-4 bg-auth-pattern">
+            <div class="z-10">
+                <h1 class="text-6xl md:text-8xl font-black tracking-wider text-white">ACTION<span class="text-accent">MAX</span></h1>
+                <p class="text-gray-300 mt-4 mb-12 max-w-md">Filmes, séries e muito mais, sem limites. Assista onde quiser. Cancele quando quiser.</p>
+                <div class="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                    <button data-target="login-page" class="auth-nav-btn btn-primary w-full">Entrar</button>
+                    <button data-target="signup-page" class="auth-nav-btn btn-secondary w-full">Criar Conta</button>
+                </div>
+            </div>
         </div>
 
         <!-- Página de Login -->
-        <div id="login-page" class="auth-page hidden min-h-screen flex items-center justify-center">
-            <div class="w-full max-w-md p-8 space-y-8 bg-gray-900/50 rounded-2xl shadow-2xl">
+        <div id="login-page" class="auth-page hidden min-h-screen flex items-center justify-center bg-auth-pattern">
+            <div class="w-full max-w-md p-8 space-y-8 bg-secondary rounded-2xl shadow-2xl">
                 <h2 class="text-3xl font-bold text-center text-white">Entrar na sua Conta</h2>
                 <form id="login-form" class="space-y-6">
-                    <input type="email" id="login-email" placeholder="E-mail" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
-                    <input type="password" id="login-password" placeholder="Senha" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                    <input type="email" id="login-email" placeholder="E-mail" required class="form-input">
+                    <input type="password" id="login-password" placeholder="Senha" required class="form-input">
                     <p id="login-error" class="text-red-400 text-sm h-4"></p>
-                    <button type="submit" class="btn-primary w-full text-white font-bold py-3 rounded-lg">Entrar</button>
+                    <button type="submit" class="btn-primary w-full">Entrar</button>
                 </form>
-                <p class="text-center text-gray-400">Não tem uma conta? <button data-target="signup-page" class="auth-nav-btn font-semibold text-violet-400 hover:underline">Crie uma agora</button></p>
+                <p class="text-center text-gray-400">Não tem uma conta? <button data-target="signup-page" class="auth-nav-btn font-semibold text-accent hover:underline">Crie uma agora</button></p>
             </div>
         </div>
 
         <!-- Página de Cadastro -->
-        <div id="signup-page" class="auth-page hidden min-h-screen flex items-center justify-center">
-            <div class="w-full max-w-md p-8 space-y-8 bg-gray-900/50 rounded-2xl shadow-2xl">
+        <div id="signup-page" class="auth-page hidden min-h-screen flex items-center justify-center bg-auth-pattern">
+            <div class="w-full max-w-md p-8 space-y-8 bg-secondary rounded-2xl shadow-2xl">
                 <h2 class="text-3xl font-bold text-center text-white">Criar Nova Conta</h2>
                 <form id="signup-form" class="space-y-6">
-                    <input type="text" id="signup-username" placeholder="Nome de usuário" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
-                    <input type="email" id="signup-email" placeholder="E-mail" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
-                    <input type="password" id="signup-password" placeholder="Senha (mínimo 6 caracteres)" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                    <input type="text" id="signup-username" placeholder="Nome de usuário" required class="form-input">
+                    <input type="email" id="signup-email" placeholder="E-mail" required class="form-input">
+                    <input type="password" id="signup-password" placeholder="Senha (mínimo 6 caracteres)" required class="form-input">
                     <p id="signup-error" class="text-red-400 text-sm h-4"></p>
-                    <button type="submit" class="btn-primary w-full text-white font-bold py-3 rounded-lg">Criar Conta</button>
+                    <button type="submit" class="btn-primary w-full">Criar Conta</button>
                 </form>
-                <p class="text-center text-gray-400">Já tem uma conta? <button data-target="login-page" class="auth-nav-btn font-semibold text-violet-400 hover:underline">Entrar</button></p>
+                <p class="text-center text-gray-400">Já tem uma conta? <button data-target="login-page" class="auth-nav-btn font-semibold text-accent hover:underline">Entrar</button></p>
             </div>
         </div>
-    </div>
-
-    <!-- Tela de Seleção de Perfil -->
-    <div id="profile-gate" class="fixed inset-0 bg-[#040714] z-[9998] flex-col items-center justify-center hidden">
-        <h2 class="text-4xl sm:text-5xl font-bold text-white mb-12">Quem está a assistir?</h2>
-        <div id="profiles-list" class="flex flex-wrap justify-center gap-4 sm:gap-8">
-            <!-- Perfis serão injetados aqui -->
-        </div>
-        <button id="manage-profiles-btn" class="mt-12 text-gray-400 border border-gray-400 py-2 px-6 rounded-lg hover:bg-gray-700 transition">Gerir Perfis</button>
     </div>
 
     <!-- Wrapper Principal da Aplicação -->
-    <div id="app-wrapper" class="hidden flex flex-col min-h-screen">
-        <!-- Header Fixo -->
-        <header id="main-header" class="glass-effect sticky top-0 z-40 border-b">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
-                <div class="flex items-center space-x-8">
-                    <a href="#inicio" data-target="inicio-page" class="nav-link text-3xl font-black tracking-wider text-white">ACTION<span class="text-violet-400">MAX</span></a>
-                    <nav class="hidden lg:flex items-center space-x-6">
-                        <a href="#inicio" data-target="inicio-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Início</a>
-                        <a href="#series" data-target="series-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Séries</a>
-                        <a href="#filmes" data-target="filmes-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Filmes</a>
-                        <a href="#generos" data-target="generos-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Gêneros</a>
-                        <a href="#aovivo" data-target="aovivo-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Ao Vivo</a>
-                        <a href="#embreve" data-target="embreve-page" class="nav-link text-gray-300 hover:text-white font-semibold border-b-2 border-transparent hover:border-violet-400 transition-all duration-300">Em Breve</a>
-                    </nav>
-                </div>
-                <div class="flex items-center space-x-4 sm:space-x-6">
-                    <button id="search-btn" aria-label="Buscar" class="text-gray-300 hover:text-white"><i class="fas fa-search text-xl"></i></button>
-                    <button id="notification-btn" aria-label="Notificações" class="text-gray-300 hover:text-white relative">
-                        <i class="fas fa-bell text-xl"></i>
-                        <span id="notification-badge" class="absolute -top-1 -right-2 w-4 h-4 bg-violet-500 text-xs rounded-full flex items-center justify-center hidden"></span>
-                    </button>
-                    <!-- Avatar Link -->
-                    <a href="#perfil" data-target="perfil-page" class="nav-link">
-                        <img id="profile-avatar" src="https://placehold.co/40x40/040714/a78bfa?text=A" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-violet-400 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/40x40/040714/a78bfa?text=A';">
-                    </a>
-                </div>
+    <div id="app-wrapper" class="hidden">
+        <!-- Sidebar de Navegação -->
+        <aside id="sidebar" class="fixed top-0 left-0 h-full z-50 flex flex-col items-center justify-between py-6">
+            <a href="#inicio" data-target="inicio-page" class="nav-link text-3xl font-black tracking-wider text-white">A<span class="text-accent">M</span></a>
+            
+            <nav class="flex flex-col items-center gap-4">
+                <a href="#inicio" data-target="inicio-page" class="nav-link" data-tooltip="Início"><i class="fas fa-home"></i> <span>Início</span></a>
+                <a href="#series" data-target="series-page" class="nav-link" data-tooltip="Séries"><i class="fas fa-tv"></i> <span>Séries</span></a>
+                <a href="#filmes" data-target="filmes-page" class="nav-link" data-tooltip="Filmes"><i class="fas fa-film"></i> <span>Filmes</span></a>
+                <a href="#generos" data-target="generos-page" class="nav-link" data-tooltip="Gêneros"><i class="fas fa-grip-horizontal"></i> <span>Gêneros</span></a>
+                <a href="#aovivo" data-target="aovivo-page" class="nav-link" data-tooltip="Ao Vivo"><i class="fas fa-broadcast-tower"></i> <span>Ao Vivo</span></a>
+                <a href="#embreve" data-target="embreve-page" class="nav-link" data-tooltip="Em Breve"><i class="fas fa-clock"></i> <span>Em Breve</span></a>
+            </nav>
+
+            <div class="flex flex-col items-center gap-4">
+                <button id="search-btn" class="nav-link" data-tooltip="Buscar"><i class="fas fa-search"></i> <span>Buscar</span></button>
+                <button id="notification-btn" class="nav-link relative" data-tooltip="Notificações">
+                    <i class="fas fa-bell"></i> <span>Notificações</span>
+                    <span id="notification-badge" class="absolute top-1 right-1 w-3 h-3 bg-accent rounded-full hidden"></span>
+                </button>
+                <a href="#perfil" data-target="perfil-page" class="nav-link" data-tooltip="Perfil">
+                    <img id="profile-avatar" src="https://placehold.co/40x40/040714/a78bfa?text=A" alt="Avatar" class="w-8 h-8 rounded-full object-cover">
+                    <span>Perfil</span>
+                </a>
             </div>
-        </header>
+        </aside>
 
         <!-- Conteúdo Principal -->
-        <main class="flex-grow">
-            <div id="inicio-page" class="page-content">
-                <section id="hero-section" class="relative h-[80vh] sm:h-[85vh] flex items-center">
-                    <div class="absolute inset-0 z-0">
-                        <img id="hero-bg-desktop" src="https://placehold.co/1920x1080/040714/1c1d2c?text=+" alt="Filme em destaque" class="w-full h-full object-cover">
-                        <img id="hero-bg-mobile" src="https://placehold.co/1920x1080/040714/1c1d2c?text=+" alt="Filme em destaque" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#040714]/90 via-[#040714]/60 to-transparent"></div>
-                    </div>
-                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                        <div id="hero-content" class="max-w-xl">
-                             <h1 id="hero-title" class="text-4xl sm:text-5xl md:text-7xl font-black text-white uppercase tracking-wider cursor-pointer">Carregando...</h1>
-                             <div class="flex items-center space-x-4 my-6 text-gray-300">
-                                 <span id="hero-year"></span><span>•</span><span id="hero-genre"></span><span>•</span><span id="hero-duration"></span>
-                             </div>
-                             <p id="hero-desc" class="text-gray-200 text-base sm:text-lg mb-8"></p>
-                             <div class="flex flex-wrap gap-4">
-                                 <button id="hero-watch-btn" class="btn-primary text-white font-bold py-3 px-6 sm:px-8 rounded-lg flex items-center space-x-2 text-sm sm:text-base"><i class="fas fa-play"></i><span>Assistir Agora</span></button>
-                                 <button id="hero-add-list-btn" class="btn-secondary text-white font-bold py-3 px-6 sm:px-8 rounded-lg flex items-center space-x-2 text-sm sm:text-base">
-                                     <i id="hero-add-list-icon" class="fas fa-plus"></i>
-                                     <span id="hero-add-list-text">Minha Lista</span>
-                                 </button>
-                             </div>
+        <div id="main-content" class="transition-all duration-300">
+            <main>
+                <!-- Páginas de Conteúdo -->
+                <div id="inicio-page" class="page-content">
+                    <section id="hero-section" class="relative h-screen flex items-end pb-24 md:items-center md:pb-0">
+                        <div class="absolute inset-0 z-0">
+                            <img id="hero-bg-desktop" src="https://placehold.co/1920x1080/040714/1c1d2c?text=+" alt="Filme em destaque" class="w-full h-full object-cover">
+                            <img id="hero-bg-mobile" src="https://placehold.co/1920x1080/040714/1c1d2c?text=+" alt="Filme em destaque" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/70 to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-primary via-primary/50 to-transparent"></div>
                         </div>
-                    </div>
-                </section>
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-                    <div id="continue-watching-container"></div>
-                    <div id="home-carousels"></div>
-                </div>
-            </div>
-            <div id="series-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Todas as Séries</h1>
-                    <div id="series-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        <!-- Conteúdo das séries será injetados aqui -->
-                    </div>
-                </div>
-            </div>
-            <div id="filmes-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Todos os Filmes</h1>
-                     <div id="filmes-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        <!-- Conteúdo dos filmes será injetado aqui -->
-                    </div>
-                </div>
-            </div>
-            <div id="generos-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Explorar por Gênero</h1>
-                    <!-- Container para os botões de gênero -->
-                    <div id="genres-selection-container" class="flex flex-wrap gap-3 sm:gap-4 mb-12">
-                        <!-- Botões de gênero serão injetados aqui -->
-                    </div>
-    
-                    <!-- Container para os resultados -->
-                    <h2 id="genre-results-title" class="text-2xl sm:text-3xl font-bold mb-8 hidden"></h2>
-                    <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        <!-- Conteúdo do gênero será injetado aqui -->
-                    </div>
-                    <p id="genre-results-empty" class="text-gray-400 hidden">Nenhum item encontrado para este gênero.</p>
-                </div>
-            </div>
-            <div id="aovivo-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Canais Ao Vivo</h1>
-                    <div id="aovivo-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        <!-- Canais ao vivo serão injetados aqui -->
-                    </div>
-                </div>
-            </div>
-            <div id="embreve-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Em Breve</h1>
-                    <div id="embreve-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        <!-- Conteúdo "Em Breve" será injetado aqui -->
-                    </div>
-                </div>
-            </div>
-            <div id="perfil-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div class="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
-                        <img id="profile-avatar-large" src="https://placehold.co/150x150/040714/a78bfa?text=A" alt="Avatar grande do usuário" class="w-36 h-36 rounded-full border-4 border-violet-400 mb-6 md:mb-0 md:mr-10 flex-shrink-0 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/150x150/040714/a78bfa?text=A';">
-                        <div class="flex-grow">
-                            <h1 id="profile-username" class="text-4xl lg:text-5xl font-bold"></h1>
-                            <p id="profile-email" class="text-gray-400 mt-2"></p>
-                            <div class="flex flex-wrap gap-4 mt-4">
-                                <button id="change-username-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition">Alterar Nome</button>
-                                <button id="change-photo-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition">Alterar Foto</button>
-                            </div>
-                        </div>
-                    </div>
-                    <hr class="border-gray-700 my-12">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white mb-6">Minha Lista</h2>
-                        <div id="my-list-container">
-                            <!-- "Minha Lista" será injetada aqui como um carrossel -->
-                        </div>
-                         <p id="my-list-empty" class="text-gray-400 hidden">Sua lista está vazia. Adicione filmes e séries para vê-los aqui.</p>
-                    </div>
-                    <div class="mt-12">
-                         <h2 class="text-2xl font-bold text-white mb-6">Configurações da Conta</h2>
-                         <div class="bg-gray-800/50 p-6 rounded-lg max-w-2xl">
-                             <ul class="space-y-4">
-                                 <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Plano:</span> <span class="font-semibold">Premium</span></li>
-                                 <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Próxima cobrança:</span> <span class="font-semibold">25 de Agosto, 2025</span></li>
-                                 <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Idioma:</span> <span class="font-semibold">Português (Brasil)</span></li>
-                             </ul>
-                             <div class="mt-6 flex flex-col sm:flex-row gap-4">
-                                 <a href="#gerenciar-assinatura" data-target="gerenciar-assinatura-page" class="nav-link inline-block w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2 px-6 rounded-lg transition text-center">Gerenciar Assinatura</a>
-                                 <button id="sign-out-btn-profile" class="inline-block w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-6 rounded-lg transition text-center">Sair</button>
-                             </div>
-                         </div>
-                    </div>
-                </div>
-            </div>
-            <div id="gerenciar-assinatura-page" class="page-content hidden">
-                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                     <h1 class="text-3xl sm:text-4xl font-bold mb-8">Gerenciar Assinatura</h1>
-                     <p class="text-gray-400">Página em construção.</p>
-                 </div>
-            </div>
-            <div id="details-page" class="page-content hidden">
-                <section class="relative min-h-screen py-20">
-                    <div class="absolute inset-0 z-0">
-                        <img id="details-bg-desktop" src="" alt="Background" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/1920x1080/000000/ffffff?text=Placeholder';">
-                        <img id="details-bg-mobile" src="" alt="Background" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/1920x1080/000000/ffffff?text=Placeholder';">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#040714]/80 to-transparent"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#040714]/90 via-[#040714]/50 to-transparent"></div>
-                    </div>
-                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                        <!-- Grid para poster, título, etc. -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 items-start pt-16 md:pt-0">
-                            <div class="md:col-span-1 flex justify-center">
-                                <div class="w-56 sm:w-64 aspect-[2/3]">
-                                    <img id="details-poster" src="" alt="Poster" class="w-full h-full object-cover rounded-lg shadow-2xl" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                            <div id="hero-content" class="max-w-xl">
+                                <h1 id="hero-title" class="text-4xl sm:text-5xl md:text-7xl font-black text-white uppercase tracking-wider cursor-pointer">Carregando...</h1>
+                                <div class="flex items-center space-x-4 my-6 text-gray-300">
+                                    <span id="hero-year"></span><span>•</span><span id="hero-genre"></span><span>•</span><span id="hero-duration"></span>
                                 </div>
-                            </div>
-                            <div class="md:col-span-2 text-center md:text-left">
-                                <h1 id="details-title" class="text-4xl md:text-6xl font-black text-white uppercase tracking-wider"></h1>
-                                <div class="flex items-center justify-center md:justify-start space-x-4 my-6 text-gray-300">
-                                    <span id="details-year"></span><span>•</span><span id="details-genre"></span><span>•</span><span id="details-duration"></span>
-                                </div>
-                                <p id="details-desc" class="text-gray-200 text-lg mb-8"></p>
-                                <div class="flex flex-wrap justify-center md:justify-start gap-4">
-                                    <button id="details-watch-btn" class="btn-primary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2"><i class="fas fa-play"></i><span>Assistir</span></button>
-                                    <button id="details-trailer-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2 hidden"><i class="fas fa-video"></i><span>Trailer</span></button>
-                                    <button id="details-add-list-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
-                                        <i id="details-add-list-icon" class="fas fa-plus"></i>
-                                        <span id="details-add-list-text">Minha Lista</span>
-                                    </button>
-                                    <button id="details-share-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
-                                        <i class="fas fa-share-alt"></i>
-                                        <span>Partilhar</span>
+                                <p id="hero-desc" class="text-gray-200 text-base sm:text-lg mb-8 line-clamp-3"></p>
+                                <div class="flex flex-wrap gap-4">
+                                    <button id="hero-watch-btn" class="btn-primary"><i class="fas fa-play"></i><span>Assistir Agora</span></button>
+                                    <button id="hero-add-list-btn" class="btn-secondary">
+                                        <i id="hero-add-list-icon" class="fas fa-plus"></i>
+                                        <span id="hero-add-list-text">Minha Lista</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
+                    </section>
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12 -mt-24 md:-mt-12 relative z-10">
+                        <div id="continue-watching-container"></div>
+                        <div id="home-carousels"></div>
+                    </div>
+                </div>
 
-                        <!-- Seção de Temporadas e Episódios -->
-                        <div id="seasons-section" class="mt-12 hidden text-left">
-                            <div class="flex items-center gap-4 mb-4 pb-2 border-b-2 border-gray-700">
-                                <h3 class="text-xl font-bold flex-shrink-0">Temporadas:</h3>
-                                <div id="season-selector" class="flex flex-wrap gap-2">
-                                    <!-- Botões das temporadas serão injetados aqui -->
+                <div id="series-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Todas as Séries</h1>
+                        <div id="series-container" class="grid-container"></div>
+                    </div>
+                </div>
+
+                <div id="filmes-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Todos os Filmes</h1>
+                        <div id="filmes-container" class="grid-container"></div>
+                    </div>
+                </div>
+
+                <div id="generos-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Explorar por Gênero</h1>
+                        <div id="genres-selection-container" class="flex flex-wrap gap-3 sm:gap-4 mb-12"></div>
+                        <h2 id="genre-results-title" class="text-2xl sm:text-3xl font-bold mb-8 hidden"></h2>
+                        <div id="genre-results-container" class="grid-container"></div>
+                        <p id="genre-results-empty" class="text-gray-400 hidden">Nenhum item encontrado para este gênero.</p>
+                    </div>
+                </div>
+
+                <div id="aovivo-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Canais Ao Vivo</h1>
+                        <div id="aovivo-container" class="grid-container"></div>
+                    </div>
+                </div>
+
+                <div id="embreve-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Em Breve</h1>
+                        <div id="embreve-container" class="grid-container"></div>
+                    </div>
+                </div>
+
+                <div id="perfil-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <div class="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-8">
+                            <img id="profile-avatar-large" src="https://placehold.co/150x150/040714/a78bfa?text=A" alt="Avatar grande do usuário" class="w-36 h-36 rounded-full border-4 border-accent flex-shrink-0 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/150x150/040714/a78bfa?text=A';">
+                            <div class="flex-grow">
+                                <h1 id="profile-username" class="text-4xl lg:text-5xl font-bold"></h1>
+                                <p id="profile-email" class="text-gray-400 mt-2"></p>
+                                <div class="flex flex-wrap gap-4 mt-6 justify-center md:justify-start">
+                                    <button id="change-username-btn" class="btn-secondary">Alterar Nome</button>
+                                    <button id="change-photo-btn" class="btn-secondary">Alterar Foto</button>
                                 </div>
                             </div>
-                            <div id="episodes-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 max-h-[40vh] overflow-y-auto pr-2">
-                                <!-- Cards dos episódios serão injetados aqui -->
-                            </div>
                         </div>
-
-                        <!-- Seção de Em Breve (Episódios) -->
-                        <div id="upcoming-episodes-section" class="mt-12 hidden text-left">
-                            <h3 class="text-xl font-bold mb-4 pb-2 border-b-2 border-gray-700">Próximos Episódios</h3>
-                            <div id="upcoming-episodes-list" class="space-y-3">
-                                <!-- Cards dos episódios em breve serão injetados aqui -->
-                            </div>
+                        <hr class="border-gray-700 my-12">
+                        <div>
+                            <h2 class="section-title">Minha Lista</h2>
+                            <div id="my-list-container"></div>
+                            <p id="my-list-empty" class="text-gray-400 hidden">Sua lista está vazia.</p>
                         </div>
-
-                        <!-- Wrapper para Avaliações e Comentários -->
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 mt-12">
-                            <!-- Coluna de Avaliação -->
-                            <div>
-                                <h2 class="text-2xl font-bold text-white mb-4">Avaliações</h2>
-                                <div class="flex items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
-                                    <div>
-                                        <p class="text-lg font-semibold">Sua Avaliação:</p>
-                                        <div id="user-rating-stars" class="star-rating flex text-3xl">
-                                            <i class="far fa-star" data-value="1"></i><i class="far fa-star" data-value="2"></i><i class="far fa-star" data-value="3"></i><i class="far fa-star" data-value="4"></i><i class="far fa-star" data-value="5"></i>
-                                        </div>
-                                    </div>
-                                    <div class="border-l border-gray-600 pl-4">
-                                        <p class="text-lg font-semibold">Média:</p>
-                                        <div class="flex items-center gap-2">
-                                            <i class="fas fa-star text-yellow-400 text-2xl"></i>
-                                            <span id="average-rating" class="text-2xl font-bold">N/A</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Coluna de Comentários -->
-                            <div>
-                                <h2 class="text-2xl font-bold text-white mb-6">Comentários</h2>
-                                <div class="max-w-3xl">
-                                    <form id="comment-form" class="flex items-start gap-4 mb-8">
-                                        <img id="comment-avatar" src="https://placehold.co/40x40/040714/a78bfa?text=A" class="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="Seu avatar">
-                                        <div class="flex-grow">
-                                            <textarea id="comment-input" required placeholder="Adicionar um comentário..." class="w-full bg-gray-800/50 border-2 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-violet-500 transition resize-none"></textarea>
-                                            <button type="submit" class="btn-primary text-white font-semibold py-2 px-5 rounded-lg mt-2 float-right">Comentar</button>
-                                        </div>
-                                    </form>
-                                    <div id="comments-container" class="space-y-6 max-h-[40vh] overflow-y-auto pr-2">
-                                        <!-- Comentários serão injetados aqui -->
-                                    </div>
+                        <div class="mt-12">
+                            <h2 class="section-title">Configurações da Conta</h2>
+                            <div class="bg-secondary p-6 rounded-lg max-w-2xl">
+                                <ul class="space-y-4">
+                                    <li class="flex justify-between items-center"><span class="text-gray-300">Plano:</span> <span class="font-semibold">Premium</span></li>
+                                    <li class="flex justify-between items-center"><span class="text-gray-300">Próxima cobrança:</span> <span class="font-semibold">25 de Agosto, 2025</span></li>
+                                </ul>
+                                <div class="mt-6 flex flex-col sm:flex-row gap-4">
+                                    <button id="sign-out-btn-profile" class="btn-danger w-full sm:w-auto">Sair</button>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Seção de Recomendados -->
-                        <div id="recommended-section" class="mt-12">
-                            <!-- O carrossel de recomendados será injetado aqui -->
+                    </div>
+                </div>
+                
+                <div id="details-page" class="page-content hidden">
+                    <section class="relative min-h-screen">
+                        <div class="absolute inset-0 z-0">
+                            <img id="details-bg-desktop" src="" alt="Background" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/1920x1080/000000/ffffff?text=Placeholder';">
+                            <img id="details-bg-mobile" src="" alt="Background" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/1920x1080/000000/ffffff?text=Placeholder';">
+                            <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/80 to-transparent"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-primary via-primary/60 to-transparent"></div>
                         </div>
+                        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-12">
+                            <button id="details-back-btn" class="absolute top-8 left-8 text-white bg-black/30 rounded-full w-10 h-10 flex items-center justify-center hover:bg-black/60 transition z-20"><i class="fas fa-arrow-left"></i></button>
+                            <div class="flex flex-col md:flex-row gap-8 lg:gap-12 items-center md:items-start pt-24 md:pt-16">
+                                <div class="md:w-1/3 lg:w-1/4 flex-shrink-0">
+                                    <img id="details-poster" src="" alt="Poster" class="w-full aspect-[2/3] object-cover rounded-lg shadow-2xl" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                                </div>
+                                <div class="md:w-2/3 lg:w-3/4 text-center md:text-left">
+                                    <h1 id="details-title" class="text-4xl md:text-6xl font-black text-white uppercase tracking-wider"></h1>
+                                    <div class="flex items-center justify-center md:justify-start space-x-4 my-6 text-gray-300">
+                                        <span id="details-year"></span><span>•</span><span id="details-genre"></span><span>•</span><span id="details-duration"></span>
+                                    </div>
+                                    <p id="details-desc" class="text-gray-200 text-lg mb-8 line-clamp-4"></p>
+                                    <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                                        <button id="details-watch-btn" class="btn-primary"><i class="fas fa-play"></i><span>Assistir</span></button>
+                                        <button id="details-trailer-btn" class="btn-secondary hidden"><i class="fas fa-video"></i><span>Trailer</span></button>
+                                        <button id="details-add-list-btn" class="btn-secondary">
+                                            <i id="details-add-list-icon" class="fas fa-plus"></i>
+                                            <span id="details-add-list-text">Minha Lista</span>
+                                        </button>
+                                        <button id="details-share-btn" class="btn-secondary"><i class="fas fa-share-alt"></i><span>Partilhar</span></button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Abas de Conteúdo -->
+                            <div class="mt-12">
+                                <div id="details-tabs" class="flex border-b border-gray-700 mb-6">
+                                    <button class="details-tab-btn active" data-tab="episodes-tab">Episódios</button>
+                                    <button class="details-tab-btn" data-tab="comments-tab">Comentários</button>
+                                    <button class="details-tab-btn" data-tab="recommended-tab">Recomendados</button>
+                                </div>
+                                <div id="details-tab-content">
+                                    <div id="episodes-tab" class="details-tab-panel">
+                                        <div id="seasons-section" class="hidden">
+                                            <div class="flex items-center gap-4 mb-4">
+                                                <h3 class="text-xl font-bold flex-shrink-0">Temporadas:</h3>
+                                                <div id="season-selector" class="flex flex-wrap gap-2"></div>
+                                            </div>
+                                            <div id="episodes-list" class="grid-container"></div>
+                                        </div>
+                                    </div>
+                                    <div id="comments-tab" class="details-tab-panel hidden">
+                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                            <div>
+                                                <h2 class="section-title">Avaliações</h2>
+                                                <div class="flex items-center gap-4 bg-secondary p-4 rounded-lg">
+                                                    <div>
+                                                        <p class="text-lg font-semibold">Sua Avaliação:</p>
+                                                        <div id="user-rating-stars" class="star-rating flex text-3xl">
+                                                            <i class="far fa-star" data-value="1"></i><i class="far fa-star" data-value="2"></i><i class="far fa-star" data-value="3"></i><i class="far fa-star" data-value="4"></i><i class="far fa-star" data-value="5"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="border-l border-gray-600 pl-4">
+                                                        <p class="text-lg font-semibold">Média:</p>
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="fas fa-star text-yellow-400 text-2xl"></i>
+                                                            <span id="average-rating" class="text-2xl font-bold">N/A</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h2 class="section-title">Comentários</h2>
+                                                <form id="comment-form" class="flex items-start gap-4 mb-8">
+                                                    <img id="comment-avatar" src="https://placehold.co/40x40/040714/a78bfa?text=A" class="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="Seu avatar">
+                                                    <div class="flex-grow">
+                                                        <textarea id="comment-input" required placeholder="Adicionar um comentário..." class="form-input resize-none"></textarea>
+                                                        <button type="submit" class="btn-primary mt-2 float-right">Comentar</button>
+                                                    </div>
+                                                </form>
+                                                <div id="comments-container" class="space-y-6 max-h-[50vh] overflow-y-auto pr-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="recommended-tab" class="details-tab-panel hidden">
+                                        <div id="recommended-section"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
 
-                    </div>
-                </section>
-            </div>
-            <div id="avatar-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div class="flex items-center mb-8 sm:mb-12">
-                        <button id="avatar-back-btn" aria-label="Voltar" class="text-white hover:text-violet-400 transition mr-4">
-                            <i class="fas fa-arrow-left text-2xl"></i>
-                        </button>
-                        <h1 class="text-3xl sm:text-4xl font-bold text-center">Escolha seu Avatar</h1>
-                    </div>
-                    <div id="avatar-category-container" class="space-y-8">
-                        <!-- Categorias de Avatares serão injetados aqui -->
+                <div id="avatar-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <div class="flex items-center mb-8 sm:mb-12">
+                            <button id="avatar-back-btn" aria-label="Voltar" class="text-white hover:text-accent transition mr-4"><i class="fas fa-arrow-left text-2xl"></i></button>
+                            <h1 class="page-title">Escolha seu Avatar</h1>
+                        </div>
+                        <div id="avatar-category-container" class="space-y-8"></div>
                     </div>
                 </div>
-            </div>
-            <div id="player-page" class="page-content hidden bg-black">
-                <div class="w-full h-screen flex flex-col items-center justify-center relative">
-                    <div id="player-container" class="w-full h-full">
-                        <!-- Player de Vídeo ou Iframe será injetado aqui -->
-                    </div>
-                    <div id="next-episode-overlay" class="absolute inset-0 bg-black/70 flex-col items-center justify-center hidden z-10">
-                        <p id="next-episode-countdown" class="text-2xl mb-4">Próximo episódio em 5...</p>
-                        <button id="play-next-btn" class="btn-primary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
-                            <i class="fas fa-step-forward"></i>
-                            <span>Assistir Próximo</span>
-                        </button>
-                        <button id="cancel-next-btn" class="btn-secondary text-white font-bold py-2 px-6 rounded-lg mt-4">Cancelar</button>
-                    </div>
-                </div>
-            </div>
-            <div id="termos-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Termos de Serviço</h1>
-                    <div id="termos-content" class="text-gray-300 space-y-4 footer-content">
-                        <p>Carregando...</p>
-                    </div>
-                </div>
-            </div>
-            <div id="privacidade-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Política de Privacidade</h1>
-                    <div id="privacidade-content" class="text-gray-300 space-y-4 footer-content">
-                        <p>Carregando...</p>
-                    </div>
-                </div>
-            </div>
-            <div id="ajuda-page" class="page-content hidden">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Ajuda</h1>
-                    <div id="ajuda-content" class="text-gray-300 space-y-4 footer-content">
-                        <p>Carregando...</p>
-                    </div>
-                </div>
-            </div>
-        </main>
 
-        <footer class="bg-gray-900 text-gray-400 mt-auto">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div id="social-links-container" class="flex justify-center mb-4 space-x-6">
-                    <!-- Links de redes sociais serão injetados aqui -->
+                <div id="player-page" class="page-content hidden bg-black">
+                    <div class="w-full h-screen flex flex-col items-center justify-center relative">
+                        <div id="player-container" class="w-full h-full"></div>
+                        <div id="next-episode-overlay" class="absolute inset-0 bg-black/70 flex-col items-center justify-center hidden z-10">
+                            <p id="next-episode-countdown" class="text-2xl mb-4">Próximo episódio em 5...</p>
+                            <button id="play-next-btn" class="btn-primary"><i class="fas fa-step-forward"></i><span>Assistir Próximo</span></button>
+                            <button id="cancel-next-btn" class="btn-secondary mt-4">Cancelar</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-center flex-wrap gap-x-4 gap-y-2 mb-4 text-sm">
-                    <a href="#termos" data-target="termos-page" class="nav-link hover:text-white transition-colors">Termos de Serviço</a>
-                    <span class="hidden sm:inline">|</span>
-                    <a href="#privacidade" data-target="privacidade-page" class="nav-link hover:text-white transition-colors">Política de Privacidade</a>
-                    <span class="hidden sm:inline">|</span>
-                    <a href="#ajuda" data-target="ajuda-page" class="nav-link hover:text-white transition-colors">Ajuda</a>
-                </div>
-                <p class="text-center text-xs">&copy; 2025 ActionMax. Todos os direitos reservados.</p>
-            </div>
-        </footer>
 
-        <nav id="mobile-nav" class="lg:hidden fixed bottom-0 left-0 right-0 h-20 glass-effect border-t z-40 flex justify-around items-center">
-            <a href="#inicio" data-target="inicio-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-home text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Início</span>
-            </a>
-            <a href="#filmes" data-target="filmes-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-film text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Filmes</span>
-            </a>
-            <a href="#series" data-target="series-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-tv text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Séries</span>
-            </a>
-            <a href="#generos" data-target="generos-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-grip-horizontal text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Gêneros</span>
-            </a>
-            <a href="#aovivo" data-target="aovivo-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-broadcast-tower text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Ao Vivo</span>
-            </a>
-             <a href="#embreve" data-target="embreve-page" class="mobile-nav-link nav-link text-gray-400 hover:text-white flex flex-col items-center justify-center text-center w-full transition">
-                <i class="fas fa-clock text-2xl"></i>
-                <span class="text-xs font-medium mt-1">Em Breve</span>
-            </a>
-        </nav>
+                <div id="termos-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Termos de Serviço</h1>
+                        <div id="termos-content" class="prose"></div>
+                    </div>
+                </div>
+                <div id="privacidade-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Política de Privacidade</h1>
+                        <div id="privacidade-content" class="prose"></div>
+                    </div>
+                </div>
+                <div id="ajuda-page" class="page-content hidden">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                        <h1 class="page-title">Ajuda</h1>
+                        <div id="ajuda-content" class="prose"></div>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="bg-secondary text-gray-400 mt-auto">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div id="social-links-container" class="flex justify-center mb-4 space-x-6"></div>
+                    <div class="flex justify-center flex-wrap gap-x-4 gap-y-2 mb-4 text-sm">
+                        <a href="#termos" data-target="termos-page" class="footer-link">Termos de Serviço</a>
+                        <span class="hidden sm:inline">|</span>
+                        <a href="#privacidade" data-target="privacidade-page" class="footer-link">Política de Privacidade</a>
+                        <span class="hidden sm:inline">|</span>
+                        <a href="#ajuda" data-target="ajuda-page" class="footer-link">Ajuda</a>
+                    </div>
+                    <p class="text-center text-xs">&copy; 2025 ActionMax. Todos os direitos reservados.</p>
+                </div>
+            </footer>
+        </div>
     </div>
 
-    <!-- Modal de Alterar Nome de Usuário -->
-    <div id="username-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="username-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
+    <!-- Modals -->
+    <div id="username-modal-overlay" class="modal-overlay">
+        <div id="username-modal" class="modal">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">Alterar Nome de Usuário</h2>
-                <button id="close-username-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                <button id="close-username-btn" class="modal-close-btn">&times;</button>
             </div>
             <form id="username-form" class="space-y-4">
-                <input type="text" id="new-username-input" placeholder="Novo nome de usuário" required class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                <input type="text" id="new-username-input" placeholder="Novo nome de usuário" required class="form-input">
                 <p id="username-error" class="text-red-400 text-sm h-4"></p>
-                <button type="submit" class="btn-primary w-full text-white font-bold py-3 rounded-lg">Salvar</button>
+                <button type="submit" class="btn-primary w-full">Salvar</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Busca -->
-    <div id="search-modal-overlay" class="modal-overlay fixed inset-0 bg-[#040714]/95 z-[60] hidden opacity-0 flex flex-col items-center p-4 sm:p-6 lg:p-8 transition-opacity duration-300">
-        <button id="close-search-btn" class="absolute top-6 right-6 text-gray-400 hover:text-white text-3xl leading-none z-10">&times;</button>
+    <div id="search-modal-overlay" class="modal-overlay flex-col p-4 sm:p-6 lg:p-8">
+        <button id="close-search-btn" class="absolute top-6 right-6 modal-close-btn z-10">&times;</button>
         <div class="w-full max-w-4xl mt-16 flex-grow flex flex-col">
             <div class="relative">
-                <input type="text" id="search-input" placeholder="Buscar por títulos..." class="w-full bg-gray-800/50 border-2 border-gray-700 focus:border-violet-500 text-white text-xl sm:text-2xl font-semibold rounded-lg py-4 px-6 pl-14 outline-none transition">
+                <input type="text" id="search-input" placeholder="Buscar por títulos..." class="w-full bg-secondary border-2 border-gray-700 focus:border-accent text-white text-xl sm:text-2xl font-semibold rounded-lg py-4 px-6 pl-14 outline-none transition">
                 <i class="fas fa-search text-gray-500 absolute left-6 top-1/2 -translate-y-1/2 text-xl"></i>
             </div>
             <div id="search-results-wrapper" class="mt-8 overflow-y-auto flex-grow">
-                <div id="search-results-container">
-                    <!-- Resultados da busca serão injetados aqui como um carrossel -->
-                </div>
+                <div id="search-results-container"></div>
                 <p id="search-no-results" class="text-gray-400 text-center mt-8 text-lg hidden">Nenhum resultado encontrado.</p>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Notificações -->
-    <div id="notification-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="notification-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl text-white transform scale-95 opacity-0">
+    <div id="notification-modal-overlay" class="modal-overlay">
+        <div id="notification-modal" class="modal">
             <div class="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h2 class="text-xl font-bold">Notificações</h2>
-                <button id="close-notification-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                <button id="close-notification-btn" class="modal-close-btn">&times;</button>
             </div>
-            <div id="notification-list" class="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                 <!-- Notificações do Firebase serão injetadas aqui -->
-            </div>
+            <div id="notification-list" class="p-4 space-y-4 max-h-[60vh] overflow-y-auto"></div>
         </div>
     </div>
 
-    <!-- Modal de Partilha -->
-    <div id="share-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="share-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0">
+    <div id="share-modal-overlay" class="modal-overlay">
+        <div id="share-modal" class="modal">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">Partilhar</h2>
-                <button id="close-share-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                <button id="close-share-btn" class="modal-close-btn">&times;</button>
             </div>
             <p class="text-gray-300 mb-4">Copie o link abaixo para partilhar:</p>
-            <div class="flex items-center gap-2 bg-gray-900 p-2 rounded-lg">
+            <div class="flex items-center gap-2 bg-primary p-2 rounded-lg">
                 <input type="text" id="share-link-input" readonly class="w-full bg-transparent border-none text-gray-300 focus:ring-0 p-2">
-                <button id="copy-link-btn" class="btn-primary text-white font-semibold py-2 px-4 rounded-lg whitespace-nowrap">Copiar</button>
+                <button id="copy-link-btn" class="btn-primary whitespace-nowrap">Copiar</button>
             </div>
             <p id="copy-feedback" class="text-green-400 text-sm h-4 mt-2 text-center"></p>
         </div>
     </div>
 
-    <!-- Link para o seu arquivo JavaScript -->
     <script type="module" src="script.js"></script>
 </body>
 </html>

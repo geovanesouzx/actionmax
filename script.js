@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelNextBtn = document.getElementById('cancel-next-btn');
     const nextEpisodeCountdown = document.getElementById('next-episode-countdown');
     const pageContents = document.querySelectorAll('.page-content');
-    const mobileNav = document.getElementById('mobile-nav');
-    const mainHeader = document.getElementById('main-header');
+    const mainContent = document.getElementById('main-content');
+    const sidebar = document.getElementById('sidebar');
     const heroSection = document.getElementById('hero-section');
     const homeCarousels = document.getElementById('home-carousels');
     const continueWatchingContainer = document.getElementById('continue-watching-container');
@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const signupForm = document.getElementById('signup-form');
     const signOutBtnProfile = document.getElementById('sign-out-btn-profile');
     const navLinks = document.querySelectorAll('.nav-link');
-    const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
     const searchBtn = document.getElementById('search-btn');
     const searchModalOverlay = document.getElementById('search-modal-overlay');
     const closeSearchBtn = document.getElementById('close-search-btn');
@@ -117,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareLinkInput = document.getElementById('share-link-input');
     const copyLinkBtn = document.getElementById('copy-link-btn');
     const copyFeedback = document.getElementById('copy-feedback');
+    const detailsBackBtn = document.getElementById('details-back-btn');
+    const detailsTabs = document.getElementById('details-tabs');
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -239,8 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!container) return;
             if (container.swiper) container.swiper.destroy(true, true);
             new Swiper(container, {
-                slidesPerView: 2.2, 
-                spaceBetween: 16,
+                slidesPerView: 'auto',
+                spaceBetween: 20,
                 freeMode: true,
                 freeModeMomentum: true,
                 speed: 600, 
@@ -250,12 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 navigation: {
                     nextEl: container.parentElement.querySelector('.swiper-button-next'),
                     prevEl: container.parentElement.querySelector('.swiper-button-prev'),
-                },
-                breakpoints: {
-                    640: { slidesPerView: 3, spaceBetween: 16 },
-                    768: { slidesPerView: 4, spaceBetween: 24 },
-                    1024: { slidesPerView: 5, spaceBetween: 24 },
-                    1280: { slidesPerView: 6, spaceBetween: 24 },
                 },
             });
         };
@@ -324,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             myListEmptyMsg?.classList.add('hidden');
-            const slidesHTML = myList.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
+            const slidesHTML = myList.map(itemData => `<div class="swiper-slide !w-40 md:!w-48">${createCardHTML(itemData)}</div>`).join('');
             myListContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
             initCarousel(myListContainer.querySelector('.content-carousel'));
         };
@@ -332,13 +327,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
             if (unsubscribeRatings) unsubscribeRatings();
-            const isDetailsPage = pageId === 'details-page';
-            const isAvatarPage = pageId === 'avatar-page';
-            const isPlayerPage = pageId === 'player-page';
-            if (!isDetailsPage && !isAvatarPage && !isPlayerPage) lastPageId = pageId;
+            
+            const isDetailsOrPlayer = pageId === 'details-page' || pageId === 'player-page';
+            sidebar.classList.toggle('hidden', isDetailsOrPlayer);
+            mainContent.classList.toggle('!ml-0', isDetailsOrPlayer);
+
+            if (!isDetailsOrPlayer) lastPageId = pageId;
+
             pageContents.forEach(page => page.classList.add('hidden'));
             
-            if (isDetailsPage) {
+            if (pageId === 'details-page') {
                 document.getElementById('details-bg-desktop').src = '';
                 document.getElementById('details-bg-mobile').src = '';
                 document.getElementById('details-poster').src = '';
@@ -347,27 +345,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const targetPage = document.getElementById(pageId);
-            mobileNav.classList.toggle('hidden', isDetailsPage || isAvatarPage || isPlayerPage);
-            mainHeader.classList.toggle('hidden', isDetailsPage || isAvatarPage || isPlayerPage);
-
-            const body = document.body;
-            if (isPlayerPage || isDetailsPage) {
-                body.classList.remove('pb-24', 'lg:pb-0');
-            } else {
-                body.classList.add('pb-24', 'lg:pb-0');
-            }
-
             if (targetPage) {
                 targetPage.classList.remove('hidden');
-                if (isDetailsPage && data) {
+                if (pageId === 'details-page' && data) {
                     currentDetailsData = data;
                     populateDetailsPage(data);
                     updateAllListButtons(data.id);
                     loadComments(data.id);
                     loadRatingData(data.id);
-                } else if (isAvatarPage) {
+                } else if (pageId === 'avatar-page') {
                     updateSelectedAvatarVisual();
-                } else if (!isPlayerPage) {
+                } else if (pageId !== 'player-page') {
                     currentDetailsData = null;
                 }
                 if (pageId === 'perfil-page') renderMyListPage();
@@ -384,11 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('inicio-page')?.classList.remove('hidden');
             }
             
-            const desktopNavLinks = document.querySelectorAll('header nav > a.nav-link');
-            desktopNavLinks.forEach(link => {
+            navLinks.forEach(link => {
                 link.classList.toggle('active', link.dataset.target === pageId);
             });
-            mobileNavLinks.forEach(link => link.classList.toggle('active', link.dataset.target === pageId));
             window.scrollTo(0, 0);
         };
 
@@ -402,24 +388,23 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('details-duration').textContent = data.duration || '';
             document.getElementById('details-genre').textContent = Array.isArray(data.genre) ? data.genre.join(', ') : (data.genre || '');
             
-            if (data.trailerSrc) {
-                detailsTrailerBtn.classList.remove('hidden');
-            } else {
-                detailsTrailerBtn.classList.add('hidden');
-            }
+            detailsTrailerBtn.classList.toggle('hidden', !data.trailerSrc);
 
-            if (data.type === 'Série' && data.seasons) {
+            const isSeries = data.type === 'Série' && data.seasons;
+            seasonsSection.classList.toggle('hidden', !isSeries);
+            detailsTabs.querySelector('[data-tab="episodes-tab"]').classList.toggle('hidden', !isSeries);
+
+            if (isSeries) {
                 currentDetailsData.parsedSeasons = data.seasons;
-                seasonsSection.classList.remove('hidden');
                 const seasonKeys = Object.keys(data.seasons).sort((a,b) => a-b);
                 const initialSeason = lastSelectedSeason[data.id] || seasonKeys[0];
                 renderSeasonSelector(data.seasons, initialSeason);
                 renderEpisodes(data.seasons, initialSeason);
+                switchDetailsTab('episodes-tab');
             } else {
-                seasonsSection.classList.add('hidden');
+                switchDetailsTab('comments-tab');
             }
 
-            document.getElementById('upcoming-episodes-section')?.classList.add('hidden');
             renderRecommendedCarousel(data);
         };
         
@@ -427,8 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
             seasonSelector.innerHTML = '';
             Object.keys(seasons).sort((a,b) => a - b).forEach((seasonNum) => {
                 const btn = document.createElement('button');
-                btn.textContent = seasonNum;
-                btn.className = `season-btn font-semibold py-2 px-4 rounded-lg ${seasonNum === activeSeason ? 'active' : ''}`;
+                btn.textContent = `T${seasonNum}`;
+                btn.className = `season-btn ${seasonNum === activeSeason ? 'active' : ''}`;
                 btn.dataset.season = seasonNum;
                 seasonSelector.appendChild(btn);
             });
@@ -445,22 +430,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const releaseDate = (typeof episodeData === 'object' && episodeData.releaseDate) ? episodeData.releaseDate : null;
 
                 const epCard = document.createElement('div');
+                epCard.className = 'episode-card p-3 text-center flex flex-col justify-center items-center';
 
                 if (releaseDate) {
-                    epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-not-allowed flex flex-col justify-center items-center opacity-60';
+                    epCard.classList.add('cursor-not-allowed', 'opacity-60');
                     epCard.innerHTML = `
                         <i class="fas fa-clock text-3xl mb-2 text-gray-400"></i>
                         <p class="font-semibold text-sm">Episódio ${epNum}</p>
                         <p class="text-xs text-gray-400 text-center mt-1 w-full truncate" title="${episodeTitle}">${episodeTitle}</p>
-                        <p class="text-xs font-bold text-violet-300 mt-1">${releaseDate}</p>
+                        <p class="text-xs font-bold text-accent mt-1">${releaseDate}</p>
                     `;
                 } else {
-                    epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
+                    epCard.classList.add('cursor-pointer');
                     epCard.dataset.videoSrc = videoSrc;
                     epCard.dataset.episode = epNum;
                     epCard.dataset.openInNewTab = openInNewTab;
                     epCard.innerHTML = `
-                        <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
+                        <i class="fas fa-play-circle text-3xl mb-2 text-accent"></i>
                         <p class="font-semibold text-sm">Episódio ${epNum}</p>
                         <p class="text-xs text-gray-400 text-center mt-1 w-full truncate" title="${episodeTitle}">${episodeTitle}</p>
                     `;
@@ -635,20 +621,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        const openModal = (overlay, modal) => {
-            overlay.classList.remove('hidden');
-            setTimeout(() => {
-                overlay.classList.remove('opacity-0');
-                modal?.classList.remove('opacity-0', 'scale-95');
-            }, 10);
+        const openModal = (overlay) => {
+            overlay.classList.add('visible');
         };
 
-        const closeModal = (overlay, modal) => {
-            overlay.classList.add('opacity-0');
-            modal?.classList.add('opacity-0', 'scale-95');
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-            }, 300);
+        const closeModal = (overlay) => {
+            overlay.classList.remove('visible');
         };
 
         const handleSearch = (e) => {
@@ -661,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const matchingContent = allContent.filter(item => item.title.toLowerCase().includes(query) && !(item.type === 'Filme' && item.emBreve));
             if (matchingContent.length > 0) {
                 searchNoResults.classList.add('hidden');
-                const slidesHTML = matchingContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
+                const slidesHTML = matchingContent.map(itemData => `<div class="swiper-slide !w-40 md:!w-48">${createCardHTML(itemData)}</div>`).join('');
                 searchResultsContainer.innerHTML = `<div class="relative"><div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div><div class="swiper-button-prev -left-4 !hidden md:!flex"></div><div class="swiper-button-next -right-4 !hidden md:!flex"></div></div>`;
                 initCarousel(searchResultsContainer.querySelector('.content-carousel'));
             } else {
@@ -702,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }).join('');
 
                     catDiv.innerHTML = `
-                        <h3 class="text-2xl font-bold mb-4">${cat.name}</h3>
+                        <h3 class="section-title">${cat.name}</h3>
                         <div class="relative">
                             <div class="swiper avatar-carousel">
                                 <div class="swiper-wrapper">${slidesHTML}</div>
@@ -728,9 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const defaultAvatar = `https://placehold.co/150x150/040714/a78bfa?text=${user.displayName.charAt(0).toUpperCase()}`;
                 const savedAvatar = (docSnap.exists() && docSnap.data().avatarUrl) ? docSnap.data().avatarUrl : defaultAvatar;
                 
-                profileAvatar.src = savedAvatar;
+                profileAvatar.src = savedAvatar.replace('150x150', '40x40');
                 profileAvatarLarge.src = savedAvatar;
-                commentAvatar.src = savedAvatar;
+                commentAvatar.src = savedAvatar.replace('150x150', '40x40');
             } catch (error) {
                 console.error("Error loading avatar:", error);
             }
@@ -738,9 +716,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const selectAvatar = async (e) => {
             const newAvatarUrl = e.target.src;
-            profileAvatar.src = newAvatarUrl;
+            profileAvatar.src = newAvatarUrl.replace('150x150', '40x40');
             profileAvatarLarge.src = newAvatarUrl;
-            commentAvatar.src = newAvatarUrl;
+            commentAvatar.src = newAvatarUrl.replace('150x150', '40x40');
             updateSelectedAvatarVisual();
             const user = auth.currentUser;
             if(user) await setDoc(doc(db, 'users', user.uid), { avatarUrl: newAvatarUrl }, { merge: true });
@@ -773,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await batch.commit();
                 await updateProfile(currentUser, { displayName: newUsername });
                 document.getElementById('profile-username').textContent = newUsername;
-                closeModal(usernameModalOverlay, usernameModal);
+                closeModal(usernameModalOverlay);
                 newUsernameInput.value = '';
             } catch (error) {
                 console.error("Erro ao alterar nome de usuário:", error);
@@ -787,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             allGenres.forEach(genre => {
                 const btn = document.createElement('button');
-                btn.className = 'genre-select-btn font-semibold py-2 px-5 rounded-lg';
+                btn.className = 'genre-select-btn';
                 btn.textContent = genre;
                 btn.dataset.genre = genre;
                 genresSelectionContainer.appendChild(btn);
@@ -852,7 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const isOwner = comment.authorId === currentUser.uid;
                     const commentEl = document.createElement('div');
                     commentEl.className = 'flex items-start gap-4';
-                    commentEl.innerHTML = `<img src="${comment.authorAvatar}" class="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="Avatar do usuário" onerror="this.onerror=null;this.src='https://placehold.co/40x40/040714/a78bfa?text=A';"><div class="flex-grow bg-gray-800/50 p-3 rounded-lg"><div class="flex justify-between items-center"><p class="font-semibold text-white">${comment.authorName}</p>${isOwner ? `<button data-comment-id="${comment.id}" class="delete-comment-btn text-gray-500 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}</div><p class="text-gray-300 py-2">${comment.text}</p><div class="flex items-center gap-2 text-gray-400"><button data-comment-id="${comment.id}" class="like-btn ${isLiked ? 'liked' : ''}"><i class="fas fa-heart"></i></button><span>${(comment.likes || []).length}</span></div></div>`;
+                    commentEl.innerHTML = `<img src="${comment.authorAvatar}" class="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="Avatar do usuário" onerror="this.onerror=null;this.src='https://placehold.co/40x40/040714/a78bfa?text=A';"><div class="flex-grow bg-primary p-3 rounded-lg"><div class="flex justify-between items-center"><p class="font-semibold text-white">${comment.authorName}</p>${isOwner ? `<button data-comment-id="${comment.id}" class="delete-comment-btn text-gray-500 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}</div><p class="text-gray-300 py-2">${comment.text}</p><div class="flex items-center gap-2 text-gray-400"><button data-comment-id="${comment.id}" class="like-btn ${isLiked ? 'liked' : ''}"><i class="fas fa-heart"></i></button><span>${(comment.likes || []).length}</span></div></div>`;
                     commentsContainer.appendChild(commentEl);
                 });
             });
@@ -967,7 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 notificationBadge.classList.add('hidden');
             }
             
-            if (!notificationModalOverlay.classList.contains('hidden')) {
+            if (notificationModalOverlay.classList.contains('visible')) {
                 renderNotifications();
             }
         }
@@ -996,18 +974,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     linkEl.href = notif.linkUrl;
                     linkEl.target = '_blank';
                     linkEl.rel = 'noopener noreferrer';
-                    linkEl.className = 'block p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700';
+                    linkEl.className = 'block p-3 bg-primary rounded-lg cursor-pointer hover:bg-gray-800';
                     linkEl.innerHTML = contentHTML;
                     itemWrapper.appendChild(linkEl);
                 } else if (notif.contentId) {
                     const divEl = document.createElement('div');
-                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700';
+                    divEl.className = 'p-3 bg-primary rounded-lg cursor-pointer hover:bg-gray-800';
                     divEl.dataset.contentId = notif.contentId;
                     divEl.innerHTML = contentHTML;
                     itemWrapper.appendChild(divEl);
                 } else {
                     const divEl = document.createElement('div');
-                    divEl.className = 'p-3 bg-gray-700/50 rounded-lg';
+                    divEl.className = 'p-3 bg-primary rounded-lg';
                     divEl.innerHTML = contentHTML;
                     itemWrapper.appendChild(divEl);
                 }
@@ -1046,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(item && item.dataset.contentId) {
                 const contentData = allContent.find(c => c.id === item.dataset.contentId);
                 if(contentData) {
-                    closeModal(notificationModalOverlay, notificationModal);
+                    closeModal(notificationModalOverlay);
                     showPage('details-page', true, contentData);
                 }
             }
@@ -1069,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cardData.type === 'Canal') {
                         playContent(cardData.videoSrc, cardData, null, null, cardData.videoSrcNewTab);
                     } else {
-                        if (!searchModalOverlay.classList.contains('hidden')) {
+                        if (searchModalOverlay.classList.contains('visible')) {
                             closeModal(searchModalOverlay);
                             setTimeout(() => showPage('details-page', true, cardData), 300);
                         } else {
@@ -1137,16 +1115,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         searchBtn?.addEventListener('click', () => openModal(searchModalOverlay));
         closeSearchBtn?.addEventListener('click', () => closeModal(searchModalOverlay));
-        searchInput?.addEventListener('input', handleSearch);
         searchModalOverlay?.addEventListener('click', (e) => { if (e.target === searchModalOverlay) closeModal(searchModalOverlay); });
+        searchInput?.addEventListener('input', handleSearch);
+        
         notificationBtn?.addEventListener('click', () => {
             renderNotifications();
-            openModal(notificationModalOverlay, notificationModal);
+            openModal(notificationModalOverlay);
             notificationBadge.classList.add('hidden');
             localStorage.setItem('lastCheckedNotifications', new Date().toISOString());
         });
-        closeNotificationBtn?.addEventListener('click', () => closeModal(notificationModalOverlay, notificationModal));
-        notificationModalOverlay?.addEventListener('click', (e) => { if (e.target === notificationModalOverlay) closeModal(notificationModalOverlay, notificationModal); });
+        closeNotificationBtn?.addEventListener('click', () => closeModal(notificationModalOverlay));
+        notificationModalOverlay?.addEventListener('click', (e) => { if (e.target === notificationModalOverlay) closeModal(notificationModalOverlay); });
+        
         changePhotoBtn?.addEventListener('click', () => showPage('avatar-page'));
         avatarBackBtn?.addEventListener('click', (e) => { e.preventDefault(); history.back(); });
         avatarCategoryContainer.addEventListener('click', (e) => {
@@ -1154,16 +1134,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectAvatar(e);
             }
         });
-        changeUsernameBtn.addEventListener('click', () => openModal(usernameModalOverlay, usernameModal));
-        closeUsernameBtn.addEventListener('click', () => closeModal(usernameModalOverlay, usernameModal));
-        usernameModalOverlay.addEventListener('click', (e) => { if (e.target === usernameModalOverlay) closeModal(usernameModalOverlay, usernameModal); });
+        
+        changeUsernameBtn.addEventListener('click', () => openModal(usernameModalOverlay));
+        closeUsernameBtn.addEventListener('click', () => closeModal(usernameModalOverlay));
+        usernameModalOverlay.addEventListener('click', (e) => { if (e.target === usernameModalOverlay) closeModal(usernameModalOverlay); });
 
         detailsShareBtn?.addEventListener('click', () => {
             if (currentDetailsData) {
                 const shareUrl = `${window.location.origin}${window.location.pathname}#/details/${currentDetailsData.id}`;
                 shareLinkInput.value = shareUrl;
                 copyFeedback.textContent = '';
-                openModal(shareModalOverlay, shareModal);
+                openModal(shareModalOverlay);
             }
         });
 
@@ -1184,9 +1165,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 2000);
         });
 
-        closeShareBtn?.addEventListener('click', () => closeModal(shareModalOverlay, shareModal));
+        closeShareBtn?.addEventListener('click', () => closeModal(shareModalOverlay));
         shareModalOverlay?.addEventListener('click', (e) => { 
-            if (e.target === shareModalOverlay) closeModal(shareModalOverlay, shareModal); 
+            if (e.target === shareModalOverlay) closeModal(shareModalOverlay); 
         });
 
         seasonSelector.addEventListener('click', (e) => {
@@ -1208,6 +1189,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 playContent(epCard.dataset.videoSrc, currentDetailsData, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
             }
         });
+
+        detailsBackBtn.addEventListener('click', () => history.back());
+
+        detailsTabs.addEventListener('click', (e) => {
+            if(e.target.matches('.details-tab-btn')) {
+                switchDetailsTab(e.target.dataset.tab);
+            }
+        });
+
+        const switchDetailsTab = (tabId) => {
+            document.querySelectorAll('.details-tab-panel').forEach(panel => panel.classList.add('hidden'));
+            document.getElementById(tabId)?.classList.remove('hidden');
+
+            document.querySelectorAll('.details-tab-btn').forEach(btn => btn.classList.remove('active'));
+            detailsTabs.querySelector(`[data-tab="${tabId}"]`)?.classList.add('active');
+        };
 
         window.addEventListener('popstate', (e) => {
             playerContainer.innerHTML = '';
@@ -1232,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const progressHTML = progress ? `
                 <div class="absolute bottom-0 left-0 w-full h-1.5 bg-gray-500/50">
-                    <div class="h-full bg-violet-500" style="width: ${progress}%;"></div>
+                    <div class="h-full bg-accent" style="width: ${progress}%;"></div>
                 </div>
             ` : '';
             return `
@@ -1264,9 +1261,9 @@ document.addEventListener('DOMContentLoaded', () => {
             recommendations = recommendations.slice(0, 15);
 
             if (recommendations.length > 0) {
-                const slidesHTML = recommendations.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
+                const slidesHTML = recommendations.map(itemData => `<div class="swiper-slide !w-40 md:!w-48">${createCardHTML(itemData)}</div>`).join('');
                 const carouselHTML = `
-                    <h2 class="text-2xl font-bold text-white mb-6">Recomendados para Si</h2>
+                    <h2 class="section-title">Recomendados para Si</h2>
                     <div class="relative">
                         <div class="swiper content-carousel">
                             <div class="swiper-wrapper">${slidesHTML}</div>
@@ -1289,7 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAllSeriesPage();
             renderAoVivoPage();
             renderEmBrevePage();
-            if(document.getElementById('perfil-page').classList.contains('hidden') === false) {
+            if(!document.getElementById('perfil-page').classList.contains('hidden')) {
                 renderMyListPage();
             }
         }
@@ -1320,10 +1317,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (categoryContent.length > 0) {
-                     const slidesHTML = categoryContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
+                     const slidesHTML = categoryContent.map(itemData => `<div class="swiper-slide !w-40 md:!w-48">${createCardHTML(itemData)}</div>`).join('');
                      const carouselHTML = `
                          <div class="space-y-6">
-                             <h2 class="text-2xl font-bold text-white">${category.title}</h2>
+                             <h2 class="section-title">${category.title}</h2>
                              <div class="relative">
                                  <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
                                  <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
@@ -1466,12 +1463,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const contentData = allContent.find(c => c.id === item.id);
                 if (!contentData) return '';
                 const progress = (item.currentTime / item.duration) * 100;
-                return `<div class="swiper-slide">${createCardHTML(contentData, progress)}</div>`;
+                return `<div class="swiper-slide !w-40 md:!w-48">${createCardHTML(contentData, progress)}</div>`;
             }).join('');
 
             const carouselHTML = `
-                <div class="space-y-6 mb-8">
-                    <h2 class="text-2xl font-bold text-white">Continuar Assistindo</h2>
+                <div class="space-y-6">
+                    <h2 class="section-title">Continuar Assistindo</h2>
                     <div class="relative">
                         <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
                         <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
