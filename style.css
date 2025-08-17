@@ -194,11 +194,7 @@ body {
     transform: translateY(-4px); 
     background-color: rgba(255, 255, 255, 0.15); 
 }
-#player-container iframe, #player-container video, #trailer-player-container iframe { 
-    width: 100%; 
-    height: 100%; 
-    border: none; 
-}
+
 .avatar-carousel.swiper {
     overflow: visible;
 }
@@ -277,4 +273,87 @@ body {
 }
 .delete-notification-btn:hover {
     color: #ef4444;
+}
+
+/* --- Estilos do Player de Vídeo --- */
+#player-container iframe, #player-container video, #trailer-player-container iframe { 
+    width: 100%; 
+    height: 100%; 
+    border: none; 
+}
+#video-player-wrapper.show-controls #player-controls-overlay {
+    opacity: 1;
+}
+#player-controls-overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent 50%);
+}
+.player-control-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+.player-control-btn:hover {
+    transform: scale(1.1);
+    color: #a78bfa;
+}
+
+/* Estilização da Barra de Progresso e Volume */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    background-color: rgba(255, 255, 255, 0.3);
+    height: 0.3rem;
+    border-radius: 0.5rem;
+}
+input[type="range"]::-moz-range-track {
+    background-color: rgba(255, 255, 255, 0.3);
+    height: 0.3rem;
+    border-radius: 0.5rem;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -0.35rem; /* Centraliza o thumb */
+    background-color: #8b5cf6;
+    height: 1rem;
+    width: 1rem;
+    border-radius: 50%;
+}
+input[type="range"]::-moz-range-thumb {
+    border: none;
+    background-color: #8b5cf6;
+    height: 1rem;
+    width: 1rem;
+    border-radius: 50%;
+}
+
+/* Menu de Configurações do Player */
+.player-settings-option, .player-submenu-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+.player-settings-option:hover, .player-submenu-option:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.player-submenu-option.active {
+    color: #a78bfa;
+    font-weight: 600;
+}
+.player-submenu-option.back-btn {
+    font-weight: 600;
+    gap: 0.5rem;
+    justify-content: flex-start;
 }

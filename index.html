@@ -224,8 +224,8 @@
             </div>
             <div id="gerenciar-assinatura-page" class="page-content hidden">
                  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                     <h1 class="text-3xl sm:text-4xl font-bold mb-8">Gerenciar Assinatura</h1>
-                     <p class="text-gray-400">Página em construção.</p>
+                      <h1 class="text-3xl sm:text-4xl font-bold mb-8">Gerenciar Assinatura</h1>
+                      <p class="text-gray-400">Página em construção.</p>
                  </div>
             </div>
             <div id="details-page" class="page-content hidden">
@@ -347,10 +347,77 @@
                 </div>
             </div>
             <div id="player-page" class="page-content hidden bg-black">
-                <div class="w-full h-screen flex flex-col items-center justify-center relative">
+                <div id="video-player-wrapper" class="w-full h-screen flex flex-col items-center justify-center relative group">
                     <div id="player-container" class="w-full h-full">
                         <!-- Player de Vídeo ou Iframe será injetado aqui -->
                     </div>
+
+                    <!-- Overlay de Controles Personalizados -->
+                    <div id="player-controls-overlay" class="absolute inset-0 w-full h-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">
+                        <!-- Controles Superiores -->
+                        <div class="flex justify-between items-center">
+                            <button id="player-back-btn" class="player-control-btn"><i class="fas fa-arrow-left"></i></button>
+                            <h3 id="player-title" class="text-lg font-semibold"></h3>
+                            <div></div> <!-- Espaçador -->
+                        </div>
+                        
+                        <!-- Controles Inferiores -->
+                        <div class="flex flex-col gap-2">
+                             <!-- Barra de Progresso -->
+                            <div class="flex items-center gap-3">
+                                <span id="player-current-time" class="text-sm font-mono">00:00</span>
+                                <input id="player-progress-bar" type="range" min="0" max="100" value="0" step="0.1" class="w-full">
+                                <span id="player-duration" class="text-sm font-mono">00:00</span>
+                            </div>
+                            <!-- Botões Principais -->
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-4">
+                                    <button id="player-play-pause-btn" class="player-control-btn text-2xl"><i class="fas fa-play"></i></button>
+                                    <button id="player-rewind-btn" class="player-control-btn"><i class="fas fa-backward"></i></button>
+                                    <button id="player-forward-btn" class="player-control-btn"><i class="fas fa-forward"></i></button>
+                                    <div class="flex items-center group/volume">
+                                        <button id="player-volume-btn" class="player-control-btn"><i class="fas fa-volume-high"></i></button>
+                                        <input id="player-volume-slider" type="range" min="0" max="1" value="1" step="0.01" class="w-0 group-hover/volume:w-24 ml-2 transition-all duration-300">
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="relative group/settings">
+                                        <button id="player-settings-btn" class="player-control-btn"><i class="fas fa-cog"></i></button>
+                                        <!-- Menu de Configurações -->
+                                        <div id="player-settings-menu" class="absolute bottom-full right-0 mb-4 bg-black/80 rounded-lg p-2 hidden w-40">
+                                            <!-- Opção de Velocidade -->
+                                            <div class="player-settings-option" data-menu="speed">
+                                                <span>Velocidade</span>
+                                                <span class="flex items-center gap-1"><span id="speed-display">Normal</span> <i class="fas fa-chevron-right text-xs"></i></span>
+                                            </div>
+                                            <!-- Opção de Qualidade -->
+                                            <div class="player-settings-option" data-menu="quality">
+                                                <span>Qualidade</span>
+                                                <span class="flex items-center gap-1"><span id="quality-display">Auto</span> <i class="fas fa-chevron-right text-xs"></i></span>
+                                            </div>
+                                        </div>
+                                        <!-- Submenu de Velocidade -->
+                                        <div id="speed-submenu" class="player-submenu absolute bottom-full right-0 mb-4 bg-black/80 rounded-lg p-2 hidden w-40">
+                                            <div class="player-submenu-option back-btn" data-target="main"><i class="fas fa-chevron-left text-xs"></i> <span>Velocidade</span></div>
+                                            <div class="player-submenu-option speed-option" data-speed="0.5">0.5x</div>
+                                            <div class="player-submenu-option speed-option" data-speed="0.75">0.75x</div>
+                                            <div class="player-submenu-option speed-option active" data-speed="1">Normal</div>
+                                            <div class="player-submenu-option speed-option" data-speed="1.25">1.25x</div>
+                                            <div class="player-submenu-option speed-option" data-speed="1.5">1.5x</div>
+                                            <div class="player-submenu-option speed-option" data-speed="2">2x</div>
+                                        </div>
+                                        <!-- Submenu de Qualidade -->
+                                        <div id="quality-submenu" class="player-submenu absolute bottom-full right-0 mb-4 bg-black/80 rounded-lg p-2 hidden w-40">
+                                            <div class="player-submenu-option back-btn" data-target="main"><i class="fas fa-chevron-left text-xs"></i> <span>Qualidade</span></div>
+                                            <!-- Opções de qualidade serão injetadas aqui -->
+                                        </div>
+                                    </div>
+                                    <button id="player-fullscreen-btn" class="player-control-btn"><i class="fas fa-expand"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="next-episode-overlay" class="absolute inset-0 bg-black/70 flex-col items-center justify-center hidden z-10">
                         <p id="next-episode-countdown" class="text-2xl mb-4">Próximo episódio em 5...</p>
                         <button id="play-next-btn" class="btn-primary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">

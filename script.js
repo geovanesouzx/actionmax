@@ -121,6 +121,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const trailerModal = document.getElementById('trailer-modal');
     const trailerPlayerContainer = document.getElementById('trailer-player-container');
     const closeTrailerBtn = document.getElementById('close-trailer-btn');
+    // Player Controls
+    const videoPlayerWrapper = document.getElementById('video-player-wrapper');
+    const playerTitle = document.getElementById('player-title');
+    const playerPlayPauseBtn = document.getElementById('player-play-pause-btn');
+    const playerRewindBtn = document.getElementById('player-rewind-btn');
+    const playerForwardBtn = document.getElementById('player-forward-btn');
+    const playerVolumeBtn = document.getElementById('player-volume-btn');
+    const playerVolumeSlider = document.getElementById('player-volume-slider');
+    const playerProgressBar = document.getElementById('player-progress-bar');
+    const playerCurrentTime = document.getElementById('player-current-time');
+    const playerDuration = document.getElementById('player-duration');
+    const playerSettingsBtn = document.getElementById('player-settings-btn');
+    const playerFullscreenBtn = document.getElementById('player-fullscreen-btn');
+    const playerSettingsMenu = document.getElementById('player-settings-menu');
+    const speedSubmenu = document.getElementById('speed-submenu');
+    const qualitySubmenu = document.getElementById('quality-submenu');
+    const speedDisplay = document.getElementById('speed-display');
+    const playerBackBtn = document.getElementById('player-back-btn');
+
 
     // --- Estado da Aplicação ---
     let myList = [];
@@ -139,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
+    let controlsTimeout;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
 
@@ -546,6 +566,112 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return null;
         };
+        
+        const formatTime = (time) => {
+            const seconds = Math.floor(time % 60);
+            const minutes = Math.floor(time / 60) % 60;
+            const hours = Math.floor(time / 3600);
+            if (hours === 0) {
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        const setupPlayerControls = (videoEl, contentData) => {
+            // Reset UI
+            playerSettingsMenu.classList.add('hidden');
+            speedSubmenu.classList.add('hidden');
+            qualitySubmenu.classList.add('hidden');
+            playerTitle.textContent = contentData.title || '';
+
+            const updatePlayPauseIcon = () => {
+                playerPlayPauseBtn.innerHTML = `<i class="fas ${videoEl.paused ? 'fa-play' : 'fa-pause'}"></i>`;
+            };
+            
+            const updateVolumeIcon = () => {
+                const icon = videoEl.muted || videoEl.volume === 0 ? 'fa-volume-mute' : videoEl.volume < 0.5 ? 'fa-volume-low' : 'fa-volume-high';
+                playerVolumeBtn.innerHTML = `<i class="fas ${icon}"></i>`;
+            };
+
+            videoEl.addEventListener('play', updatePlayPauseIcon);
+            videoEl.addEventListener('pause', updatePlayPauseIcon);
+            videoEl.addEventListener('volumechange', updateVolumeIcon);
+            
+            videoEl.addEventListener('loadedmetadata', () => {
+                playerDuration.textContent = formatTime(videoEl.duration);
+                playerProgressBar.max = videoEl.duration;
+            });
+            
+            videoEl.addEventListener('timeupdate', () => {
+                playerCurrentTime.textContent = formatTime(videoEl.currentTime);
+                playerProgressBar.value = videoEl.currentTime;
+            });
+
+            playerPlayPauseBtn.onclick = () => videoEl.paused ? videoEl.play() : videoEl.pause();
+            playerRewindBtn.onclick = () => videoEl.currentTime -= 10;
+            playerForwardBtn.onclick = () => videoEl.currentTime += 10;
+            playerProgressBar.oninput = () => videoEl.currentTime = playerProgressBar.value;
+            playerVolumeBtn.onclick = () => videoEl.muted = !videoEl.muted;
+            playerVolumeSlider.oninput = () => {
+                videoEl.volume = playerVolumeSlider.value;
+                videoEl.muted = playerVolumeSlider.value == 0;
+            };
+            playerFullscreenBtn.onclick = () => {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    videoPlayerWrapper.requestFullscreen();
+                }
+            };
+            
+            // Settings Menu Logic
+            playerSettingsBtn.onclick = (e) => {
+                e.stopPropagation();
+                playerSettingsMenu.classList.toggle('hidden');
+                speedSubmenu.classList.add('hidden');
+                qualitySubmenu.classList.add('hidden');
+            };
+
+            document.querySelectorAll('.player-settings-option').forEach(option => {
+                option.onclick = (e) => {
+                    e.stopPropagation();
+                    playerSettingsMenu.classList.add('hidden');
+                    if (option.dataset.menu === 'speed') speedSubmenu.classList.remove('hidden');
+                    // if (option.dataset.menu === 'quality') qualitySubmenu.classList.remove('hidden');
+                };
+            });
+            
+            document.querySelectorAll('.player-submenu .back-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    btn.closest('.player-submenu').classList.add('hidden');
+                    playerSettingsMenu.classList.remove('hidden');
+                };
+            });
+
+            document.querySelectorAll('.speed-option').forEach(option => {
+                option.onclick = (e) => {
+                    e.stopPropagation();
+                    const newSpeed = parseFloat(option.dataset.speed);
+                    videoEl.playbackRate = newSpeed;
+                    speedDisplay.textContent = option.textContent;
+                    document.querySelector('.speed-option.active').classList.remove('active');
+                    option.classList.add('active');
+                    speedSubmenu.classList.add('hidden');
+                };
+            });
+
+            // Hide controls on inactivity
+            const hideControls = () => videoPlayerWrapper.classList.remove('show-controls');
+            const showControls = () => {
+                videoPlayerWrapper.classList.add('show-controls');
+                clearTimeout(controlsTimeout);
+                controlsTimeout = setTimeout(hideControls, 3000);
+            };
+            videoPlayerWrapper.onmousemove = showControls;
+            videoPlayerWrapper.onmouseleave = hideControls;
+            showControls(); // Show on start
+        }
 
         const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
             if (openInNewTab) {
@@ -594,9 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (isVideoFile) {
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
-                videoEl.controls = true;
+                // videoEl.controls = true; // Remove default controls
                 videoEl.autoplay = true;
-                videoEl.controlsList = "nodownload";
                 videoEl.innerHTML = `<source src="${finalSrc}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
         
                 videoEl.addEventListener('loadedmetadata', () => {
@@ -614,6 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 10000);
         
                 playerContainer.appendChild(videoEl);
+                setupPlayerControls(videoEl, contentData);
+
             } else if (finalSrc.trim().startsWith('http')) {
                 playerContainer.innerHTML = `<iframe src="${finalSrc}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
@@ -622,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
             showPage('player-page', true, contentData);
             if (window.innerWidth < 768) {
-                playerPage.requestFullscreen?.();
+                videoPlayerWrapper.requestFullscreen?.();
                 screen.orientation?.lock('landscape').catch(err => console.log("Falha ao travar orientação:", err));
             }
         };
@@ -659,7 +786,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
+                playerFullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
                 screen.orientation?.unlock();
+            } else {
+                playerFullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
             }
         });
         
@@ -1226,6 +1356,8 @@ document.addEventListener('DOMContentLoaded', () => {
         trailerModalOverlay?.addEventListener('click', (e) => { 
             if (e.target === trailerModalOverlay) closeTrailerModal(); 
         });
+        playerBackBtn.addEventListener('click', () => history.back());
+
 
         seasonSelector.addEventListener('click', (e) => {
             if (e.target.matches('.season-btn')) {
