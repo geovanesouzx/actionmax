@@ -611,7 +611,25 @@ document.addEventListener('DOMContentLoaded', () => {
             playerPlayPauseBtn.onclick = () => videoEl.paused ? videoEl.play() : videoEl.pause();
             playerRewindBtn.onclick = () => videoEl.currentTime -= 10;
             playerForwardBtn.onclick = () => videoEl.currentTime += 10;
-            playerProgressBar.oninput = () => videoEl.currentTime = playerProgressBar.value;
+            
+            // --- Correção da Barra de Progresso ---
+            let wasPlayingBeforeSeek = false;
+            playerProgressBar.addEventListener('mousedown', () => {
+                wasPlayingBeforeSeek = !videoEl.paused;
+                if (wasPlayingBeforeSeek) {
+                    videoEl.pause();
+                }
+            });
+            playerProgressBar.addEventListener('input', () => {
+                playerCurrentTime.textContent = formatTime(playerProgressBar.value);
+                videoEl.currentTime = playerProgressBar.value;
+            });
+            playerProgressBar.addEventListener('mouseup', () => {
+                if (wasPlayingBeforeSeek) {
+                    videoEl.play();
+                }
+            });
+
             playerVolumeBtn.onclick = () => videoEl.muted = !videoEl.muted;
             playerVolumeSlider.oninput = () => {
                 videoEl.volume = playerVolumeSlider.value;
@@ -638,7 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.stopPropagation();
                     playerSettingsMenu.classList.add('hidden');
                     if (option.dataset.menu === 'speed') speedSubmenu.classList.remove('hidden');
-                    // if (option.dataset.menu === 'quality') qualitySubmenu.classList.remove('hidden');
                 };
             });
             
@@ -688,8 +705,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 openTrailerModal(src);
                 return;
             }
-        
+            
+            // --- Correção do Áudio Persistente ---
+            const oldVideo = playerContainer.querySelector('video');
+            if (oldVideo) {
+                oldVideo.pause();
+                oldVideo.src = '';
+                oldVideo.load();
+            }
             playerContainer.innerHTML = '';
+            // --- Fim da Correção ---
+
             if (!src) return;
         
             clearInterval(watchProgressInterval);
