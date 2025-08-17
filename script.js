@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeTrailerBtn = document.getElementById('close-trailer-btn');
     // Player Controls
     const videoPlayerWrapper = document.getElementById('video-player-wrapper');
+    const playerControlsOverlay = document.getElementById('player-controls-overlay');
     const playerTitle = document.getElementById('player-title');
     const playerPlayPauseBtn = document.getElementById('player-play-pause-btn');
     const playerRewindBtn = document.getElementById('player-rewind-btn');
@@ -666,10 +667,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const showControls = () => {
                 videoPlayerWrapper.classList.add('show-controls');
                 clearTimeout(controlsTimeout);
-                controlsTimeout = setTimeout(hideControls, 3000);
+                if (!videoEl.paused) {
+                    controlsTimeout = setTimeout(hideControls, 3000);
+                }
             };
             videoPlayerWrapper.onmousemove = showControls;
             videoPlayerWrapper.onmouseleave = hideControls;
+            videoEl.addEventListener('play', showControls);
+            videoEl.addEventListener('pause', showControls);
             showControls(); // Show on start
         }
 
@@ -717,10 +722,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
             if (youtubeEmbedUrl) {
                 playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                playerControlsOverlay.classList.add('hidden');
             } else if (isVideoFile) {
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
-                // videoEl.controls = true; // Remove default controls
                 videoEl.autoplay = true;
                 videoEl.innerHTML = `<source src="${finalSrc}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
         
@@ -739,12 +744,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 10000);
         
                 playerContainer.appendChild(videoEl);
+                playerControlsOverlay.classList.remove('hidden');
                 setupPlayerControls(videoEl, contentData);
 
             } else if (finalSrc.trim().startsWith('http')) {
                 playerContainer.innerHTML = `<iframe src="${finalSrc}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                playerControlsOverlay.classList.add('hidden');
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
+                playerControlsOverlay.classList.add('hidden');
             }
         
             showPage('player-page', true, contentData);
