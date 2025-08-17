@@ -11,6 +11,8 @@
     <!-- Swiper.js para Carrossel -->
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
     <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <!-- HLS.js for Adaptive Streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <!-- Showdown para converter Markdown em HTML -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     
@@ -391,7 +393,7 @@
                                                 <span class="flex items-center gap-1"><span id="speed-display">Normal</span> <i class="fas fa-chevron-right text-xs"></i></span>
                                             </div>
                                             <!-- Opção de Qualidade -->
-                                            <div class="player-settings-option" data-menu="quality">
+                                            <div class="player-settings-option hidden" data-menu="quality">
                                                 <span>Qualidade</span>
                                                 <span class="flex items-center gap-1"><span id="quality-display">Auto</span> <i class="fas fa-chevron-right text-xs"></i></span>
                                             </div>

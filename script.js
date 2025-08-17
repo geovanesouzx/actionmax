@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const speedSubmenu = document.getElementById('speed-submenu');
     const qualitySubmenu = document.getElementById('quality-submenu');
     const speedDisplay = document.getElementById('speed-display');
+    const qualityDisplay = document.getElementById('quality-display');
     const playerBackBtn = document.getElementById('player-back-btn');
 
 
@@ -160,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
     let controlsTimeout;
+    let hlsInstance = null;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
 
@@ -579,11 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const setupPlayerControls = (videoEl, contentData) => {
-            // Reset UI
-            playerSettingsMenu.classList.add('hidden');
-            speedSubmenu.classList.add('hidden');
-            qualitySubmenu.classList.add('hidden');
             playerTitle.textContent = contentData.title || '';
+            const qualityOptionMenu = playerSettingsMenu.querySelector('[data-menu="quality"]');
 
             const updatePlayPauseIcon = () => {
                 playerPlayPauseBtn.innerHTML = `<i class="fas ${videoEl.paused ? 'fa-play' : 'fa-pause'}"></i>`;
@@ -594,41 +593,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerVolumeBtn.innerHTML = `<i class="fas ${icon}"></i>`;
             };
 
-            videoEl.addEventListener('play', updatePlayPauseIcon);
-            videoEl.addEventListener('pause', updatePlayPauseIcon);
-            videoEl.addEventListener('volumechange', updateVolumeIcon);
-            
-            videoEl.addEventListener('loadedmetadata', () => {
-                playerDuration.textContent = formatTime(videoEl.duration);
-                playerProgressBar.max = videoEl.duration;
-            });
-            
-            videoEl.addEventListener('timeupdate', () => {
-                playerCurrentTime.textContent = formatTime(videoEl.currentTime);
-                playerProgressBar.value = videoEl.currentTime;
+            const allHandlers = {
+                play: updatePlayPauseIcon,
+                pause: updatePlayPauseIcon,
+                volumechange: updateVolumeIcon,
+                loadedmetadata: () => {
+                    playerDuration.textContent = formatTime(videoEl.duration);
+                    playerProgressBar.max = videoEl.duration;
+                },
+                timeupdate: () => {
+                    playerCurrentTime.textContent = formatTime(videoEl.currentTime);
+                    playerProgressBar.value = videoEl.currentTime;
+                }
+            };
+
+            Object.entries(allHandlers).forEach(([event, handler]) => {
+                videoEl.addEventListener(event, handler);
             });
 
             playerPlayPauseBtn.onclick = () => videoEl.paused ? videoEl.play() : videoEl.pause();
             playerRewindBtn.onclick = () => videoEl.currentTime -= 10;
             playerForwardBtn.onclick = () => videoEl.currentTime += 10;
             
-            // --- Correção da Barra de Progresso ---
             let wasPlayingBeforeSeek = false;
-            playerProgressBar.addEventListener('mousedown', () => {
+            playerProgressBar.onmousedown = () => {
                 wasPlayingBeforeSeek = !videoEl.paused;
-                if (wasPlayingBeforeSeek) {
-                    videoEl.pause();
-                }
-            });
-            playerProgressBar.addEventListener('input', () => {
+                if (wasPlayingBeforeSeek) videoEl.pause();
+            };
+            playerProgressBar.oninput = () => {
                 playerCurrentTime.textContent = formatTime(playerProgressBar.value);
                 videoEl.currentTime = playerProgressBar.value;
-            });
-            playerProgressBar.addEventListener('mouseup', () => {
-                if (wasPlayingBeforeSeek) {
-                    videoEl.play();
-                }
-            });
+            };
+            playerProgressBar.onmouseup = () => {
+                if (wasPlayingBeforeSeek) videoEl.play();
+            };
 
             playerVolumeBtn.onclick = () => videoEl.muted = !videoEl.muted;
             playerVolumeSlider.oninput = () => {
@@ -643,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             
-            // Settings Menu Logic
             playerSettingsBtn.onclick = (e) => {
                 e.stopPropagation();
                 playerSettingsMenu.classList.toggle('hidden');
@@ -656,6 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.stopPropagation();
                     playerSettingsMenu.classList.add('hidden');
                     if (option.dataset.menu === 'speed') speedSubmenu.classList.remove('hidden');
+                    if (option.dataset.menu === 'quality') qualitySubmenu.classList.remove('hidden');
                 };
             });
             
@@ -678,8 +676,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     speedSubmenu.classList.add('hidden');
                 };
             });
+            
+            // HLS Quality Logic
+            if (hlsInstance) {
+                qualityOptionMenu.classList.remove('hidden');
+                const qualityLevels = qualitySubmenu.querySelectorAll('.quality-option');
+                qualityLevels.forEach(level => level.remove()); // Clear old levels
 
-            // Hide controls on inactivity
+                const autoOption = document.createElement('div');
+                autoOption.className = 'player-submenu-option quality-option active';
+                autoOption.textContent = 'Auto';
+                autoOption.dataset.level = -1;
+                qualitySubmenu.appendChild(autoOption);
+
+                hlsInstance.levels.forEach((level, index) => {
+                    const option = document.createElement('div');
+                    option.className = 'player-submenu-option quality-option';
+                    option.textContent = `${level.height}p`;
+                    option.dataset.level = index;
+                    qualitySubmenu.appendChild(option);
+                });
+
+                qualitySubmenu.onclick = (e) => {
+                    if (e.target.classList.contains('quality-option')) {
+                        const level = parseInt(e.target.dataset.level);
+                        hlsInstance.currentLevel = level;
+                        qualityDisplay.textContent = e.target.textContent;
+                        document.querySelector('.quality-option.active').classList.remove('active');
+                        e.target.classList.add('active');
+                        qualitySubmenu.classList.add('hidden');
+                    }
+                };
+            } else {
+                qualityOptionMenu.classList.add('hidden');
+            }
+
+
             const hideControls = () => videoPlayerWrapper.classList.remove('show-controls');
             const showControls = () => {
                 videoPlayerWrapper.classList.add('show-controls');
@@ -692,7 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlayerWrapper.onmouseleave = hideControls;
             videoEl.addEventListener('play', showControls);
             videoEl.addEventListener('pause', showControls);
-            showControls(); // Show on start
+            showControls();
         }
 
         const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
@@ -706,7 +738,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // --- Correção do Áudio Persistente ---
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
             const oldVideo = playerContainer.querySelector('video');
             if (oldVideo) {
                 oldVideo.pause();
@@ -714,7 +749,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 oldVideo.load();
             }
             playerContainer.innerHTML = '';
-            // --- Fim da Correção ---
 
             if (!src) return;
         
@@ -731,7 +765,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentId: contentData.id
             };
         
-            const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
+            const isM3U8 = src.endsWith('.m3u8');
+            const isVideoFile = src.endsWith('.mp4');
             let finalSrc = src;
         
             if (src.trim().startsWith('<iframe')) {
@@ -746,14 +781,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
             const youtubeEmbedUrl = getYoutubeEmbedUrl(finalSrc);
         
-            if (youtubeEmbedUrl) {
-                playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            if (youtubeEmbedUrl || finalSrc.trim().startsWith('http') && !isVideoFile && !isM3U8) {
+                playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl || finalSrc}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                 playerControlsOverlay.classList.add('hidden');
-            } else if (isVideoFile) {
+            } else if (isVideoFile || isM3U8) {
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
                 videoEl.autoplay = true;
-                videoEl.innerHTML = `<source src="${finalSrc}" type="video/mp4">Seu navegador não suporta o elemento de vídeo.`;
+                playerContainer.appendChild(videoEl);
+
+                if (isM3U8 && Hls.isSupported()) {
+                    hlsInstance = new Hls();
+                    hlsInstance.loadSource(finalSrc);
+                    hlsInstance.attachMedia(videoEl);
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                        setupPlayerControls(videoEl, contentData);
+                    });
+                } else {
+                    videoEl.src = finalSrc;
+                    setupPlayerControls(videoEl, contentData);
+                }
         
                 videoEl.addEventListener('loadedmetadata', () => {
                     const progress = watchHistory[currentPlaying.contentId];
@@ -768,14 +815,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
                 }, 10000);
-        
-                playerContainer.appendChild(videoEl);
+                
                 playerControlsOverlay.classList.remove('hidden');
-                setupPlayerControls(videoEl, contentData);
 
-            } else if (finalSrc.trim().startsWith('http')) {
-                playerContainer.innerHTML = `<iframe src="${finalSrc}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-                playerControlsOverlay.classList.add('hidden');
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
                 playerControlsOverlay.classList.add('hidden');
@@ -1414,6 +1456,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         window.addEventListener('popstate', (e) => {
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
             playerContainer.innerHTML = '';
             clearInterval(watchProgressInterval);
             if (document.fullscreenElement) document.exitFullscreen();
