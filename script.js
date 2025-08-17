@@ -577,21 +577,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const isVideoFile = src.endsWith('.mp4') || src.endsWith('.m3u8');
             let finalSrc = src;
         
-            // Se o src for um iframe completo, extrai a URL do 'src'
             if (src.trim().startsWith('<iframe')) {
                 const match = src.match(/src="([^"]+)"/);
                 if (match) {
                     finalSrc = match[1];
+                    if (finalSrc.startsWith('//')) {
+                        finalSrc = 'https://' + finalSrc.substring(2);
+                    }
                 }
             }
         
             const youtubeEmbedUrl = getYoutubeEmbedUrl(finalSrc);
         
             if (youtubeEmbedUrl) {
-                // Para YouTube, usamos o URL de embed com autoplay=1 e o atributo allow
                 playerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else if (isVideoFile) {
-                // Para arquivos de vídeo diretos, usamos a tag <video> com autoplay
                 const videoEl = document.createElement('video');
                 videoEl.className = 'w-full h-full';
                 videoEl.controls = true;
@@ -615,7 +615,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
                 playerContainer.appendChild(videoEl);
             } else if (finalSrc.trim().startsWith('http')) {
-                // Para todos os outros links, usamos um iframe genérico com allow="autoplay"
                 playerContainer.innerHTML = `<iframe src="${finalSrc}" allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             } else {
                 playerContainer.innerHTML = `<div class="w-full h-full flex items-center justify-center"><p class="text-white">Formato de vídeo não suportado.</p></div>`;
@@ -634,13 +633,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 trailerPlayerContainer.innerHTML = `<iframe src="${youtubeEmbedUrl}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                 openModal(trailerModalOverlay, trailerModal);
             } else {
-                // Se não for um link do YouTube, podemos mostrar uma mensagem de erro ou tentar outro player.
                 console.error("Formato de trailer não suportado:", src);
             }
         };
 
         const closeTrailerModal = () => {
-            trailerPlayerContainer.innerHTML = ''; // Importante para parar o vídeo
+            trailerPlayerContainer.innerHTML = ''; 
             closeModal(trailerModalOverlay, trailerModal);
         };
 
