@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.open(src, '_blank');
                 return;
             }
-        
+            
             if (isTrailer) {
                 openTrailerModal(src);
                 return;
@@ -1300,9 +1300,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
         
         document.body.addEventListener('click', async (e) => {
-            const card = e.target.closest('.movie-card');
+            const card = e.target.closest('.movie-card-wrapper'); // MODIFIED
             if (card && card.dataset.id) {
-                e.preventDefault();
+                e.preventDefault(); // ADDED
                 const cardData = allContent.find(item => item.id === card.dataset.id);
                 if (cardData) {
                     if (cardData.type === 'Canal') {
@@ -1510,10 +1510,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
             return `
-                <div class="movie-card" data-id="${data.id}">
-                    <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
-                    ${ratingHTML}
-                    ${progressHTML}
+                <div class="movie-card-wrapper" data-id="${data.id}">
+                    <div class="movie-card">
+                        <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                        ${ratingHTML}
+                        ${progressHTML}
+                    </div>
+                    <h3 class="card-title" title="${data.title}">${data.title}</h3>
                 </div>
             `;
         };
