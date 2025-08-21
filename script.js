@@ -1300,9 +1300,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
         
         document.body.addEventListener('click', async (e) => {
-            const card = e.target.closest('.movie-card-wrapper'); // MODIFIED
+            const card = e.target.closest('.movie-card-wrapper');
             if (card && card.dataset.id) {
-                e.preventDefault(); // ADDED
+                e.preventDefault();
                 const cardData = allContent.find(item => item.id === card.dataset.id);
                 if (cardData) {
                     if (cardData.type === 'Canal') {
@@ -1515,8 +1515,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                         ${ratingHTML}
                         ${progressHTML}
+                        <div class="card-overlay">
+                            <i class="fas fa-play-circle overlay-play-icon"></i>
+                            <h3 class="overlay-title" title="${data.title}">${data.title}</h3>
+                        </div>
                     </div>
-                    <h3 class="card-title" title="${data.title}">${data.title}</h3>
                 </div>
             `;
         };
