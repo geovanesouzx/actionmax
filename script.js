@@ -141,6 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const speedDisplay = document.getElementById('speed-display');
     const qualityDisplay = document.getElementById('quality-display');
     const playerBackBtn = document.getElementById('player-back-btn');
+    // Modal de Assistir/Transmitir
+    const watchCastModalOverlay = document.getElementById('watch-cast-modal-overlay');
+    const watchCastModal = document.getElementById('watch-cast-modal');
+    const closeWatchCastBtn = document.getElementById('close-watch-cast-btn');
+    const modalWatchBtn = document.getElementById('modal-watch-btn');
+    const modalCastBtn = document.getElementById('modal-cast-btn');
+    const watchCastTitle = document.getElementById('watch-cast-title');
 
 
     // --- Estado da Aplicação ---
@@ -163,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let controlsTimeout;
     let hlsInstance = null;
     let lastSelectedSeason = {};
+    let currentMediaForModal = {};
     const markdownConverter = new showdown.Converter();
 
     // --- Lógica de Autenticação do Firebase ---
@@ -485,6 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
                     epCard.dataset.videoSrc = videoSrc;
                     epCard.dataset.episode = epNum;
+                    epCard.dataset.episodeTitle = episodeTitle;
                     epCard.dataset.openInNewTab = openInNewTab;
                     epCard.innerHTML = `
                         <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
@@ -1305,8 +1314,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 const cardData = allContent.find(item => item.id === card.dataset.id);
                 if (cardData) {
-                    if (cardData.type === 'Canal') {
-                        playContent(cardData.videoSrc, cardData, null, null, cardData.videoSrcNewTab);
+                    if (cardData.type === 'Canal' || cardData.type === 'Filme') {
+                        currentMediaForModal = {
+                            src: cardData.videoSrc,
+                            title: cardData.title,
+                            contentData: cardData,
+                            openInNewTab: cardData.videoSrcNewTab
+                        };
+                        watchCastTitle.textContent = cardData.title;
+                        openModal(watchCastModalOverlay, watchCastModal);
                     } else {
                         if (!searchModalOverlay.classList.contains('hidden')) {
                             closeModal(searchModalOverlay);
@@ -1341,13 +1357,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][epNum];
                         if (!episodeData.releaseDate) {
                             const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
-                            playContent(videoSrc, currentDetailsData, firstSeasonNum, epNum, episodeData.openInNewTab);
+                            const episodeTitle = (typeof episodeData === 'object' && episodeData.title) ? episodeData.title : 'Episódio ' + epNum;
+                            currentMediaForModal = {
+                                src: videoSrc,
+                                title: `${currentDetailsData.title} - S${firstSeasonNum} E${epNum}: ${episodeTitle}`,
+                                contentData: currentDetailsData,
+                                seasonNum: firstSeasonNum,
+                                epNum: epNum,
+                                openInNewTab: episodeData.openInNewTab
+                            };
+                            watchCastTitle.textContent = `Episódio ${epNum}`;
+                            openModal(watchCastModalOverlay, watchCastModal);
                             return;
                         }
                     }
                 }
             } else if (currentDetailsData && currentDetailsData.type === 'Filme') {
-                playContent(currentDetailsData.videoSrc, currentDetailsData, null, null, currentDetailsData.videoSrcNewTab);
+                 currentMediaForModal = {
+                    src: currentDetailsData.videoSrc,
+                    title: currentDetailsData.title,
+                    contentData: currentDetailsData,
+                    openInNewTab: currentDetailsData.videoSrcNewTab
+                };
+                watchCastTitle.textContent = currentDetailsData.title;
+                openModal(watchCastModalOverlay, watchCastModal);
             }
         });
 
@@ -1363,7 +1396,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         heroWatchBtn.addEventListener('click', () => {
             const heroData = allContent.find(item => item.id === heroSection.dataset.id);
-            if (heroData) playContent(heroData.videoSrc, heroData, null, null, heroData.videoSrcNewTab);
+            if (heroData) {
+                 currentMediaForModal = {
+                    src: heroData.videoSrc,
+                    title: heroData.title,
+                    contentData: heroData,
+                    openInNewTab: heroData.videoSrcNewTab
+                };
+                watchCastTitle.textContent = heroData.title;
+                openModal(watchCastModalOverlay, watchCastModal);
+            }
         });
         heroAddListBtn.addEventListener('click', () => {
              const heroData = allContent.find(item => item.id === heroSection.dataset.id);
@@ -1451,9 +1493,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const epCard = e.target.closest('.episode-card');
             if (epCard && epCard.dataset.videoSrc) {
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
-                playContent(epCard.dataset.videoSrc, currentDetailsData, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
+                currentMediaForModal = {
+                    src: epCard.dataset.videoSrc,
+                    title: `${currentDetailsData.title} - S${activeSeasonBtn.dataset.season} E${epCard.dataset.episode}: ${epCard.dataset.episodeTitle}`,
+                    contentData: currentDetailsData,
+                    seasonNum: activeSeasonBtn.dataset.season,
+                    epNum: epCard.dataset.episode,
+                    openInNewTab: epCard.dataset.openInNewTab === 'true'
+                };
+                watchCastTitle.textContent = `Episódio ${epCard.dataset.episode}`;
+                openModal(watchCastModalOverlay, watchCastModal);
             }
         });
+
+        // --- Lógica do Modal Assistir/Transmitir ---
+        closeWatchCastBtn.addEventListener('click', () => closeModal(watchCastModalOverlay, watchCastModal));
+        watchCastModalOverlay.addEventListener('click', (e) => {
+            if (e.target === watchCastModalOverlay) closeModal(watchCastModalOverlay, watchCastModal);
+        });
+
+        modalWatchBtn.addEventListener('click', () => {
+            const { src, contentData, seasonNum, epNum, openInNewTab } = currentMediaForModal;
+            playContent(src, contentData, seasonNum, epNum, openInNewTab);
+            closeModal(watchCastModalOverlay, watchCastModal);
+        });
+
+        modalCastBtn.addEventListener('click', () => {
+            const { src, title } = currentMediaForModal;
+            const encodedUrl = encodeURIComponent(src);
+            const encodedTitle = encodeURIComponent(title);
+            const castUrl = `wvc-x-callback://open?url=${encodedUrl}&title=${encodedTitle}`;
+            window.location.href = castUrl;
+            closeModal(watchCastModalOverlay, watchCastModal);
+        });
+
 
         window.addEventListener('popstate', (e) => {
             if (hlsInstance) {

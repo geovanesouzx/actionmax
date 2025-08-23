@@ -419,3 +419,10 @@ input[type="range"]::-moz-range-thumb {
     gap: 0.5rem;
     justify-content: flex-start;
 }
+
+.fa-cast {
+    -webkit-text-stroke: 1px #fff;
+    -moz-text-stroke: 1px #fff;
+    text-stroke: 1px #fff;
+    color: transparent;
+}
