@@ -1512,40 +1512,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // LÓGICA DA TAG DE STATUS
             let statusTagHTML = '';
-            if (data.statusTag && data.statusTag.type) {
-                let tagText = '';
-                switch (data.statusTag.type) {
-                    case 'novidade':
-                        tagText = 'Novidade';
-                        break;
-                    case 'nova_temporada':
-                        tagText = 'Nova Temporada';
-                        break;
-                    case 'novos_episodios':
-                        tagText = 'Novos Episódios';
-                        break;
-                    case 'indisponivel_em_breve':
-                        tagText = data.statusTag.text ? `Sai em ${data.statusTag.text}` : 'Indisponível em Breve';
-                        break;
-                    case 'proximo_episodio':
-                        tagText = data.statusTag.text ? `Próximo Ep. ${data.statusTag.text}` : 'Próximo Episódio';
-                        break;
-                }
-                if (tagText) {
-                    statusTagHTML = `<div class="status-tag">${tagText}</div>`;
+            const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+            const now = new Date();
+            
+            if (data.statusTag && data.statusTag.type && data.statusTagTimestamp) {
+                const tagDate = data.statusTagTimestamp.toDate();
+                if (now - tagDate < sevenDaysInMs) {
+                    let tagText = '';
+                    switch (data.statusTag.type) {
+                        case 'novidade':
+                            tagText = 'Novidade';
+                            break;
+                        case 'nova_temporada':
+                            tagText = 'Nova Temporada';
+                            break;
+                        case 'novos_episodios':
+                            tagText = 'Novos Episódios';
+                            break;
+                        case 'indisponivel_em_breve':
+                            tagText = data.statusTag.text ? `Sai em ${data.statusTag.text}` : 'Indisponível em Breve';
+                            break;
+                        case 'proximo_episodio':
+                            tagText = data.statusTag.text ? `Próximo Ep. ${data.statusTag.text}` : 'Próximo Episódio';
+                            break;
+                    }
+                    if (tagText) {
+                        statusTagHTML = `<div class="status-tag">${tagText}</div>`;
+                    }
                 }
             }
 
             return `
                 <div class="movie-card-wrapper" data-id="${data.id}">
                     <div class="movie-card">
-                        ${statusTagHTML}
                         <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                         ${ratingHTML}
                         ${progressHTML}
                         <div class="card-overlay">
                             <i class="fas fa-play-circle overlay-play-icon"></i>
                             <h3 class="overlay-title" title="${data.title}">${data.title}</h3>
+                            ${statusTagHTML}
                         </div>
                     </div>
                 </div>
