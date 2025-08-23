@@ -141,6 +141,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const speedDisplay = document.getElementById('speed-display');
     const qualityDisplay = document.getElementById('quality-display');
     const playerBackBtn = document.getElementById('player-back-btn');
+    // NOVOS ELEMENTOS
+    const detailsCastBtn = document.getElementById('details-cast-btn');
+    const episodeActionModalOverlay = document.getElementById('episode-action-modal-overlay');
+    const episodeActionModal = document.getElementById('episode-action-modal');
+    const closeEpisodeActionBtn = document.getElementById('close-episode-action-btn');
+    const episodeActionTitle = document.getElementById('episode-action-title');
+    const episodeActionDesc = document.getElementById('episode-action-desc');
+    const episodeWatchBtn = document.getElementById('episode-watch-btn');
+    const episodeCastBtn = document.getElementById('episode-cast-btn');
 
 
     // --- Estado da Aplicação ---
@@ -164,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let hlsInstance = null;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
+    let selectedEpisodeInfo = {}; // NOVO: Guarda info do episódio para o modal
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -479,6 +489,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 detailsTrailerBtn.classList.add('hidden');
             }
 
+            // Lógica para mostrar o botão de transmitir para filmes
+            detailsCastBtn.classList.add('hidden');
+            if (data.type === 'Filme' && data.videoSrc) {
+                detailsCastBtn.classList.remove('hidden');
+            }
+
             if (data.type === 'Série' && data.seasons) {
                 currentDetailsData.parsedSeasons = data.seasons;
                 seasonsSection.classList.remove('hidden');
@@ -530,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     epCard.dataset.videoSrc = videoSrc;
                     epCard.dataset.episode = epNum;
                     epCard.dataset.openInNewTab = openInNewTab;
+                    epCard.dataset.title = episodeTitle; // Adiciona o título para o modal
                     epCard.innerHTML = `
                         <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
                         <p class="font-semibold text-sm">Episódio ${epNum}</p>
@@ -770,6 +787,21 @@ document.addEventListener('DOMContentLoaded', () => {
             videoEl.addEventListener('pause', showControls);
             showControls();
         }
+        
+        // NOVA FUNÇÃO para transmitir
+        const transmitContent = (src, title) => {
+            if (!src || !title) {
+                console.error("Source URL or title is missing for casting.");
+                // Poderia mostrar um modal de erro para o usuário aqui
+                return;
+            }
+            const encodedUrl = encodeURIComponent(src);
+            const encodedTitle = encodeURIComponent(title);
+            // URL Scheme para o app Web Video Caster
+            const castUrl = `wvc-x-callback://open?url=${encodedUrl}&title=${encodedTitle}`;
+            // Tenta abrir a URL
+            window.location.href = castUrl;
+        };
 
         const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
             if (openInNewTab) {
@@ -1394,6 +1426,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 playContent(currentDetailsData.videoSrc, currentDetailsData, null, null, currentDetailsData.videoSrcNewTab);
             }
         });
+        
+        // NOVO: Event listener para o botão de transmitir de filmes
+        detailsCastBtn?.addEventListener('click', () => {
+            if (currentDetailsData && currentDetailsData.videoSrc) {
+                transmitContent(currentDetailsData.videoSrc, currentDetailsData.title);
+            }
+        });
 
         detailsTrailerBtn?.addEventListener('click', () => {
             if (currentDetailsData && currentDetailsData.trailerSrc) {
@@ -1491,13 +1530,58 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // MODIFICADO: Event listener para episódios agora abre o modal
         episodesList.addEventListener('click', (e) => {
             const epCard = e.target.closest('.episode-card');
             if (epCard && epCard.dataset.videoSrc) {
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
-                playContent(epCard.dataset.videoSrc, currentDetailsData, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
+                const seasonNum = activeSeasonBtn.dataset.season;
+                const epNum = epCard.dataset.episode;
+                const episodeTitle = epCard.dataset.title || `Episódio ${epNum}`;
+
+                selectedEpisodeInfo = {
+                    src: epCard.dataset.videoSrc,
+                    contentData: currentDetailsData,
+                    seasonNum: seasonNum,
+                    epNum: epNum,
+                    openInNewTab: epCard.dataset.openInNewTab === 'true',
+                    title: `${currentDetailsData.title} - T${seasonNum}:E${epNum}`
+                };
+                
+                episodeActionTitle.textContent = `Temporada ${seasonNum}, Episódio ${epNum}`;
+                episodeActionDesc.textContent = episodeTitle;
+                openModal(episodeActionModalOverlay, episodeActionModal);
             }
         });
+
+        // NOVO: Event listeners para os botões do modal de episódio
+        closeEpisodeActionBtn.addEventListener('click', () => closeModal(episodeActionModalOverlay, episodeActionModal));
+        episodeActionModalOverlay.addEventListener('click', (e) => {
+            if (e.target === episodeActionModalOverlay) {
+                closeModal(episodeActionModalOverlay, episodeActionModal);
+            }
+        });
+
+        episodeWatchBtn.addEventListener('click', () => {
+            if (selectedEpisodeInfo.src) {
+                playContent(
+                    selectedEpisodeInfo.src,
+                    selectedEpisodeInfo.contentData,
+                    selectedEpisodeInfo.seasonNum,
+                    selectedEpisodeInfo.epNum,
+                    selectedEpisodeInfo.openInNewTab
+                );
+                closeModal(episodeActionModalOverlay, episodeActionModal);
+            }
+        });
+
+        episodeCastBtn.addEventListener('click', () => {
+            if (selectedEpisodeInfo.src) {
+                transmitContent(selectedEpisodeInfo.src, selectedEpisodeInfo.title);
+                closeModal(episodeActionModalOverlay, episodeActionModal);
+            }
+        });
+
 
         window.addEventListener('popstate', (e) => {
             if (hlsInstance) {
@@ -1681,12 +1765,12 @@ document.addEventListener('DOMContentLoaded', () => {
                      const slidesHTML = categoryContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
                      const carouselHTML = `
                          <div class="space-y-6">
-                             <h2 class="text-2xl font-bold text-white">${category.title}</h2>
-                             <div class="relative">
-                                 <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
-                                 <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
-                                 <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
-                             </div>
+                              <h2 class="text-2xl font-bold text-white">${category.title}</h2>
+                              <div class="relative">
+                                   <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
+                                   <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
+                                   <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
+                              </div>
                          </div>`;
                      homeCarousels.innerHTML += carouselHTML;
                 }
