@@ -173,7 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let hlsInstance = null;
     let lastSelectedSeason = {};
     const markdownConverter = new showdown.Converter();
-    let selectedEpisodeInfo = {}; // NOVO: Guarda info do episódio para o modal
+    let selectedEpisodeInfo = {};
+    let isEnteringFullscreen = false; // Flag para controlar a entrada em tela cheia
+
 
     // --- Lógica de Autenticação do Firebase ---
     onAuthStateChanged(auth, user => {
@@ -263,10 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeAppLogic() {
         appWrapper.classList.remove('opacity-0');
 
-        // --- NOVO: Sistema Anti-DevTools ---
+        // --- Sistema Anti-DevTools ---
         const setupAntiDevTools = () => {
             const blockUser = () => {
-                // Limpa o conteúdo da página
                 document.body.innerHTML = `
                     <div style="position: fixed; inset: 0; background-color: #040714; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; font-family: 'Inter', sans-serif; padding: 1rem;">
                         <h1 style="font-size: 2rem; font-weight: 800; color: #a78bfa;">Acesso Bloqueado</h1>
@@ -276,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             };
 
-            // Detecção por atalhos de teclado
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
                     e.preventDefault();
@@ -284,12 +284,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Detecção por alteração no tamanho da janela (quando as ferramentas são abertas ancoradas)
-            const threshold = 160; // Diferença em pixels que indica a abertura das ferramentas
+            const threshold = 160;
             let lastHeight = window.innerHeight;
             let lastWidth = window.innerWidth;
 
             setInterval(() => {
+                // Pula a verificação se estivermos entrando em tela cheia intencionalmente
+                if (isEnteringFullscreen) {
+                    return;
+                }
                 const currentHeight = window.innerHeight;
                 const currentWidth = window.innerWidth;
                 if (Math.abs(lastHeight - currentHeight) > threshold || Math.abs(lastWidth - currentWidth) > threshold) {
@@ -299,13 +302,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastWidth = currentWidth;
             }, 1000);
 
-            // Desativar clique direito
             window.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
             });
         };
         setupAntiDevTools();
-        // --- FIM DO SISTEMA ANTI-DEVTOOLS ---
 
         // --- Funções Auxiliares ---
         function shuffleArray(array) {
@@ -489,7 +490,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 detailsTrailerBtn.classList.add('hidden');
             }
 
-            // Lógica para mostrar o botão de transmitir para filmes
             detailsCastBtn.classList.add('hidden');
             if (data.type === 'Filme' && data.videoSrc) {
                 detailsCastBtn.classList.remove('hidden');
@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     epCard.dataset.videoSrc = videoSrc;
                     epCard.dataset.episode = epNum;
                     epCard.dataset.openInNewTab = openInNewTab;
-                    epCard.dataset.title = episodeTitle; // Adiciona o título para o modal
+                    epCard.dataset.title = episodeTitle;
                     epCard.innerHTML = `
                         <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
                         <p class="font-semibold text-sm">Episódio ${epNum}</p>
@@ -698,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (document.fullscreenElement) {
                     document.exitFullscreen();
                 } else {
+                    isEnteringFullscreen = true; // Ativa a flag antes de entrar em tela cheia
                     videoPlayerWrapper.requestFullscreen();
                 }
             };
@@ -738,11 +739,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             });
             
-            // HLS Quality Logic
             if (hlsInstance) {
                 qualityOptionMenu.classList.remove('hidden');
                 const qualityLevels = qualitySubmenu.querySelectorAll('.quality-option');
-                qualityLevels.forEach(level => level.remove()); // Clear old levels
+                qualityLevels.forEach(level => level.remove());
 
                 const autoOption = document.createElement('div');
                 autoOption.className = 'player-submenu-option quality-option active';
@@ -788,18 +788,14 @@ document.addEventListener('DOMContentLoaded', () => {
             showControls();
         }
         
-        // NOVA FUNÇÃO para transmitir
         const transmitContent = (src, title) => {
             if (!src || !title) {
                 console.error("Source URL or title is missing for casting.");
-                // Poderia mostrar um modal de erro para o usuário aqui
                 return;
             }
             const encodedUrl = encodeURIComponent(src);
             const encodedTitle = encodeURIComponent(title);
-            // URL Scheme para o app Web Video Caster
             const castUrl = `wvc-x-callback://open?url=${encodedUrl}&title=${encodedTitle}`;
-            // Tenta abrir a URL
             window.location.href = castUrl;
         };
 
@@ -901,6 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
             showPage('player-page', true, contentData);
             if (window.innerWidth < 768) {
+                isEnteringFullscreen = true; // Ativa a flag antes de entrar em tela cheia no mobile
                 videoPlayerWrapper.requestFullscreen?.();
                 screen.orientation?.lock('landscape').catch(err => console.log("Falha ao travar orientação:", err));
             }
@@ -938,6 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
+                isEnteringFullscreen = false; // Desativa a flag ao sair da tela cheia
                 playerFullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
                 screen.orientation?.unlock();
             } else {
@@ -1427,7 +1425,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // NOVO: Event listener para o botão de transmitir de filmes
         detailsCastBtn?.addEventListener('click', () => {
             if (currentDetailsData && currentDetailsData.videoSrc) {
                 transmitContent(currentDetailsData.videoSrc, currentDetailsData.title);
@@ -1530,7 +1527,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // MODIFICADO: Event listener para episódios agora abre o modal
         episodesList.addEventListener('click', (e) => {
             const epCard = e.target.closest('.episode-card');
             if (epCard && epCard.dataset.videoSrc) {
@@ -1554,7 +1550,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // NOVO: Event listeners para os botões do modal de episódio
         closeEpisodeActionBtn.addEventListener('click', () => closeModal(episodeActionModalOverlay, episodeActionModal));
         episodeActionModalOverlay.addEventListener('click', (e) => {
             if (e.target === episodeActionModalOverlay) {
@@ -1607,7 +1602,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (document.getElementById(pageId)) {
                     showPage(pageId, false);
                     if (pageId === 'generos-page') {
-                        // Limpa os resultados se voltarmos para a página principal de gêneros
                         genreResultsContainer.innerHTML = '';
                         genreResultsTitle.classList.add('hidden');
                         genreResultsEmpty.classList.add('hidden');
@@ -1638,7 +1632,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
 
-            // LÓGICA DA TAG DE STATUS
             let statusTagHTML = '';
             const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
             const now = new Date();
@@ -1983,7 +1976,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (hash.startsWith('#/generos/')) {
                         const genreName = decodeURIComponent(hash.split('/')[2]);
                         showPage('generos-page', false);
-                        // Usa um timeout para garantir que os botões de gênero sejam renderizados antes de selecionar um
                         setTimeout(() => displayGenreResults(genreName, false), 100);
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
