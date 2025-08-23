@@ -1509,9 +1509,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="h-full bg-violet-500" style="width: ${progress}%;"></div>
                 </div>
             ` : '';
+
+            // LÓGICA DA TAG DE STATUS
+            let statusTagHTML = '';
+            if (data.statusTag && data.statusTag.type) {
+                let tagText = '';
+                switch (data.statusTag.type) {
+                    case 'novidade':
+                        tagText = 'Novidade';
+                        break;
+                    case 'nova_temporada':
+                        tagText = 'Nova Temporada';
+                        break;
+                    case 'novos_episodios':
+                        tagText = 'Novos Episódios';
+                        break;
+                    case 'indisponivel_em_breve':
+                        tagText = data.statusTag.text ? `Sai em ${data.statusTag.text}` : 'Indisponível em Breve';
+                        break;
+                    case 'proximo_episodio':
+                        tagText = data.statusTag.text ? `Próximo Ep. ${data.statusTag.text}` : 'Próximo Episódio';
+                        break;
+                }
+                if (tagText) {
+                    statusTagHTML = `<div class="status-tag">${tagText}</div>`;
+                }
+            }
+
             return `
                 <div class="movie-card-wrapper" data-id="${data.id}">
                     <div class="movie-card">
+                        ${statusTagHTML}
                         <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                         ${ratingHTML}
                         ${progressHTML}
