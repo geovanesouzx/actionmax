@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentForm = document.getElementById('comment-form');
     const commentsContainer = document.getElementById('comments-container');
     const commentAvatar = document.getElementById('comment-avatar');
+    const userRatingStars = document.getElementById('user-rating-stars');
     const likeBtn = document.getElementById('like-btn');
     const dislikeBtn = document.getElementById('dislike-btn');
     const likeCountEl = document.getElementById('like-count');
@@ -154,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPageId = 'inicio-page';
     let unsubscribeComments = null;
     let unsubscribeLikes = null;
+    let unsubscribeRatings = null;
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
@@ -408,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
             if (unsubscribeLikes) unsubscribeLikes();
+            if (unsubscribeRatings) unsubscribeRatings();
             const isDetailsPage = pageId === 'details-page';
             const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
@@ -441,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAllListButtons(data.id);
                     loadComments(data.id);
                     loadLikes(data.id);
+                    loadRatingData(data.id);
                 } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
                 } else if (!isPlayerPage) {
@@ -1561,10 +1565,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const createCardHTML = (data, progress = null, isTop10 = false, rank = 0) => {
+            const ratingInfo = allLikes[data.id];
             let ratingHTML = '';
-            if (!isTop10 && allLikes[data.id]) {
-                const likes = allLikes[data.id].likes || 0;
-                const dislikes = allLikes[data.id].dislikes || 0;
+            if (!isTop10 && ratingInfo) {
+                const likes = ratingInfo.likes || 0;
+                const dislikes = ratingInfo.dislikes || 0;
                 const total = likes + dislikes;
                 if (total > 0) {
                     const percentage = Math.round((likes / total) * 100);

@@ -290,10 +290,11 @@
 
                         <!-- Wrapper para Avaliações e Comentários -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 mt-12">
-                            <!-- Coluna de Avaliação (Gostei/Não Gostei) -->
+                            <!-- Coluna de Avaliação -->
                             <div>
                                 <h2 class="text-2xl font-bold text-white mb-4">Avaliações</h2>
-                                <div class="flex items-center gap-6 bg-gray-800/50 p-4 rounded-lg">
+                                <div class="flex flex-wrap gap-6 items-center bg-gray-800/50 p-4 rounded-lg">
+                                    <!-- Gostei / Não Gostei -->
                                     <div class="flex items-center gap-4">
                                         <button id="like-btn" class="like-dislike-btn text-2xl"><i class="far fa-thumbs-up"></i></button>
                                         <span id="like-count" class="font-bold text-lg">0</span>
@@ -301,6 +302,13 @@
                                     <div class="flex items-center gap-4">
                                         <button id="dislike-btn" class="like-dislike-btn text-2xl"><i class="far fa-thumbs-down"></i></button>
                                         <span id="dislike-count" class="font-bold text-lg">0</span>
+                                    </div>
+                                    <!-- Avaliação por Estrelas -->
+                                    <div class="border-l border-gray-600 pl-6">
+                                        <p class="text-lg font-semibold">Sua Avaliação:</p>
+                                        <div id="user-rating-stars" class="star-rating flex text-3xl">
+                                            <i class="far fa-star" data-value="1"></i><i class="far fa-star" data-value="2"></i><i class="far fa-star" data-value="3"></i><i class="far fa-star" data-value="4"></i><i class="far fa-star" data-value="5"></i>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
