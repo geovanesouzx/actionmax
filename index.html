@@ -223,8 +223,47 @@
             </div>
             <div id="gerenciar-assinatura-page" class="page-content hidden">
                  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                         <h1 class="text-3xl sm:text-4xl font-bold mb-8">Gerenciar Assinatura</h1>
-                         <p class="text-gray-400">Página em construção.</p>
+                    <h1 class="text-3xl sm:text-4xl font-bold mb-8 text-center">Escolha o seu Plano</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
+                        <!-- Plano 1 -->
+                        <div class="card p-8 text-center flex flex-col">
+                            <h4 class="text-2xl font-bold text-text-primary">7 Dias</h4>
+                            <p class="text-4xl font-extrabold my-6">R$ 1,50</p>
+                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
+                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 1 semana</li>
+                            </ul>
+                            <button class="btn btn-secondary w-full mt-auto">Selecionar Plano</button>
+                        </div>
+                        <!-- Plano 2 -->
+                        <div class="card p-8 text-center flex flex-col">
+                            <h4 class="text-2xl font-bold text-text-primary">15 Dias</h4>
+                            <p class="text-4xl font-extrabold my-6">R$ 2,00</p>
+                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
+                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 15 dias</li>
+                            </ul>
+                            <button class="btn btn-secondary w-full mt-auto">Selecionar Plano</button>
+                        </div>
+                        <!-- Plano 3 -->
+                        <div class="card p-8 text-center flex flex-col border-2 border-primary ring-4 ring-primary/20 relative">
+                            <span class="absolute top-0 -translate-y-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">POPULAR</span>
+                            <h4 class="text-2xl font-bold text-text-primary">30 Dias</h4>
+                            <p class="text-4xl font-extrabold my-6">R$ 4,00</p>
+                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
+                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 1 mês</li>
+                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Melhor custo-benefício</li>
+                            </ul>
+                            <button class="btn btn-primary w-full mt-auto">Selecionar Plano</button>
+                        </div>
+                        <!-- Plano 4 -->
+                        <div class="card p-8 text-center flex flex-col">
+                            <h4 class="text-2xl font-bold text-text-primary">45 Dias</h4>
+                            <p class="text-4xl font-extrabold my-6">R$ 5,00</p>
+                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
+                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 45 dias</li>
+                            </ul>
+                            <button class="btn btn-secondary w-full mt-auto">Selecionar Plano</button>
+                        </div>
+                    </div>
                  </div>
             </div>
             <div id="details-page" class="page-content hidden">
@@ -577,7 +616,7 @@
             </div>
             <i class="fas fa-crown text-5xl text-yellow-400 mb-4"></i>
             <h2 class="text-2xl font-bold mb-2">Funcionalidade Premium</h2>
-            <p class="text-gray-300 mb-6">Altere o seu avatar e desbloqueie mais funcionalidades com uma assinatura ActionMax.</p>
+            <p id="subscription-modal-message" class="text-gray-300 mb-6">Desbloqueie esta e outras funcionalidades com uma assinatura ActionMax.</p>
             <button id="go-to-subscription-btn" class="btn-primary w-full text-white font-bold py-3 rounded-lg">Ver Planos</button>
         </div>
     </div>

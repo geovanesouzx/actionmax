@@ -466,3 +466,16 @@ input[type="range"]::-moz-range-thumb {
 #achievement-toast.show {
     transform: translateX(0);
 }
+
+/* --- Estilos de Assinatura --- */
+.card-lock-icon {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    color: #facc15; /* yellow-400 */
+}

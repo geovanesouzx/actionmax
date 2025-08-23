@@ -124,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeTrailerBtn = document.getElementById('close-trailer-btn');
     const subscriptionModalOverlay = document.getElementById('subscription-modal-overlay');
     const subscriptionModal = document.getElementById('subscription-modal');
+    const subscriptionModalMessage = document.getElementById('subscription-modal-message');
     const closeSubscriptionBtn = document.getElementById('close-subscription-btn');
     const goToSubscriptionBtn = document.getElementById('go-to-subscription-btn');
     const accountInfoList = document.getElementById('account-info-list');
@@ -746,6 +747,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
+            if (contentData.requiresSubscription && !userSubscriptionStatus.isSubscribed) {
+                subscriptionModalMessage.textContent = "Assine um plano para assistir a este conteúdo exclusivo.";
+                openModal(subscriptionModalOverlay, subscriptionModal);
+                return;
+            }
+
             if (openInNewTab) {
                 window.open(src, '_blank');
                 return;
@@ -1347,6 +1354,12 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsCastBtn.addEventListener('click', () => {
             if (!currentDetailsData) return;
     
+            if (currentDetailsData.requiresSubscription && !userSubscriptionStatus.isSubscribed) {
+                subscriptionModalMessage.textContent = "Assine um plano para transmitir este conteúdo exclusivo.";
+                openModal(subscriptionModalOverlay, subscriptionModal);
+                return;
+            }
+
             let srcToCast = '';
             let titleToCast = currentDetailsData.title;
     
@@ -1416,6 +1429,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (userSubscriptionStatus.isSubscribed) {
                 showPage('avatar-page');
             } else {
+                subscriptionModalMessage.textContent = "Altere o seu avatar e desbloqueie mais funcionalidades com uma assinatura ActionMax.";
                 openModal(subscriptionModalOverlay, subscriptionModal);
             }
         });
@@ -1426,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userSubscriptionStatus.isSubscribed) {
                     selectAvatar(e);
                 } else {
+                    subscriptionModalMessage.textContent = "Altere o seu avatar e desbloqueie mais funcionalidades com uma assinatura ActionMax.";
                     openModal(subscriptionModalOverlay, subscriptionModal);
                 }
             }
@@ -1550,6 +1565,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }
+
+            const lockIcon = data.requiresSubscription ? `<div class="card-lock-icon"><i class="fas fa-crown"></i></div>` : '';
         
             const progressHTML = progress ? `
                 <div class="absolute bottom-0 left-0 w-full h-1.5 bg-gray-500/50">
@@ -1561,6 +1578,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="movie-card">
                         <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                         ${ratingHTML}
+                        ${lockIcon}
                         ${progressHTML}
                         <div class="card-overlay">
                             <i class="fas fa-play-circle overlay-play-icon"></i>
