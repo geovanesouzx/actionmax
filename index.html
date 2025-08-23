@@ -69,6 +69,15 @@
         </div>
     </div>
 
+    <!-- Tela de Seleção de Perfil -->
+    <div id="profile-gate" class="fixed inset-0 bg-[#040714] z-[9998] flex-col items-center justify-center hidden">
+        <h2 class="text-4xl sm:text-5xl font-bold text-white mb-12">Quem está a assistir?</h2>
+        <div id="profiles-list" class="flex flex-wrap justify-center gap-4 sm:gap-8">
+            <!-- Perfis serão injetados aqui -->
+        </div>
+        <button id="manage-profiles-btn" class="mt-12 text-gray-400 border border-gray-400 py-2 px-6 rounded-lg hover:bg-gray-700 transition">Gerir Perfis</button>
+    </div>
+
     <!-- Wrapper Principal da Aplicação -->
     <div id="app-wrapper" class="hidden flex flex-col min-h-screen">
         <!-- Header Fixo -->
@@ -199,19 +208,13 @@
                         </div>
                          <p id="my-list-empty" class="text-gray-400 hidden">Sua lista está vazia. Adicione filmes e séries para vê-los aqui.</p>
                     </div>
-                    <hr class="border-gray-700 my-12">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white mb-6">Conquistas</h2>
-                        <div id="achievements-container" class="flex flex-wrap gap-4 justify-center md:justify-start">
-                            <!-- Emblemas serão injetados aqui -->
-                            <p id="achievements-empty" class="text-gray-400">Comece a assistir para desbloquear conquistas!</p>
-                        </div>
-                    </div>
                     <div class="mt-12">
                          <h2 class="text-2xl font-bold text-white mb-6">Configurações da Conta</h2>
                          <div class="bg-gray-800/50 p-6 rounded-lg max-w-2xl">
-                             <ul id="account-info-list" class="space-y-4">
-                                 <!-- Informações da conta serão injetadas aqui -->
+                             <ul class="space-y-4">
+                                 <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Plano:</span> <span class="font-semibold">Premium</span></li>
+                                 <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Próxima cobrança:</span> <span class="font-semibold">25 de Agosto, 2025</span></li>
+                                 <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Idioma:</span> <span class="font-semibold">Português (Brasil)</span></li>
                              </ul>
                              <div class="mt-6 flex flex-col sm:flex-row gap-4">
                                  <a href="#gerenciar-assinatura" data-target="gerenciar-assinatura-page" class="nav-link inline-block w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2 px-6 rounded-lg transition text-center">Gerenciar Assinatura</a>
@@ -223,47 +226,8 @@
             </div>
             <div id="gerenciar-assinatura-page" class="page-content hidden">
                  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8 text-center">Escolha o seu Plano</h1>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
-                        <!-- Plano 1 -->
-                        <div class="card p-8 text-center flex flex-col">
-                            <h4 class="text-2xl font-bold text-text-primary">7 Dias</h4>
-                            <p class="text-4xl font-extrabold my-6">R$ 1,50</p>
-                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
-                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 1 semana</li>
-                            </ul>
-                            <button class="btn btn-secondary w-full mt-auto">Selecionar Plano</button>
-                        </div>
-                        <!-- Plano 2 -->
-                        <div class="card p-8 text-center flex flex-col">
-                            <h4 class="text-2xl font-bold text-text-primary">15 Dias</h4>
-                            <p class="text-4xl font-extrabold my-6">R$ 2,00</p>
-                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
-                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 15 dias</li>
-                            </ul>
-                            <button class="btn btn-secondary w-full mt-auto">Selecionar Plano</button>
-                        </div>
-                        <!-- Plano 3 -->
-                        <div class="card p-8 text-center flex flex-col border-2 border-primary ring-4 ring-primary/20 relative">
-                            <span class="absolute top-0 -translate-y-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">POPULAR</span>
-                            <h4 class="text-2xl font-bold text-text-primary">30 Dias</h4>
-                            <p class="text-4xl font-extrabold my-6">R$ 4,00</p>
-                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
-                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 1 mês</li>
-                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Melhor custo-benefício</li>
-                            </ul>
-                            <button class="btn btn-primary w-full mt-auto">Selecionar Plano</button>
-                        </div>
-                        <!-- Plano 4 -->
-                        <div class="card p-8 text-center flex flex-col">
-                            <h4 class="text-2xl font-bold text-text-primary">45 Dias</h4>
-                            <p class="text-4xl font-extrabold my-6">R$ 5,00</p>
-                            <ul class="text-text-secondary space-y-2 mb-8 text-left">
-                                <li class="flex items-center gap-2"><i class="fa fa-check text-success"></i> Acesso por 45 dias</li>
-                            </ul>
-                            <button class="btn btn-secondary w-full mt-auto">Selecionar Plano</button>
-                        </div>
-                    </div>
+                      <h1 class="text-3xl sm:text-4xl font-bold mb-8">Gerenciar Assinatura</h1>
+                      <p class="text-gray-400">Página em construção.</p>
                  </div>
             </div>
             <div id="details-page" class="page-content hidden">
@@ -290,7 +254,6 @@
                                 <p id="details-desc" class="text-gray-200 text-lg mb-8"></p>
                                 <div class="flex flex-wrap justify-center md:justify-start gap-4">
                                     <button id="details-watch-btn" class="btn-primary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2"><i class="fas fa-play"></i><span>Assistir</span></button>
-                                    <button id="details-cast-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2"><i class="fas fa-broadcast-tower"></i><span>Transmitir</span></button>
                                     <button id="details-trailer-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2 hidden"><i class="fas fa-video"></i><span>Trailer</span></button>
                                     <button id="details-add-list-btn" class="btn-secondary text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2">
                                         <i id="details-add-list-icon" class="fas fa-plus"></i>
@@ -577,7 +540,7 @@
                 <button id="close-notification-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             <div id="notification-list" class="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                <!-- Notificações do Firebase serão injetadas aqui -->
+                 <!-- Notificações do Firebase serão injetadas aqui -->
             </div>
         </div>
     </div>
@@ -608,27 +571,6 @@
         </div>
     </div>
 
-    <!-- Modal de Assinatura Necessária -->
-    <div id="subscription-modal-overlay" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden opacity-0 items-center justify-center p-4">
-        <div id="subscription-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6 text-white transform scale-95 opacity-0 text-center">
-            <div class="flex justify-end">
-                <button id="close-subscription-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-            </div>
-            <i class="fas fa-crown text-5xl text-yellow-400 mb-4"></i>
-            <h2 class="text-2xl font-bold mb-2">Funcionalidade Premium</h2>
-            <p id="subscription-modal-message" class="text-gray-300 mb-6">Desbloqueie esta e outras funcionalidades com uma assinatura ActionMax.</p>
-            <button id="go-to-subscription-btn" class="btn-primary w-full text-white font-bold py-3 rounded-lg">Ver Planos</button>
-        </div>
-    </div>
-
-    <!-- Notificação de Conquista Desbloqueada -->
-    <div id="achievement-toast" class="fixed bottom-5 right-5 bg-gray-900 border-2 border-yellow-400 text-white p-4 rounded-lg shadow-2xl flex items-center gap-4 transform translate-x-[calc(100%+2rem)] transition-transform duration-500 ease-in-out z-[100]">
-        <i class="fas fa-trophy text-3xl text-yellow-400"></i>
-        <div>
-            <p class="font-bold">Conquista Desbloqueada!</p>
-            <p id="achievement-toast-name" class="text-sm"></p>
-        </div>
-    </div>
 
     <!-- Link para o seu arquivo JavaScript -->
     <script type="module" src="script.js"></script>

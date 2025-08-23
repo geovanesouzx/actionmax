@@ -84,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeNotificationBtn = document.getElementById('close-notification-btn');
     const detailsAddListBtn = document.getElementById('details-add-list-btn');
     const detailsWatchBtn = document.getElementById('details-watch-btn');
-    const detailsCastBtn = document.getElementById('details-cast-btn');
     const detailsTrailerBtn = document.getElementById('details-trailer-btn');
     const myListContainer = document.getElementById('my-list-container');
     const myListEmptyMsg = document.getElementById('my-list-empty');
@@ -122,12 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const trailerModal = document.getElementById('trailer-modal');
     const trailerPlayerContainer = document.getElementById('trailer-player-container');
     const closeTrailerBtn = document.getElementById('close-trailer-btn');
-    const subscriptionModalOverlay = document.getElementById('subscription-modal-overlay');
-    const subscriptionModal = document.getElementById('subscription-modal');
-    const subscriptionModalMessage = document.getElementById('subscription-modal-message');
-    const closeSubscriptionBtn = document.getElementById('close-subscription-btn');
-    const goToSubscriptionBtn = document.getElementById('go-to-subscription-btn');
-    const accountInfoList = document.getElementById('account-info-list');
     // Player Controls
     const videoPlayerWrapper = document.getElementById('video-player-wrapper');
     const playerControlsOverlay = document.getElementById('player-controls-overlay');
@@ -149,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qualityDisplay = document.getElementById('quality-display');
     const playerBackBtn = document.getElementById('player-back-btn');
 
+
     // --- Estado da Aplicação ---
     let myList = [];
     let watchHistory = {};
@@ -163,15 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let allFetchedNotifications = [];
     let dismissedNotificationIds = new Set();
     let unsubscribeUserDoc = null;
-    let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null, type: null };
+    let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
     let controlsTimeout;
     let hlsInstance = null;
     let lastSelectedSeason = {};
-    let userSubscriptionStatus = { isSubscribed: false };
-    let userAchievements = {};
-    let allAchievements = [];
     const markdownConverter = new showdown.Converter();
 
     // --- Lógica de Autenticação do Firebase ---
@@ -182,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-username').textContent = user.displayName || 'Usuário';
             document.getElementById('profile-email').textContent = user.email;
             if (!appWrapper.dataset.initialized) {
-                initializeAppLogic(user);
+                initializeAppLogic();
                 appWrapper.dataset.initialized = 'true';
             }
         } else {
@@ -224,11 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = userCredential.user;
             await updateProfile(user, { displayName: username });
             await setDoc(doc(db, "usernames", username.toLowerCase()), { uid: user.uid });
-            // Criar documento de usuário com configurações padrão
-            await setDoc(doc(db, "users", user.uid), {
-                isSubscribed: false,
-                createdAt: serverTimestamp()
-            });
             location.reload();
         } catch (error) {
             errorEl.textContent = getFirebaseErrorMessage(error);
@@ -264,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Lógica Principal da Aplicação ---
-    function initializeAppLogic(user) {
+    function initializeAppLogic() {
         appWrapper.classList.remove('opacity-0');
 
         // --- Funções Auxiliares ---
@@ -325,7 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             if (user) await setDoc(doc(db, 'users', user.uid), { myList }, { merge: true });
         };
-
+        const loadMyList = async () => {
+            const user = auth.currentUser;
+            if (user) {
+                const docSnap = await getDoc(doc(db, 'users', user.uid));
+                myList = (docSnap.exists() && docSnap.data().myList) ? docSnap.data().myList : [];
+            }
+        };
         const toggleMyList = (itemData) => {
             if (!itemData) return;
             const itemIndex = myList.findIndex(item => item.id === itemData.id);
@@ -405,10 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (!isPlayerPage) {
                     currentDetailsData = null;
                 }
-                if (pageId === 'perfil-page') {
-                    renderMyListPage();
-                    renderAchievements();
-                }
+                if (pageId === 'perfil-page') renderMyListPage();
                 if (pageId === 'filmes-page') renderAllMoviesPage();
                 if (pageId === 'series-page') renderAllSeriesPage();
                 if (pageId === 'generos-page') renderGenresPage();
@@ -440,8 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('details-duration').textContent = data.duration || '';
             document.getElementById('details-genre').textContent = Array.isArray(data.genre) ? data.genre.join(', ') : (data.genre || '');
             
-            detailsCastBtn.classList.toggle('hidden', !data.videoSrc && data.type !== 'Série');
-
             if (data.trailerSrc) {
                 detailsTrailerBtn.classList.remove('hidden');
             } else {
@@ -449,6 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (data.type === 'Série' && data.seasons) {
+                currentDetailsData.parsedSeasons = data.seasons;
                 seasonsSection.classList.remove('hidden');
                 const seasonKeys = Object.keys(data.seasons).sort((a,b) => a-b);
                 const initialSeason = lastSelectedSeason[data.id] || seasonKeys[0];
@@ -497,7 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     epCard.className = 'episode-card bg-gray-800/50 rounded-lg p-3 text-center cursor-pointer flex flex-col justify-center items-center';
                     epCard.dataset.videoSrc = videoSrc;
                     epCard.dataset.episode = epNum;
-                    epCard.dataset.episodeTitle = episodeTitle;
                     epCard.dataset.openInNewTab = openInNewTab;
                     epCard.innerHTML = `
                         <i class="fas fa-play-circle text-3xl mb-2 text-violet-300"></i>
@@ -510,9 +497,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const findNextEpisode = (seasonNum, epNum) => {
-            if (!seasonNum || !epNum || !currentDetailsData?.seasons) return null;
+            if (!seasonNum || !epNum || !currentDetailsData?.parsedSeasons) return null;
             
-            const seasons = currentDetailsData.seasons;
+            const seasons = currentDetailsData.parsedSeasons;
             const seasonKeys = Object.keys(seasons).sort((a, b) => parseInt(a) - parseInt(b));
             let currentSeasonIndex = seasonKeys.indexOf(String(seasonNum));
 
@@ -553,12 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const handleVideoEnd = () => {
-             // Lógica de Gamificação ao completar
-            const content = allContent.find(c => c.id === currentPlaying.contentId);
-            if (content) {
-                handleContentCompleted(content.id, content.type, currentPlaying.season, currentPlaying.episode, content.genre);
-            }
-
             if (currentPlaying.nextEpisodeInfo) {
                 nextEpisodeOverlay.classList.remove('hidden');
                 nextEpisodeOverlay.classList.add('flex');
@@ -747,12 +728,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const playContent = (src, contentData, seasonNum = null, epNum = null, openInNewTab = false, isTrailer = false) => {
-            if (contentData.requiresSubscription && !userSubscriptionStatus.isSubscribed) {
-                subscriptionModalMessage.textContent = "Assine um plano para assistir a este conteúdo exclusivo.";
-                openModal(subscriptionModalOverlay, subscriptionModal);
-                return;
-            }
-
             if (openInNewTab) {
                 window.open(src, '_blank');
                 return;
@@ -787,8 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 season: seasonNum,
                 episode: epNum,
                 nextEpisodeInfo: findNextEpisode(seasonNum, epNum),
-                contentId: contentData.id,
-                type: contentData.type
+                contentId: contentData.id
             };
         
             const isM3U8 = src.endsWith('.m3u8');
@@ -838,7 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoEl.addEventListener('ended', handleVideoEnd);
                 watchProgressInterval = setInterval(() => {
                     if (!videoEl.paused) {
-                        updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration, currentPlaying.type);
+                        updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
                 }, 10000);
                 
@@ -976,6 +950,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 updateSelectedAvatarVisual();
             });
+        };
+
+        const loadAvatar = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                const userDocRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(userDocRef);
+                const defaultAvatar = `https://placehold.co/150x150/040714/a78bfa?text=${user.displayName.charAt(0).toUpperCase()}`;
+                const savedAvatar = (docSnap.exists() && docSnap.data().avatarUrl) ? docSnap.data().avatarUrl : defaultAvatar;
+                
+                profileAvatar.src = savedAvatar;
+                profileAvatarLarge.src = savedAvatar;
+                commentAvatar.src = savedAvatar;
+            } catch (error) {
+                console.error("Error loading avatar:", error);
+            }
         };
 
         const selectAvatar = async (e) => {
@@ -1176,6 +1168,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = auth.currentUser;
             if (!user) return;
 
+            if (unsubscribeUserDoc) unsubscribeUserDoc();
+
+            const userDocRef = doc(db, "users", user.uid);
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                const userData = docSnap.data();
+                dismissedNotificationIds = new Set(userData?.dismissedNotifications || []);
+                filterAndDisplayNotifications();
+            });
+
             const q = query(collection(db, "notifications"));
             onSnapshot(q, (snapshot) => {
                 allFetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1306,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cardData) {
                     if (cardData.type === 'Canal') {
                         playContent(cardData.videoSrc, cardData, null, null, cardData.videoSrcNewTab);
-                    } else { // Para 'Filme' e 'Série'
+                    } else {
                         if (!searchModalOverlay.classList.contains('hidden')) {
                             closeModal(searchModalOverlay);
                             setTimeout(() => showPage('details-page', true, cardData), 300);
@@ -1332,15 +1333,12 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsAddListBtn?.addEventListener('click', () => toggleMyList(currentDetailsData));
         
         detailsWatchBtn?.addEventListener('click', () => {
-            if (!currentDetailsData) return;
-            if (currentDetailsData.type === 'Filme') {
-                playContent(currentDetailsData.videoSrc, currentDetailsData, null, null, currentDetailsData.videoSrcNewTab);
-            } else if (currentDetailsData.type === 'Série' && currentDetailsData.seasons) {
-                const firstSeasonNum = Object.keys(currentDetailsData.seasons).sort((a,b) => parseInt(a) - parseInt(b))[0];
+            if (currentDetailsData && currentDetailsData.type === 'Série') {
+                const firstSeasonNum = Object.keys(currentDetailsData.parsedSeasons).sort((a,b) => parseInt(a) - parseInt(b))[0];
                 if (firstSeasonNum) {
-                    const episodeKeys = Object.keys(currentDetailsData.seasons[firstSeasonNum]).sort((a,b) => parseInt(a) - parseInt(b));
+                    const episodeKeys = Object.keys(currentDetailsData.parsedSeasons[firstSeasonNum]).sort((a,b) => parseInt(a) - parseInt(b));
                     for (const epNum of episodeKeys) {
-                        const episodeData = currentDetailsData.seasons[firstSeasonNum][epNum];
+                        const episodeData = currentDetailsData.parsedSeasons[firstSeasonNum][epNum];
                         if (!episodeData.releaseDate) {
                             const videoSrc = (typeof episodeData === 'string') ? episodeData : episodeData.src;
                             playContent(videoSrc, currentDetailsData, firstSeasonNum, epNum, episodeData.openInNewTab);
@@ -1348,42 +1346,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
-            }
-        });
-
-        detailsCastBtn.addEventListener('click', () => {
-            if (!currentDetailsData) return;
-    
-            if (currentDetailsData.requiresSubscription && !userSubscriptionStatus.isSubscribed) {
-                subscriptionModalMessage.textContent = "Assine um plano para transmitir este conteúdo exclusivo.";
-                openModal(subscriptionModalOverlay, subscriptionModal);
-                return;
-            }
-
-            let srcToCast = '';
-            let titleToCast = currentDetailsData.title;
-    
-            if (currentDetailsData.type === 'Filme') {
-                srcToCast = currentDetailsData.videoSrc;
-            } else if (currentDetailsData.type === 'Série' && currentDetailsData.seasons) {
-                const firstSeasonNum = Object.keys(currentDetailsData.seasons).sort((a,b) => parseInt(a) - parseInt(b))[0];
-                if (firstSeasonNum) {
-                    const firstEpNum = Object.keys(currentDetailsData.seasons[firstSeasonNum]).sort((a,b) => parseInt(a) - parseInt(b))[0];
-                    const episodeData = currentDetailsData.seasons[firstSeasonNum][firstEpNum];
-                    if (episodeData) {
-                        srcToCast = (typeof episodeData === 'string') ? episodeData : episodeData.src;
-                        titleToCast = `${currentDetailsData.title} - S${firstSeasonNum} E${firstEpNum}`;
-                    }
-                }
-            }
-    
-            if (srcToCast) {
-                const encodedUrl = encodeURIComponent(srcToCast);
-                const encodedTitle = encodeURIComponent(titleToCast);
-                const castUrl = `wvc-x-callback://open?url=${encodedUrl}&title=${encodedTitle}`;
-                window.location.href = castUrl;
-            } else {
-                alert("Nenhum conteúdo disponível para transmitir.");
+            } else if (currentDetailsData && currentDetailsData.type === 'Filme') {
+                playContent(currentDetailsData.videoSrc, currentDetailsData, null, null, currentDetailsData.videoSrcNewTab);
             }
         });
 
@@ -1399,9 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         heroWatchBtn.addEventListener('click', () => {
             const heroData = allContent.find(item => item.id === heroSection.dataset.id);
-            if (heroData) {
-                playContent(heroData.videoSrc, heroData, null, null, heroData.videoSrcNewTab);
-            }
+            if (heroData) playContent(heroData.videoSrc, heroData, null, null, heroData.videoSrcNewTab);
         });
         heroAddListBtn.addEventListener('click', () => {
              const heroData = allContent.find(item => item.id === heroSection.dataset.id);
@@ -1424,25 +1386,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         closeNotificationBtn?.addEventListener('click', () => closeModal(notificationModalOverlay, notificationModal));
         notificationModalOverlay?.addEventListener('click', (e) => { if (e.target === notificationModalOverlay) closeModal(notificationModalOverlay, notificationModal); });
-        
-        changePhotoBtn?.addEventListener('click', () => {
-            if (userSubscriptionStatus.isSubscribed) {
-                showPage('avatar-page');
-            } else {
-                subscriptionModalMessage.textContent = "Altere o seu avatar e desbloqueie mais funcionalidades com uma assinatura ActionMax.";
-                openModal(subscriptionModalOverlay, subscriptionModal);
-            }
-        });
-
+        changePhotoBtn?.addEventListener('click', () => showPage('avatar-page'));
         avatarBackBtn?.addEventListener('click', (e) => { e.preventDefault(); history.back(); });
         avatarCategoryContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('avatar-option')) {
-                if (userSubscriptionStatus.isSubscribed) {
-                    selectAvatar(e);
-                } else {
-                    subscriptionModalMessage.textContent = "Altere o seu avatar e desbloqueie mais funcionalidades com uma assinatura ActionMax.";
-                    openModal(subscriptionModalOverlay, subscriptionModal);
-                }
+                selectAvatar(e);
             }
         });
         changeUsernameBtn.addEventListener('click', () => openModal(usernameModalOverlay, usernameModal));
@@ -1486,14 +1434,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         playerBackBtn.addEventListener('click', () => history.back());
 
-        closeSubscriptionBtn.addEventListener('click', () => closeModal(subscriptionModalOverlay, subscriptionModal));
-        subscriptionModalOverlay.addEventListener('click', (e) => {
-            if (e.target === subscriptionModalOverlay) closeModal(subscriptionModalOverlay, subscriptionModal);
-        });
-        goToSubscriptionBtn.addEventListener('click', () => {
-            closeModal(subscriptionModalOverlay, subscriptionModal);
-            showPage('gerenciar-assinatura-page');
-        });
 
         seasonSelector.addEventListener('click', (e) => {
             if (e.target.matches('.season-btn')) {
@@ -1503,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 document.querySelectorAll('.season-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
-                renderEpisodes(currentDetailsData.seasons, seasonNum);
+                renderEpisodes(currentDetailsData.parsedSeasons, seasonNum);
             }
         });
 
@@ -1511,10 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const epCard = e.target.closest('.episode-card');
             if (epCard && epCard.dataset.videoSrc) {
                 const activeSeasonBtn = seasonSelector.querySelector('.season-btn.active');
-                const seasonNum = activeSeasonBtn.dataset.season;
-                const epNum = epCard.dataset.episode;
-                const openInNewTab = epCard.dataset.openInNewTab === 'true';
-                playContent(epCard.dataset.videoSrc, currentDetailsData, seasonNum, epNum, openInNewTab);
+                playContent(epCard.dataset.videoSrc, currentDetailsData, activeSeasonBtn.dataset.season, epCard.dataset.episode, epCard.dataset.openInNewTab === 'true');
             }
         });
 
@@ -1542,6 +1479,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (document.getElementById(pageId)) {
                     showPage(pageId, false);
                     if (pageId === 'generos-page') {
+                        // Limpa os resultados se voltarmos para a página principal de gêneros
                         genreResultsContainer.innerHTML = '';
                         genreResultsTitle.classList.add('hidden');
                         genreResultsEmpty.classList.add('hidden');
@@ -1565,8 +1503,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }
-
-            const lockIcon = data.requiresSubscription ? `<div class="card-lock-icon"><i class="fas fa-crown"></i></div>` : '';
         
             const progressHTML = progress ? `
                 <div class="absolute bottom-0 left-0 w-full h-1.5 bg-gray-500/50">
@@ -1578,7 +1514,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="movie-card">
                         <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
                         ${ratingHTML}
-                        ${lockIcon}
                         ${progressHTML}
                         <div class="card-overlay">
                             <i class="fas fa-play-circle overlay-play-icon"></i>
@@ -1626,6 +1561,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderAllPages = async () => {
+            await loadWatchHistory();
             renderContinueWatchingCarousel();
             setupHero();
             renderHomeCarousels();
@@ -1635,7 +1571,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderEmBrevePage();
             if(document.getElementById('perfil-page').classList.contains('hidden') === false) {
                 renderMyListPage();
-                renderAchievements();
             }
         }
 
@@ -1770,18 +1705,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
 
-        async function updateWatchHistory(contentId, currentTime, duration, type) {
+        async function loadWatchHistory() {
+            const user = auth.currentUser;
+            if (user) {
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                watchHistory = (docSnap.exists() && docSnap.data().watchHistory) ? docSnap.data().watchHistory : {};
+            }
+        }
+
+        async function updateWatchHistory(contentId, currentTime, duration) {
             const user = auth.currentUser;
             if (user && contentId) {
                 const progress = (currentTime / duration) * 100;
                 if (progress > 95) {
                     delete watchHistory[contentId];
-                    // handleContentCompleted is now called on video 'ended' event
                 } else {
                     watchHistory[contentId] = {
                         currentTime,
                         duration,
-                        watchedAt: new Date() // Use client-side date for sorting
+                        watchedAt: serverTimestamp()
                     };
                 }
                 const docRef = doc(db, 'users', user.uid);
@@ -1795,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(([id, data]) => ({ id, ...data }))
                 .filter(item => item.currentTime && item.duration);
 
-            historyItems.sort((a, b) => (new Date(b.watchedAt) || 0) - (new Date(a.watchedAt) || 0));
+            historyItems.sort((a, b) => (b.watchedAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
 
             if (historyItems.length === 0) return;
 
@@ -1843,147 +1786,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // --- Lógica de Gamificação ---
-        function showAchievementToast(achievement) {
-            const toast = document.getElementById('achievement-toast');
-            const nameEl = document.getElementById('achievement-toast-name');
-            if (!toast || !nameEl || !achievement) return;
-    
-            nameEl.textContent = achievement.name;
-            toast.classList.add('show');
-    
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 5000);
-        }
-    
-        async function awardAchievement(achievementId) {
-            const user = auth.currentUser;
-            if (!user || userAchievements[achievementId]) return;
-    
-            const achievement = allAchievements.find(a => a.id === achievementId);
-            if (!achievement) return;
-    
-            const userDocRef = doc(db, "users", user.uid);
-            const achievementData = { unlockedAt: serverTimestamp() };
-            await updateDoc(userDocRef, { [`achievements.${achievementId}`]: achievementData });
-    
-            showAchievementToast(achievement);
-        }
-    
-        async function handleContentCompleted(contentId, type, seasonNum, epNum, genres) {
-            const user = auth.currentUser;
-            if (!user) return;
-            const userDocRef = doc(db, "users", user.uid);
-    
-            if (type === 'Filme') {
-                const updatedGenres = arrayUnion(...(genres || []));
-                await updateDoc(userDocRef, { watchedMovieGenres: updatedGenres });
-    
-                const userDocSnap = await getDoc(userDocRef);
-                const currentGenres = userDocSnap.data()?.watchedMovieGenres || [];
-                if (new Set(currentGenres).size >= 10) {
-                    awardAchievement('explorer');
-                }
-            } else if (type === 'Série') {
-                const logPath = `watchedEpisodesLog.${contentId}_${seasonNum}`;
-                await updateDoc(userDocRef, { [logPath]: arrayUnion({ ep: epNum, at: serverTimestamp() }) });
-    
-                const seriesData = allContent.find(c => c.id === contentId);
-                const totalEpisodesInSeason = Object.keys(seriesData.seasons[seasonNum]).length;
-    
-                const userDocSnap = await getDoc(userDocRef);
-                const episodeLogs = userDocSnap.data()?.watchedEpisodesLog?.[`${contentId}_${seasonNum}`] || [];
-                
-                if (episodeLogs.length >= totalEpisodesInSeason) {
-                    const timestamps = episodeLogs.map(log => log.at.toDate()).sort((a, b) => a - b);
-                    const firstWatch = timestamps[0];
-                    const lastWatch = timestamps[timestamps.length - 1];
-                    const diffHours = (lastWatch - firstWatch) / 3600000;
-    
-                    if (diffHours <= 24) {
-                        awardAchievement('marathoner');
-                    }
-                }
-            }
-        }
-    
-        function renderAchievements() {
-            const container = document.getElementById('achievements-container');
-            const emptyMsg = document.getElementById('achievements-empty');
-            container.innerHTML = '';
-    
-            if (allAchievements.length === 0) {
-                emptyMsg.classList.remove('hidden');
-                return;
-            }
-    
-            allAchievements.sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-            let hasUnlocked = false;
-            allAchievements.forEach(ach => {
-                const userAchData = userAchievements[ach.id];
-                const isUnlocked = !!userAchData;
-                if (isUnlocked) hasUnlocked = true;
-    
-                const badge = document.createElement('div');
-                badge.className = `achievement-badge ${isUnlocked ? 'unlocked' : ''}`;
-                badge.title = isUnlocked
-                    ? `${ach.description}\nDesbloqueado em: ${new Date(userAchData.unlockedAt.seconds * 1000).toLocaleDateString()}`
-                    : ach.description;
-    
-                badge.innerHTML = `
-                    <i class="badge-icon ${ach.icon}"></i>
-                    <span class="badge-name">${ach.name}</span>
-                `;
-                container.appendChild(badge);
-            });
-    
-            emptyMsg.style.display = hasUnlocked ? 'none' : 'block';
-        }
-        
         const setupRealtimeListeners = async () => {
             let isInitialLoad = true;
             
-            // Listen to User Document for real-time updates
-            if (unsubscribeUserDoc) unsubscribeUserDoc();
-            const userDocRef = doc(db, "users", user.uid);
-            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
-                const userData = docSnap.data() || {};
-                myList = userData.myList || [];
-                watchHistory = userData.watchHistory || {};
-                userSubscriptionStatus = { isSubscribed: userData.isSubscribed === true };
-                userAchievements = userData.achievements || {};
-                dismissedNotificationIds = new Set(userData.dismissedNotifications || []);
-                
-                updateSubscriptionUI(userData);
-                if (!document.getElementById('perfil-page').classList.contains('hidden')) {
-                    renderAchievements();
-                    renderMyListPage();
-                }
-                filterAndDisplayNotifications();
-                renderContinueWatchingCarousel();
-            });
-
+            loadMyList();
+            loadAvatar(); 
+            loadAvatars();
             listenForNotifications();
             loadSiteSettings();
             listenForAllAverageRatings();
-            loadAvatars();
 
             try {
                 const contentQuery = collection(db, 'content');
                 const categoriesQuery = query(collection(db, 'categories'), orderBy("order"));
-                const achievementsQuery = query(collection(db, 'achievements_master'), orderBy("order"));
 
-                const [contentSnapshot, categoriesSnapshot, achievementsSnapshot] = await Promise.all([
+                const [contentSnapshot, categoriesSnapshot] = await Promise.all([
                     getDocs(contentQuery),
-                    getDocs(categoriesQuery),
-                    getDocs(achievementsQuery)
+                    getDocs(categoriesQuery)
                 ]);
 
                 allContent = contentSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
                 allCategories = categoriesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                allAchievements = achievementsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
 
                 await renderAllPages();
 
@@ -1998,6 +1821,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (hash.startsWith('#/generos/')) {
                         const genreName = decodeURIComponent(hash.split('/')[2]);
                         showPage('generos-page', false);
+                        // Usa um timeout para garantir que os botões de gênero sejam renderizados antes de selecionar um
                         setTimeout(() => displayGenreResults(genreName, false), 100);
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
@@ -2033,17 +1857,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingScreen.innerHTML = '<h2 class="text-red-500 text-center p-4">Falha ao carregar o site. Por favor, recarregue a página.</h2>';
             }
         };
-        
-        function updateSubscriptionUI(userData) {
-            const plan = userData?.isSubscribed ? 'Premium' : 'Gratuito';
-            const nextBilling = userData?.isSubscribed ? (userData.nextBillingDate?.toDate().toLocaleDateString() || 'N/A') : 'N/A';
-            
-            accountInfoList.innerHTML = `
-                <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Plano:</span> <span class="font-semibold">${plan}</span></li>
-                <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Próxima cobrança:</span> <span class="font-semibold">${nextBilling}</span></li>
-                <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center"><span class="text-gray-300">Idioma:</span> <span class="font-semibold">Português (Brasil)</span></li>
-            `;
-        }
 
         setupRealtimeListeners();
     }
