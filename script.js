@@ -253,6 +253,50 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeAppLogic() {
         appWrapper.classList.remove('opacity-0');
 
+        // --- NOVO: Sistema Anti-DevTools ---
+        const setupAntiDevTools = () => {
+            const blockUser = () => {
+                // Limpa o conteúdo da página
+                document.body.innerHTML = `
+                    <div style="position: fixed; inset: 0; background-color: #040714; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; font-family: 'Inter', sans-serif; padding: 1rem;">
+                        <h1 style="font-size: 2rem; font-weight: 800; color: #a78bfa;">Acesso Bloqueado</h1>
+                        <p style="margin-top: 1rem; font-size: 1rem; color: #d1d5db;">O uso de ferramentas de desenvolvedor não é permitido neste site.</p>
+                        <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #9ca3af;">Por favor, feche as ferramentas e atualize a página.</p>
+                    </div>
+                `;
+            };
+
+            // Detecção por atalhos de teclado
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                    e.preventDefault();
+                    blockUser();
+                }
+            });
+
+            // Detecção por alteração no tamanho da janela (quando as ferramentas são abertas ancoradas)
+            const threshold = 160; // Diferença em pixels que indica a abertura das ferramentas
+            let lastHeight = window.innerHeight;
+            let lastWidth = window.innerWidth;
+
+            setInterval(() => {
+                const currentHeight = window.innerHeight;
+                const currentWidth = window.innerWidth;
+                if (Math.abs(lastHeight - currentHeight) > threshold || Math.abs(lastWidth - currentWidth) > threshold) {
+                    blockUser();
+                }
+                lastHeight = currentHeight;
+                lastWidth = currentWidth;
+            }, 1000);
+
+            // Desativar clique direito
+            window.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        };
+        setupAntiDevTools();
+        // --- FIM DO SISTEMA ANTI-DEVTOOLS ---
+
         // --- Funções Auxiliares ---
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
