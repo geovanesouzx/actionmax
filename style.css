@@ -294,39 +294,15 @@ body {
     border-radius: 10px;
     border: 2px solid #1f2937;
 }
-
-/* --- ESTILOS ATUALIZADOS DA SEÇÃO HERO --- */
-#hero-section .absolute.inset-0.bg-gradient-to-r {
-    background: linear-gradient(to right, #040714 20%, rgba(4, 7, 20, 0.7) 50%, transparent 100%);
+#hero-bg-mobile, #details-bg-mobile {
+    display: none;
 }
-#hero-title {
-    font-size: 4.5rem; /* Aumenta o tamanho da fonte */
-    line-height: 1.1; /* Melhora o espaçamento entre linhas */
-    text-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Adiciona uma sombra para mais profundidade */
-}
-#hero-content .btn-primary {
-    background-color: #f9f9f9;
-    color: #040714;
-}
-#hero-content .btn-primary:hover {
-    background-color: #d1d5db;
-}
-#hero-content .btn-secondary {
-    background-color: rgba(107, 114, 128, 0.5);
-}
-#hero-content .btn-secondary:hover {
-    background-color: rgba(107, 114, 128, 0.7);
-}
-
 @media (max-width: 768px) {
     #hero-bg-desktop, #details-bg-desktop {
         display: none;
     }
     #hero-bg-mobile, #details-bg-mobile {
         display: block;
-    }
-    #hero-title {
-        font-size: 3rem;
     }
 }
 
