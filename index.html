@@ -290,22 +290,17 @@
 
                         <!-- Wrapper para Avaliações e Comentários -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 mt-12">
-                            <!-- Coluna de Avaliação -->
+                            <!-- Coluna de Avaliação (Gostei/Não Gostei) -->
                             <div>
                                 <h2 class="text-2xl font-bold text-white mb-4">Avaliações</h2>
-                                <div class="flex items-center gap-4 bg-gray-800/50 p-4 rounded-lg">
-                                    <div>
-                                        <p class="text-lg font-semibold">Sua Avaliação:</p>
-                                        <div id="user-rating-stars" class="star-rating flex text-3xl">
-                                            <i class="far fa-star" data-value="1"></i><i class="far fa-star" data-value="2"></i><i class="far fa-star" data-value="3"></i><i class="far fa-star" data-value="4"></i><i class="far fa-star" data-value="5"></i>
-                                        </div>
+                                <div class="flex items-center gap-6 bg-gray-800/50 p-4 rounded-lg">
+                                    <div class="flex items-center gap-4">
+                                        <button id="like-btn" class="like-dislike-btn text-2xl"><i class="far fa-thumbs-up"></i></button>
+                                        <span id="like-count" class="font-bold text-lg">0</span>
                                     </div>
-                                    <div class="border-l border-gray-600 pl-4">
-                                        <p class="text-lg font-semibold">Média:</p>
-                                        <div class="flex items-center gap-2">
-                                            <i class="fas fa-star text-yellow-400 text-2xl"></i>
-                                            <span id="average-rating" class="text-2xl font-bold">N/A</span>
-                                        </div>
+                                    <div class="flex items-center gap-4">
+                                        <button id="dislike-btn" class="like-dislike-btn text-2xl"><i class="far fa-thumbs-down"></i></button>
+                                        <span id="dislike-count" class="font-bold text-lg">0</span>
                                     </div>
                                 </div>
                             </div>
@@ -353,6 +348,9 @@
                     <div id="player-container" class="w-full h-full">
                         <!-- Player de Vídeo ou Iframe será injetado aqui -->
                     </div>
+
+                    <!-- Botão Pular Abertura -->
+                    <button id="skip-intro-btn" class="absolute bottom-24 right-8 bg-black/70 text-white py-2 px-5 rounded-lg text-sm font-semibold hidden z-20">Pular Abertura</button>
 
                     <!-- Overlay de Controles Personalizados -->
                     <div id="player-controls-overlay" class="absolute inset-0 w-full h-full text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-4">

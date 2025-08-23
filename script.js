@@ -100,8 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentForm = document.getElementById('comment-form');
     const commentsContainer = document.getElementById('comments-container');
     const commentAvatar = document.getElementById('comment-avatar');
-    const userRatingStars = document.getElementById('user-rating-stars');
-    const averageRatingEl = document.getElementById('average-rating');
+    const likeBtn = document.getElementById('like-btn');
+    const dislikeBtn = document.getElementById('dislike-btn');
+    const likeCountEl = document.getElementById('like-count');
+    const dislikeCountEl = document.getElementById('dislike-count');
     const filmesContainer = document.getElementById('filmes-container');
     const seriesContainer = document.getElementById('series-container');
     const aovivoContainer = document.getElementById('aovivo-container');
@@ -141,16 +143,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const speedDisplay = document.getElementById('speed-display');
     const qualityDisplay = document.getElementById('quality-display');
     const playerBackBtn = document.getElementById('player-back-btn');
+    const skipIntroBtn = document.getElementById('skip-intro-btn');
 
 
     // --- Estado da Aplicação ---
     let myList = [];
     let watchHistory = {};
-    let allAverageRatings = {};
+    let allLikes = {};
     let currentDetailsData = null;
     let lastPageId = 'inicio-page';
     let unsubscribeComments = null;
-    let unsubscribeRatings = null;
+    let unsubscribeLikes = null;
     let allContent = [];
     let allCategories = [];
     let allNotifications = [];
@@ -160,9 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlaying = { season: null, episode: null, nextEpisodeInfo: null, contentId: null };
     let nextEpisodeInterval = null;
     let watchProgressInterval = null;
+    let skipIntroInterval = null;
     let controlsTimeout;
     let hlsInstance = null;
     let lastSelectedSeason = {};
+    let trailerHoverTimeout = null;
     const markdownConverter = new showdown.Converter();
 
     // --- Lógica de Autenticação do Firebase ---
@@ -402,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const showPage = (pageId, pushState = true, data = null) => {
             if (unsubscribeComments) unsubscribeComments();
-            if (unsubscribeRatings) unsubscribeRatings();
+            if (unsubscribeLikes) unsubscribeLikes();
             const isDetailsPage = pageId === 'details-page';
             const isAvatarPage = pageId === 'avatar-page';
             const isPlayerPage = pageId === 'player-page';
@@ -435,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     populateDetailsPage(data);
                     updateAllListButtons(data.id);
                     loadComments(data.id);
-                    loadRatingData(data.id);
+                    loadLikes(data.id);
                 } else if (isAvatarPage) {
                     updateSelectedAvatarVisual();
                 } else if (!isPlayerPage) {
@@ -797,6 +802,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!src) return;
         
             clearInterval(watchProgressInterval);
+            clearInterval(skipIntroInterval);
+            skipIntroBtn.classList.add('hidden');
         
             if (!currentDetailsData || currentDetailsData.id !== contentData.id) {
                 currentDetailsData = contentData;
@@ -859,6 +866,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateWatchHistory(currentPlaying.contentId, videoEl.currentTime, videoEl.duration);
                     }
                 }, 10000);
+
+                // Lógica para Pular Abertura
+                const episodeData = contentData.seasons?.[seasonNum]?.[epNum];
+                if(episodeData && episodeData.introStart && episodeData.introEnd) {
+                    skipIntroInterval = setInterval(() => {
+                        if(videoEl.currentTime > episodeData.introStart && videoEl.currentTime < episodeData.introEnd) {
+                            skipIntroBtn.classList.remove('hidden');
+                        } else {
+                            skipIntroBtn.classList.add('hidden');
+                        }
+                    }, 1000);
+                    skipIntroBtn.onclick = () => {
+                        videoEl.currentTime = episodeData.introEnd;
+                        skipIntroBtn.classList.add('hidden');
+                    };
+                }
                 
                 playerControlsOverlay.classList.remove('hidden');
 
@@ -1141,72 +1164,74 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
-        const handleStarRating = async (rating) => {
+        const handleLikeDislike = async (type) => {
             const user = auth.currentUser;
-            if (user && currentDetailsData) {
-                await setDoc(doc(db, "ratings", `${user.uid}_${currentDetailsData.id}`), {
-                    contentId: currentDetailsData.id, userId: user.uid, rating: rating
-                });
-            }
-        };
+            if (!user || !currentDetailsData) return;
         
-        const getRatingColorClass = (rating) => {
-            if (rating >= 4.5) return 'rating-5';
-            if (rating >= 3) return 'rating-3';
-            if (rating > 0) return 'rating-1';
-            return '';
+            const contentId = currentDetailsData.id;
+            const likeRef = doc(db, "likes", contentId);
+            const dislikeRef = doc(db, "dislikes", contentId);
+        
+            const batch = writeBatch(db);
+        
+            if (type === 'like') {
+                batch.update(likeRef, { uids: arrayUnion(user.uid) });
+                batch.update(dislikeRef, { uids: arrayRemove(user.uid) });
+            } else if (type === 'dislike') {
+                batch.update(dislikeRef, { uids: arrayUnion(user.uid) });
+                batch.update(likeRef, { uids: arrayRemove(user.uid) });
+            }
+        
+            try {
+                await batch.commit();
+            } catch (error) {
+                // Se os documentos não existirem, crie-os
+                if (error.code === 'not-found') {
+                    const newBatch = writeBatch(db);
+                    if (type === 'like') {
+                        await setDoc(likeRef, { uids: [user.uid] }, { merge: true });
+                        await setDoc(dislikeRef, { uids: arrayRemove(user.uid) }, { merge: true });
+                    } else if (type === 'dislike') {
+                        await setDoc(dislikeRef, { uids: [user.uid] }, { merge: true });
+                        await setDoc(likeRef, { uids: arrayRemove(user.uid) }, { merge: true });
+                    }
+                } else {
+                    console.error("Error handling like/dislike:", error);
+                }
+            }
         };
 
-        const loadRatingData = (contentId) => {
+        const loadLikes = (contentId) => {
             const user = auth.currentUser;
-            averageRatingEl.textContent = 'N/A';
-            userRatingStars.className = 'star-rating flex text-3xl';
-            userRatingStars.querySelectorAll('.fa-star').forEach(star => star.className = 'far fa-star');
+            const q = query(collection(db, "likes"), where("__name__", "==", contentId));
+            
+            unsubscribeLikes = onSnapshot(q, (snapshot) => {
+                let likes = [];
+                let dislikes = [];
+                let userVote = null;
 
-            if (user) {
-                getDoc(doc(db, "ratings", `${user.uid}_${contentId}`)).then(docSnap => {
-                    if (docSnap.exists()) {
-                        const userRating = docSnap.data().rating;
-                        for (let i = 0; i < userRating; i++) {
-                            userRatingStars.children[i].className = 'fas fa-star selected';
-                        }
-                        userRatingStars.classList.add(getRatingColorClass(userRating));
-                    }
-                });
-            }
-
-            const q = query(collection(db, "ratings"), where("contentId", "==", contentId));
-            unsubscribeRatings = onSnapshot(q, (querySnapshot) => {
-                let totalRating = 0, count = 0;
-                querySnapshot.forEach((doc) => {
-                    totalRating += doc.data().rating;
-                    count++;
-                });
-
-                const averageRatingContainer = averageRatingEl.closest('.flex').parentElement;
-                averageRatingContainer.className = 'border-l border-gray-600 pl-4'; // Reset
-                if (count > 0) {
-                    const average = totalRating / count;
-                    averageRatingEl.textContent = average.toFixed(1);
-                    averageRatingContainer.classList.add(getRatingColorClass(average));
-                } else {
-                    averageRatingEl.textContent = 'N/A';
+                const likeDoc = snapshot.docs[0];
+                if (likeDoc) {
+                    likes = likeDoc.data().uids || [];
+                    if (likes.includes(user.uid)) userVote = 'like';
                 }
+
+                getDoc(doc(db, "dislikes", contentId)).then(dislikeDoc => {
+                    if (dislikeDoc.exists()) {
+                        dislikes = dislikeDoc.data().uids || [];
+                        if (dislikes.includes(user.uid)) userVote = 'dislike';
+                    }
+
+                    likeCountEl.textContent = likes.length;
+                    dislikeCountEl.textContent = dislikes.length;
+                    likeBtn.classList.toggle('active', userVote === 'like');
+                    dislikeBtn.classList.toggle('active', userVote === 'dislike');
+                });
             });
         };
 
-        userRatingStars.addEventListener('click', (e) => {
-            if (e.target.matches('.fa-star')) {
-                const rating = parseInt(e.target.dataset.value);
-                handleStarRating(rating);
-                
-                userRatingStars.className = 'star-rating flex text-3xl';
-                userRatingStars.classList.add(getRatingColorClass(rating));
-                for (let i = 0; i < 5; i++) {
-                    userRatingStars.children[i].className = i < rating ? 'fas fa-star selected' : 'far fa-star';
-                }
-            }
-        });
+        likeBtn.addEventListener('click', () => handleLikeDislike('like'));
+        dislikeBtn.addEventListener('click', () => handleLikeDislike('dislike'));
         
         const listenForNotifications = () => {
             const user = auth.currentUser;
@@ -1535,17 +1560,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        const createCardHTML = (data, progress = null) => {
-            const ratingInfo = allAverageRatings[data.id];
+        const createCardHTML = (data, progress = null, isTop10 = false, rank = 0) => {
             let ratingHTML = '';
-            if (ratingInfo && ratingInfo.count > 0) {
-                const colorClass = getRatingColorClass(ratingInfo.average);
-                ratingHTML = `
-                    <div class="card-rating ${colorClass}">
-                        <i class="fas fa-star"></i>
-                        <span>${ratingInfo.average.toFixed(1)}</span>
-                    </div>
-                `;
+            if (!isTop10 && allLikes[data.id]) {
+                const likes = allLikes[data.id].likes || 0;
+                const dislikes = allLikes[data.id].dislikes || 0;
+                const total = likes + dislikes;
+                if (total > 0) {
+                    const percentage = Math.round((likes / total) * 100);
+                    ratingHTML = `
+                        <div class="card-rating rating-3">
+                            <i class="fas fa-thumbs-up"></i>
+                            <span>${percentage}%</span>
+                        </div>
+                    `;
+                }
             }
         
             const progressHTML = progress ? `
@@ -1554,7 +1583,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             ` : '';
 
-            // LÓGICA DA TAG DE STATUS
             let statusTagHTML = '';
             const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
             const now = new Date();
@@ -1564,21 +1592,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (now - tagDate < sevenDaysInMs) {
                     let tagText = '';
                     switch (data.statusTag.type) {
-                        case 'novidade':
-                            tagText = 'Novidade';
-                            break;
-                        case 'nova_temporada':
-                            tagText = 'Nova Temporada';
-                            break;
-                        case 'novos_episodios':
-                            tagText = 'Novos Episódios';
-                            break;
-                        case 'indisponivel_em_breve':
-                            tagText = data.statusTag.text ? `Sai em ${data.statusTag.text}` : 'Indisponível em Breve';
-                            break;
-                        case 'proximo_episodio':
-                            tagText = data.statusTag.text ? `Próximo Ep. ${data.statusTag.text}` : 'Próximo Episódio';
-                            break;
+                        case 'novidade': tagText = 'Novidade'; break;
+                        case 'nova_temporada': tagText = 'Nova Temporada'; break;
+                        case 'novos_episodios': tagText = 'Novos Episódios'; break;
+                        case 'indisponivel_em_breve': tagText = data.statusTag.text ? `Sai em ${data.statusTag.text}` : 'Indisponível em Breve'; break;
+                        case 'proximo_episodio': tagText = data.statusTag.text ? `Próximo Ep. ${data.statusTag.text}` : 'Próximo Episódio'; break;
                     }
                     if (tagText) {
                         statusTagHTML = `<div class="status-tag">${tagText}</div>`;
@@ -1586,18 +1604,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            return `
-                <div class="movie-card-wrapper" data-id="${data.id}">
-                    <div class="movie-card">
-                        <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
-                        ${ratingHTML}
-                        ${progressHTML}
-                        <div class="card-overlay">
-                            <i class="fas fa-play-circle overlay-play-icon"></i>
-                            <h3 class="overlay-title" title="${data.title}">${data.title}</h3>
-                            ${statusTagHTML}
-                        </div>
+            const cardContent = `
+                <div class="movie-card">
+                    <div class="card-trailer-preview"></div>
+                    <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                    ${ratingHTML}
+                    ${progressHTML}
+                    <div class="card-overlay">
+                        <i class="fas fa-play-circle overlay-play-icon"></i>
+                        <h3 class="overlay-title" title="${data.title}">${data.title}</h3>
+                        ${statusTagHTML}
                     </div>
+                </div>
+            `;
+
+            if (isTop10) {
+                return `
+                    <div class="movie-card-wrapper top-10-item" data-id="${data.id}">
+                        <span class="top-10-number">${rank}</span>
+                        <div class="top-10-card">${cardContent}</div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="movie-card-wrapper" data-id="${data.id}" data-trailer-src="${data.trailerSrc || ''}">
+                    ${cardContent}
                 </div>
             `;
         };
@@ -1626,9 +1658,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const carouselHTML = `
                     <h2 class="text-2xl font-bold text-white mb-6">Recomendados para Si</h2>
                     <div class="relative">
-                        <div class="swiper content-carousel">
-                            <div class="swiper-wrapper">${slidesHTML}</div>
-                        </div>
+                        <div class="swiper content-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
                         <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
                         <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
                     </div>
@@ -1654,6 +1684,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderHomeCarousels = () => {
             homeCarousels.innerHTML = '';
+            
+            // Render Top 10 Carousel
+            const top10Content = Object.entries(allLikes)
+                .map(([id, data]) => ({ id, score: (data.likes || 0) - (data.dislikes || 0) }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10)
+                .map(item => allContent.find(c => c.id === item.id))
+                .filter(Boolean); // Filtra itens que possam não ser encontrados
+
+            if (top10Content.length > 0) {
+                const slidesHTML = top10Content.map((itemData, index) => `<div class="swiper-slide">${createCardHTML(itemData, null, true, index + 1)}</div>`).join('');
+                const carouselHTML = `
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-bold text-white">Top 10 da Semana</h2>
+                        <div class="relative">
+                            <div class="swiper content-carousel top-10-carousel"><div class="swiper-wrapper">${slidesHTML}</div></div>
+                            <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
+                            <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
+                        </div>
+                    </div>`;
+                homeCarousels.innerHTML += carouselHTML;
+            }
+
+
             allCategories.forEach(category => {
                 let categoryContent = [];
 
@@ -1840,26 +1894,23 @@ document.addEventListener('DOMContentLoaded', () => {
             initCarousel(continueWatchingContainer.querySelector('.content-carousel'));
         }
 
-        function listenForAllAverageRatings() {
-            const q = query(collection(db, "ratings"));
-            onSnapshot(q, (snapshot) => {
-                const ratingsByContent = {};
-                snapshot.forEach(doc => {
-                    const ratingData = doc.data();
-                    if (!ratingsByContent[ratingData.contentId]) {
-                        ratingsByContent[ratingData.contentId] = { total: 0, count: 0 };
-                    }
-                    ratingsByContent[ratingData.contentId].total += ratingData.rating;
-                    ratingsByContent[ratingData.contentId].count++;
-                });
+        function listenForAllLikes() {
+            const likesQuery = collection(db, "likes");
+            const dislikesQuery = collection(db, "dislikes");
 
-                allAverageRatings = {};
-                for (const contentId in ratingsByContent) {
-                    allAverageRatings[contentId] = {
-                        average: ratingsByContent[contentId].total / ratingsByContent[contentId].count,
-                        count: ratingsByContent[contentId].count
-                    };
-                }
+            onSnapshot(likesQuery, (snapshot) => {
+                snapshot.forEach(doc => {
+                    if (!allLikes[doc.id]) allLikes[doc.id] = {};
+                    allLikes[doc.id].likes = (doc.data().uids || []).length;
+                });
+                renderAllPages();
+            });
+
+            onSnapshot(dislikesQuery, (snapshot) => {
+                snapshot.forEach(doc => {
+                    if (!allLikes[doc.id]) allLikes[doc.id] = {};
+                    allLikes[doc.id].dislikes = (doc.data().uids || []).length;
+                });
                 renderAllPages();
             });
         }
@@ -1872,7 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadAvatars();
             listenForNotifications();
             loadSiteSettings();
-            listenForAllAverageRatings();
+            listenForAllLikes();
 
             try {
                 const contentQuery = collection(db, 'content');
@@ -1899,7 +1950,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (hash.startsWith('#/generos/')) {
                         const genreName = decodeURIComponent(hash.split('/')[2]);
                         showPage('generos-page', false);
-                        // Usa um timeout para garantir que os botões de gênero sejam renderizados antes de selecionar um
                         setTimeout(() => displayGenreResults(genreName, false), 100);
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
