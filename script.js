@@ -1604,32 +1604,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const cardContent = `
-                <div class="movie-card">
-                    <div class="card-trailer-preview"></div>
-                    <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
-                    ${ratingHTML}
-                    ${progressHTML}
-                    <div class="card-overlay">
-                        <i class="fas fa-play-circle overlay-play-icon"></i>
-                        <h3 class="overlay-title" title="${data.title}">${data.title}</h3>
-                        ${statusTagHTML}
-                    </div>
-                </div>
-            `;
-
-            if (isTop10) {
-                return `
-                    <div class="movie-card-wrapper top-10-item" data-id="${data.id}">
-                        <span class="top-10-number">${rank}</span>
-                        <div class="top-10-card">${cardContent}</div>
-                    </div>
-                `;
-            }
+            const top10RankAttribute = isTop10 ? `data-rank="${rank}"` : '';
 
             return `
-                <div class="movie-card-wrapper" data-id="${data.id}" data-trailer-src="${data.trailerSrc || ''}">
-                    ${cardContent}
+                <div class="movie-card-wrapper ${isTop10 ? 'top-10-item' : ''}" data-id="${data.id}" data-trailer-src="${data.trailerSrc || ''}">
+                    <div class="movie-card" ${top10RankAttribute}>
+                        <div class="card-trailer-preview"></div>
+                        <img src="${data.img}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x360/cccccc/000000?text=Image';">
+                        ${ratingHTML}
+                        ${progressHTML}
+                        <div class="card-overlay">
+                            <i class="fas fa-play-circle overlay-play-icon"></i>
+                            <h3 class="overlay-title" title="${data.title}">${data.title}</h3>
+                            ${statusTagHTML}
+                        </div>
+                    </div>
                 </div>
             `;
         };
