@@ -426,3 +426,43 @@ input[type="range"]::-moz-range-thumb {
     text-stroke: 1px #fff;
     color: transparent;
 }
+
+/* --- Estilos de Gamificação --- */
+.achievement-badge {
+    background-color: #1f2937; /* bg-gray-800 */
+    border: 1px solid #4b5563; /* border-gray-600 */
+    width: 100px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px;
+    border-radius: 50%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.achievement-badge.unlocked {
+    border-color: #facc15; /* yellow-400 */
+    box-shadow: 0 0 15px rgba(250, 204, 21, 0.5);
+}
+.achievement-badge.unlocked .badge-icon {
+    color: #facc15;
+}
+.achievement-badge .badge-icon {
+    font-size: 2.5rem;
+    color: #6b7280; /* gray-500 */
+    margin-bottom: 4px;
+    transition: color 0.3s ease;
+}
+.achievement-badge .badge-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+.achievement-badge.unlocked .badge-name {
+    color: #f9fafb; /* gray-50 */
+}
+#achievement-toast.show {
+    transform: translateX(0);
+}
