@@ -160,10 +160,21 @@
             </div>
             <div id="generos-page" class="page-content hidden">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <h1 class="text-3xl sm:text-4xl font-bold mb-8">Explorar por Gênero</h1>
-                    <div id="genres-carousels-container" class="space-y-12">
-                        <!-- Carrosséis de gênero serão injetados aqui -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-8">
+                        <h1 class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-0">Explorar por Gênero</h1>
+                        <div class="relative">
+                            <select id="genre-select-dropdown" class="bg-gray-800 border border-gray-700 text-white text-md rounded-lg focus:ring-violet-500 focus:border-violet-500 block w-full p-2.5 appearance-none">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                     </div>
+                    <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        <!-- Conteúdo do gênero será injetado aqui -->
+                    </div>
+                    <p id="genre-results-empty" class="text-gray-400 hidden text-center mt-8">Nenhum item encontrado para este gênero.</p>
                 </div>
             </div>
             <div id="aovivo-page" class="page-content hidden">
