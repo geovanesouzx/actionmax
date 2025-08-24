@@ -106,7 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const seriesContainer = document.getElementById('series-container');
     const aovivoContainer = document.getElementById('aovivo-container');
     const embreveContainer = document.getElementById('embreve-container');
-    const genresCarouselsContainer = document.getElementById('genres-carousels-container');
+    const genreSelectDropdown = document.getElementById('genre-select-dropdown');
+    const genreResultsContainer = document.getElementById('genre-results-container');
+    const genreResultsEmpty = document.getElementById('genre-results-empty');
     const detailsShareBtn = document.getElementById('details-share-btn');
     const shareModalOverlay = document.getElementById('share-modal-overlay');
     const shareModal = document.getElementById('share-modal');
@@ -1093,32 +1095,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const renderGenresPage = () => {
-            if (!genresCarouselsContainer) return;
-            genresCarouselsContainer.innerHTML = '';
+            if (!genreSelectDropdown) return;
             const allGenres = [...new Set(allContent.flatMap(item => item.genre || []))].sort();
-
+            
+            genreSelectDropdown.innerHTML = '<option value="">Todos os Gêneros</option>';
             allGenres.forEach(genre => {
-                const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre) && !(item.type === 'Filme' && item.emBreve));
-                
-                if (genreContent.length > 0) {
-                    const slidesHTML = genreContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
-                    const carouselHTML = `
-                        <div>
-                            <h2 class="text-2xl font-bold text-white mb-6">${genre}</h2>
-                            <div class="relative">
-                                <div class="swiper content-carousel">
-                                    <div class="swiper-wrapper">${slidesHTML}</div>
-                                </div>
-                                <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
-                                <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
-                            </div>
-                        </div>`;
-                    genresCarouselsContainer.innerHTML += carouselHTML;
-                }
+                const option = document.createElement('option');
+                option.value = genre;
+                option.textContent = genre;
+                genreSelectDropdown.appendChild(option);
             });
-
-            document.querySelectorAll('#genres-carousels-container .content-carousel').forEach(c => initCarousel(c));
+            
+            displayGenreResults(allGenres[0] || '');
         };
+
+        const displayGenreResults = (genre) => {
+            const genreContent = allContent.filter(item => 
+                Array.isArray(item.genre) && item.genre.includes(genre) && !(item.type === 'Filme' && item.emBreve)
+            );
+            
+            if (genreContent.length > 0) {
+                genreResultsContainer.innerHTML = genreContent.map(itemData => createCardHTML(itemData)).join('');
+                genreResultsEmpty.classList.add('hidden');
+            } else {
+                genreResultsContainer.innerHTML = '';
+                genreResultsEmpty.classList.remove('hidden');
+            }
+        };
+
+        genreSelectDropdown?.addEventListener('change', (e) => {
+            displayGenreResults(e.target.value);
+        });
 
         commentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
