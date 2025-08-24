@@ -106,10 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const seriesContainer = document.getElementById('series-container');
     const aovivoContainer = document.getElementById('aovivo-container');
     const embreveContainer = document.getElementById('embreve-container');
-    const genresSelectionContainer = document.getElementById('genres-selection-container');
-    const genreResultsContainer = document.getElementById('genre-results-container');
-    const genreResultsTitle = document.getElementById('genre-results-title');
-    const genreResultsEmpty = document.getElementById('genre-results-empty');
+    const genresCarouselsContainer = document.getElementById('genres-carousels-container');
     const detailsShareBtn = document.getElementById('details-share-btn');
     const shareModalOverlay = document.getElementById('share-modal-overlay');
     const shareModal = document.getElementById('share-modal');
@@ -1090,52 +1087,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const renderGenresPage = () => {
+            if (!genresCarouselsContainer) return;
+            genresCarouselsContainer.innerHTML = '';
             const allGenres = [...new Set(allContent.flatMap(item => item.genre || []))].sort();
-            genresSelectionContainer.innerHTML = '';
-            
+
             allGenres.forEach(genre => {
-                const btn = document.createElement('button');
-                btn.className = 'genre-select-btn font-semibold py-2 px-5 rounded-lg';
-                btn.textContent = genre;
-                btn.dataset.genre = genre;
-                genresSelectionContainer.appendChild(btn);
+                const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre) && !(item.type === 'Filme' && item.emBreve));
+                
+                if (genreContent.length > 0) {
+                    const slidesHTML = genreContent.map(itemData => `<div class="swiper-slide">${createCardHTML(itemData)}</div>`).join('');
+                    const carouselHTML = `
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-6">${genre}</h2>
+                            <div class="relative">
+                                <div class="swiper content-carousel">
+                                    <div class="swiper-wrapper">${slidesHTML}</div>
+                                </div>
+                                <div class="swiper-button-prev -left-4 !hidden md:!flex"></div>
+                                <div class="swiper-button-next -right-4 !hidden md:!flex"></div>
+                            </div>
+                        </div>`;
+                    genresCarouselsContainer.innerHTML += carouselHTML;
+                }
             });
 
-            genreResultsContainer.innerHTML = '';
-            genreResultsTitle.classList.add('hidden');
-            genreResultsEmpty.classList.add('hidden');
+            document.querySelectorAll('#genres-carousels-container .content-carousel').forEach(c => initCarousel(c));
         };
-
-        const displayGenreResults = (genre, pushState = true) => {
-            genreResultsTitle.textContent = `Resultados para: ${genre}`;
-            genreResultsTitle.classList.remove('hidden');
-
-            const genreContent = allContent.filter(item => Array.isArray(item.genre) && item.genre.includes(genre) && !(item.type === 'Filme' && item.emBreve));
-            
-            if (genreContent.length > 0) {
-                genreResultsContainer.innerHTML = genreContent.map(itemData => createCardHTML(itemData)).join('');
-                genreResultsEmpty.classList.add('hidden');
-            } else {
-                genreResultsContainer.innerHTML = '';
-                genreResultsEmpty.classList.remove('hidden');
-            }
-
-            document.querySelectorAll('.genre-select-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.genre === genre);
-            });
-
-            if (pushState) {
-                const url = `#/generos/${encodeURIComponent(genre)}`;
-                history.pushState({ page: 'generos-page', genre: genre }, '', url);
-            }
-        };
-        
-        genresSelectionContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('genre-select-btn')) {
-                const genre = e.target.dataset.genre;
-                displayGenreResults(genre);
-            }
-        });
 
         commentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1593,20 +1570,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = allContent.find(item => item.id === itemId);
                 if (data) showPage('details-page', false, data);
                 else showPage('inicio-page', false);
-            } else if (hash.startsWith('#/generos/')) {
-                const genreName = decodeURIComponent(hash.split('/')[2]);
-                showPage('generos-page', false);
-                setTimeout(() => displayGenreResults(genreName, false), 100);
             } else {
                 const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
                 if (document.getElementById(pageId)) {
                     showPage(pageId, false);
-                    if (pageId === 'generos-page') {
-                        genreResultsContainer.innerHTML = '';
-                        genreResultsTitle.classList.add('hidden');
-                        genreResultsEmpty.classList.add('hidden');
-                        document.querySelectorAll('.genre-select-btn.active').forEach(btn => btn.classList.remove('active'));
-                    }
                 } else {
                     showPage('inicio-page', false);
                 }
@@ -1973,14 +1940,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = allContent.find(item => item.id === itemId);
                         if (data) showPage('details-page', false, data);
                         else showPage('inicio-page', false);
-                    } else if (hash.startsWith('#/generos/')) {
-                        const genreName = decodeURIComponent(hash.split('/')[2]);
-                        showPage('generos-page', false);
-                        setTimeout(() => displayGenreResults(genreName, false), 100);
                     } else {
                         const pageId = (hash && hash !== '#') ? hash.substring(1).split('/')[0] + '-page' : 'inicio-page';
-                        if (document.getElementById(pageId)) showPage(pageId, false);
-                        else showPage('inicio-page', false);
+                        if (document.getElementById(pageId)) {
+                            showPage(pageId, false);
+                        } else {
+                            showPage('inicio-page', false);
+                        }
                     }
                 }
 
