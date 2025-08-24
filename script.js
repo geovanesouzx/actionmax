@@ -314,6 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return array;
         }
 
+        const truncateText = (text, maxLength) => {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substr(0, text.lastIndexOf(' ', maxLength)) + '...';
+        };
+
         const initCarousel = (container) => {
             if (!container) return;
             if (container.swiper) container.swiper.destroy(true, true);
@@ -1772,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 heroSection.dataset.id = heroContentData.id;
                 heroSection.dataset.videoSrc = heroContentData.videoSrc || '';
                 document.getElementById('hero-title').textContent = heroContentData.title;
-                document.getElementById('hero-desc').textContent = heroContentData.desc;
+                document.getElementById('hero-desc').textContent = truncateText(heroContentData.desc, 200);
                 document.getElementById('hero-genre').textContent = Array.isArray(heroContentData.genre) ? heroContentData.genre.join(', ') : (heroContentData.genre || '');
                 document.getElementById('hero-year').textContent = heroContentData.year || '';
                 document.getElementById('hero-duration').textContent = heroContentData.duration || '';
