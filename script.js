@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeListeners = [];
     let hlsInstance = null;
     let appStarted = false;
+    let selectedAvatarUrl = null;
 
     // --- LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO ---
     function startApp() {
@@ -318,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn('Não foi possível travar a orientação da tela. O utilizador pode ter bloqueado a rotação no dispositivo.', err);
                 });
             } else {
-                 console.warn('API de Orientação de Tela não é suportada.');
+                   console.warn('API de Orientação de Tela não é suportada.');
             }
         } else {
             if (screen.orientation && typeof screen.orientation.unlock === 'function') {
@@ -520,70 +521,64 @@ document.addEventListener('DOMContentLoaded', () => {
         newListButton.addEventListener('click', () => toggleMyList(id));
 
         const seasonsContainer = document.getElementById('seasons-container');
-        if (item.type === 'Série' && item.seasons && Object.keys(item.seasons).length > 0) {
+        if (item.type === 'Série' && item.seasons) {
             seasonsContainer.innerHTML = '';
             seasonsContainer.classList.remove('hidden');
-    
-            const controlsContainer = document.createElement('div');
-            controlsContainer.className = 'mb-6';
-            
+
+            const seasonSelectorContainer = document.createElement('div');
+            seasonSelectorContainer.className = 'glass-panel p-4 md:p-6';
+
+            const selectorWrapper = document.createElement('div');
+            selectorWrapper.className = 'relative max-w-xs';
             const seasonSelector = document.createElement('select');
             seasonSelector.className = 'season-selector glass-panel';
-    
-            const sortedSeasonKeys = Object.keys(item.seasons).sort((a, b) => parseInt(a) - parseInt(b));
-    
-            sortedSeasonKeys.forEach(seasonNum => {
+            selectorWrapper.appendChild(seasonSelector);
+            seasonSelectorContainer.appendChild(selectorWrapper);
+
+            const episodesGrid = document.createElement('div');
+            episodesGrid.className = 'episodes-grid';
+            seasonSelectorContainer.appendChild(episodesGrid);
+
+            const sortedSeasons = Object.keys(item.seasons).sort((a, b) => parseInt(a) - parseInt(b));
+            
+            sortedSeasons.forEach(seasonNum => {
                 const option = document.createElement('option');
                 option.value = seasonNum;
                 option.textContent = `Temporada ${seasonNum}`;
                 seasonSelector.appendChild(option);
             });
-            
-            const savedSeason = sessionStorage.getItem(`selectedSeason_${id}`);
-            if (savedSeason && item.seasons[savedSeason]) {
+
+            const renderEpisodes = (seasonNum) => {
+                episodesGrid.innerHTML = '';
+                const seasonData = item.seasons[seasonNum];
+                if (!seasonData) return;
+
+                Object.entries(seasonData).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).forEach(([epNum, epData], index) => {
+                    const epCard = document.createElement('div');
+                    epCard.className = 'episode-card glass-panel fade-in';
+                    epCard.style.animationDelay = `${index * 0.05}s`;
+                    epCard.innerHTML = `
+                        <div class="episode-card-number">Episódio ${epNum}</div>
+                        <div class="episode-card-title">${epData.title || `Episódio ${epNum}`}</div>
+                    `;
+                    epCard.onclick = () => openPlayerWithUrl(epData.src);
+                    episodesGrid.appendChild(epCard);
+                });
+            };
+
+            seasonSelector.addEventListener('change', (e) => {
+                const selectedSeason = e.target.value;
+                localStorage.setItem(`selectedSeason_${id}`, selectedSeason);
+                renderEpisodes(selectedSeason);
+            });
+
+            const savedSeason = localStorage.getItem(`selectedSeason_${id}`);
+            if (savedSeason && sortedSeasons.includes(savedSeason)) {
                 seasonSelector.value = savedSeason;
             }
 
-            controlsContainer.appendChild(seasonSelector);
-            seasonsContainer.appendChild(controlsContainer);
-    
-            const episodesContainer = document.createElement('div');
-            episodesContainer.className = 'episodes-grid';
-            seasonsContainer.appendChild(episodesContainer);
-            
-            const renderEpisodes = (seasonNum) => {
-                episodesContainer.innerHTML = '';
-                const seasonData = item.seasons[seasonNum];
-                if (!seasonData) return;
-    
-                const sortedEpisodeKeys = Object.keys(seasonData).sort((a, b) => parseInt(a) - parseInt(b));
-                
-                sortedEpisodeKeys.forEach((epNum, index) => {
-                    const epData = seasonData[epNum];
-                    const epCard = document.createElement('div');
-                    epCard.className = 'episode-card glass-panel';
-                    epCard.innerHTML = `
-                        <div class="flex justify-between items-center">
-                           <span class="episode-card-number">Episódio ${epNum}</span>
-                           <i class="fa-solid fa-play text-purple-400"></i>
-                        </div>
-                        <h4 class="episode-card-title">${epData.title}</h4>
-                    `;
-                    epCard.style.animationDelay = `${index * 50}ms`;
-                    epCard.classList.add('fade-in');
-                    epCard.onclick = () => openPlayerWithUrl(epData.src);
-                    episodesContainer.appendChild(epCard);
-                });
-            };
-    
-            seasonSelector.addEventListener('change', () => {
-                const selectedSeason = seasonSelector.value;
-                sessionStorage.setItem(`selectedSeason_${id}`, selectedSeason);
-                renderEpisodes(selectedSeason);
-            });
-    
             renderEpisodes(seasonSelector.value);
-    
+            seasonsContainer.appendChild(seasonSelectorContainer);
         } else {
             seasonsContainer.classList.add('hidden');
         }
@@ -673,8 +668,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editUsernameOverlay.classList.add('hidden');
     });
     
-    let selectedAvatarUrl = null;
-
     document.getElementById('change-avatar-button').addEventListener('click', () => {
         // Reseta o estado da seleção ao abrir
         selectedAvatarUrl = null; 
@@ -699,16 +692,18 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarSelectionGrid.innerHTML = ''; 
 
         // Adiciona os novos avatares a uma categoria local para demonstração.
-        // O ideal é que isso venha do Firestore junto com os outros.
         const localAvatarCategories = [...allAvatars];
-        localAvatarCategories.push({
-            name: 'Especial',
-            avatars: [
-                'https://pbs.twimg.com/media/EcGdw6xXsAMkqGF?format=jpg&name=large',
-                'https://pbs.twimg.com/media/EcGdw6uXgAEpGA-.jpg',
-                'https://pbs.twimg.com/media/FMs8_KeWYAAtoS3.jpg'
-            ]
-        });
+        const specialCategory = localAvatarCategories.find(c => c.name === 'Especial');
+        const newAvatars = [
+            'https://pbs.twimg.com/media/EcGdw6xXsAMkqGF?format=jpg&name=large',
+            'https://pbs.twimg.com/media/EcGdw6uXgAEpGA-.jpg',
+            'https://pbs.twimg.com/media/FMs8_KeWYAAtoS3.jpg'
+        ];
+        if (specialCategory) {
+             specialCategory.avatars = [...new Set([...(specialCategory.avatars || []), ...newAvatars])];
+        } else {
+            localAvatarCategories.push({ name: 'Especial', avatars: newAvatars });
+        }
 
         if (!localAvatarCategories || localAvatarCategories.length === 0) {
             avatarSelectionGrid.innerHTML = '<p class="text-gray-400 text-center">Nenhuma categoria de avatar encontrada.</p>';
@@ -789,7 +784,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
     // --- LÓGICA DE AVALIAÇÃO E COMENTÁRIOS ---
     function setupRatingSystem(contentId, contentType) {
         const starContainer = document.getElementById('star-rating-container');
@@ -859,99 +853,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 commentsList.innerHTML = '<p class="text-gray-400 text-sm">Seja o primeiro a comentar.</p>';
             }
+            document.getElementById('comment-input').value = '';
         });
         unsubscribeListeners.push(unsubscribe);
     }
-    
-    document.getElementById('submit-comment-button').addEventListener('click', async () => {
-        const commentText = document.getElementById('comment-input').value.trim();
-        if (!commentText || !currentContentId || !currentContentType || !auth.currentUser) {
-            return;
-        }
-
-        const key = `${currentContentType}_${currentContentId}`;
-        const contentDocRef = doc(db, "content_interactions", key);
-
-        const newComment = {
-            id: Date.now(),
-            uid: auth.currentUser.uid,
-            displayName: currentUserData.displayName,
-            avatarUrl: currentUserData.avatarUrl,
-            text: commentText,
-            likes: [],
-            timestamp: serverTimestamp()
-        };
-
-        try {
-            await setDoc(contentDocRef, {
-                comments: arrayUnion(newComment)
-            }, { merge: true });
-            document.getElementById('comment-input').value = '';
-        } catch (error) {
-            console.error("Erro ao adicionar comentário:", error);
-        }
-    });
-
-    detailsPage.addEventListener('click', async (e) => {
-        const user = auth.currentUser;
-        if (!user || !currentContentType || !currentContentId) return;
-
-        const key = `${currentContentType}_${currentContentId}`;
-        const contentDocRef = doc(db, "content_interactions", key);
-        
-        const likeBtn = e.target.closest('.like-btn');
-        if (likeBtn) {
-            const commentId = parseInt(likeBtn.dataset.commentId, 10);
-            const contentSnap = await getDoc(contentDocRef);
-            if (!contentSnap.exists()) return;
-
-            const comments = contentSnap.data().comments || [];
-            const newComments = comments.map(c => {
-                if (c.id === commentId) {
-                    const likes = c.likes || [];
-                    return likes.includes(user.uid)
-                        ? { ...c, likes: likes.filter(uid => uid !== user.uid) }
-                        : { ...c, likes: [...likes, user.uid] };
-                }
-                return c;
-            });
-            await updateDoc(contentDocRef, { comments: newComments });
-        }
-
-        const deleteBtn = e.target.closest('.delete-btn');
-        if (deleteBtn) {
-            const commentId = parseInt(deleteBtn.dataset.commentId, 10);
-            const contentSnap = await getDoc(contentDocRef);
-            if (!contentSnap.exists()) return;
-
-            const comment = (contentSnap.data().comments || []).find(c => c.id === commentId);
-
-            if (comment && comment.uid === user.uid) {
-                commentToDelete = { contentDocRef, commentId };
-                confirmationModal.classList.remove('hidden');
-            }
-        }
-    });
-
-    document.getElementById('confirm-delete-button').addEventListener('click', async () => {
-        if (!commentToDelete) return;
-
-        const { contentDocRef, commentId } = commentToDelete;
-        const contentSnap = await getDoc(contentDocRef);
-        if (contentSnap.exists()) {
-            const comments = contentSnap.data().comments || [];
-            await updateDoc(contentDocRef, { comments: comments.filter(c => c.id !== commentId) });
-        }
-        
-        confirmationModal.classList.add('hidden');
-        commentToDelete = null;
-    });
-
-    document.getElementById('cancel-delete-button').addEventListener('click', () => {
-        confirmationModal.classList.add('hidden');
-        commentToDelete = null;
-    });
-
 
     // --- LÓGICA DO RODAPÉ ---
     function renderFooter() {
@@ -1054,7 +959,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function handleRouting() {
+        // Hide all overlays by default before routing to a new page
+        avatarSelectionOverlay.classList.add('hidden');
+        detailsPage.classList.add('hidden');
+
         const hash = location.hash;
+        
         if (hash.startsWith('#details/')) {
             const id = hash.substring(9);
             renderDetailsPage(id);
@@ -1090,10 +1000,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('popstate', (event) => {
         if (!videoPlayerOverlay.classList.contains('hidden')) {
             closePlayer();
-        } else if (!avatarSelectionOverlay.classList.contains('hidden')) {
-            // Se o overlay de avatar estiver aberto, fecha ele e mostra a página de perfil
-            avatarSelectionOverlay.classList.add('hidden');
-            showPage('profile-page');
         } else {
             handleRouting();
         }
@@ -1296,14 +1202,11 @@ document.addEventListener('DOMContentLoaded', () => {
              updateDoc(docRef, {
                  requesters: arrayUnion(auth.currentUser.uid)
              });
-
-             // Adiciona a animação ao ícone de voto
-             const voteIconContainer = button.closest('.request-card').querySelector('.request-card-votes');
-             if (voteIconContainer) {
-                 voteIconContainer.classList.add('vote-animation');
-                 setTimeout(() => {
-                     voteIconContainer.classList.remove('vote-animation');
-                 }, 400); // Mesma duração da animação CSS
+             
+             const voteContainer = button.closest('.request-card').querySelector('.request-card-votes');
+             if(voteContainer) {
+                voteContainer.classList.add('vote-animation');
+                setTimeout(() => voteContainer.classList.remove('vote-animation'), 400);
              }
         }
     });
@@ -1312,9 +1215,4 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
-
-
-
-
-
 
