@@ -675,24 +675,39 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('change-avatar-button').addEventListener('click', () => {
         renderAvatarSelectionPage();
-        avatarSelectionOverlay.classList.remove('hidden');
+        showOverlay(avatarSelectionOverlay);
     });
 
     document.getElementById('back-to-profile-button').addEventListener('click', () => {
         avatarSelectionOverlay.classList.add('hidden');
+        showPage('profile-page');
     });
 
     function renderAvatarSelectionPage() {
         avatarSelectionGrid.innerHTML = ''; 
 
-        if (!allAvatars || allAvatars.length === 0) {
+        // Adiciona os novos avatares a uma categoria local para demonstração.
+        // O ideal é que isso venha do Firestore junto com os outros.
+        const localAvatarCategories = [...allAvatars];
+        localAvatarCategories.push({
+            name: 'Especial',
+            avatars: [
+                'https://pbs.twimg.com/media/EcGdw6xXsAMkqGF?format=jpg&name=large',
+                'https://pbs.twimg.com/media/EcGdw6uXgAEpGA-.jpg',
+                'https://pbs.twimg.com/media/FMs8_KeWYAAtoS3.jpg'
+            ]
+        });
+
+        if (!localAvatarCategories || localAvatarCategories.length === 0) {
             avatarSelectionGrid.innerHTML = '<p class="text-gray-400 text-center">Nenhuma categoria de avatar encontrada.</p>';
             return;
         }
 
         const fragment = document.createDocumentFragment();
 
-        allAvatars.forEach(category => {
+        localAvatarCategories.forEach(category => {
+            if (!category.avatars || category.avatars.length === 0) return;
+
             const categorySection = document.createElement('div');
             
             const categoryTitle = document.createElement('h3');
@@ -700,26 +715,24 @@ document.addEventListener('DOMContentLoaded', () => {
             categoryTitle.textContent = category.name;
             categorySection.appendChild(categoryTitle);
             
-            const avatarsGrid = document.createElement('div');
-            avatarsGrid.className = 'avatar-grid';
+            const avatarsContainer = document.createElement('div');
+            avatarsContainer.className = 'avatar-grid';
             
-            if (category.avatars && category.avatars.length > 0) {
-                category.avatars.forEach(avatarUrl => {
-                    const avatarChoice = document.createElement('div');
-                    avatarChoice.className = 'avatar-choice';
-                    avatarChoice.dataset.url = avatarUrl;
-
-                    const img = document.createElement('img');
-                    img.src = avatarUrl;
-                    img.alt = `Avatar da categoria ${category.name}`;
-                    img.loading = 'lazy';
-                    
-                    avatarChoice.appendChild(img);
-                    avatarsGrid.appendChild(avatarChoice);
-                });
-            }
+            category.avatars.forEach(avatarUrl => {
+                const avatarWrapper = document.createElement('div');
+                avatarWrapper.className = 'avatar-choice';
+                avatarWrapper.dataset.url = avatarUrl;
+                
+                const img = document.createElement('img');
+                img.src = avatarUrl;
+                img.alt = `Avatar da categoria ${category.name}`;
+                img.loading = 'lazy';
+                
+                avatarWrapper.appendChild(img);
+                avatarsContainer.appendChild(avatarWrapper);
+            });
             
-            categorySection.appendChild(avatarsGrid);
+            categorySection.appendChild(avatarsContainer);
             fragment.appendChild(categorySection);
         });
 
@@ -731,32 +744,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!avatarChoice) return;
 
         const avatarUrl = avatarChoice.dataset.url;
-        if (!avatarUrl) {
-            console.error("Avatar-choice clicado, mas não foi encontrado data-url.");
+        if (!avatarUrl || !auth.currentUser) {
+            console.error("URL do avatar ou utilizador não encontrado.");
             return;
         }
+        
+        // Feedback visual imediato
+        document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected-avatar'));
+        avatarChoice.classList.add('selected-avatar');
 
-        if (!auth.currentUser) {
-            console.error("Utilizador não autenticado. Ação de mudança de avatar cancelada.");
-            return;
-        }
-
-        avatarChoice.style.opacity = '0.5';
         try {
             const userDocRef = doc(db, "users", auth.currentUser.uid);
             await updateDoc(userDocRef, { avatarUrl: avatarUrl });
             
-            document.getElementById('profile-avatar').src = avatarUrl;
-            document.getElementById('header-avatar').src = avatarUrl;
-            if (currentUserData) {
-                currentUserData.avatarUrl = avatarUrl;
-            }
-            
-            avatarSelectionOverlay.classList.add('hidden');
+            // Oculta o overlay após um pequeno delay para o utilizador ver a seleção
+            setTimeout(() => {
+                avatarSelectionOverlay.classList.add('hidden');
+                showPage('profile-page');
+            }, 300);
 
         } catch (error) {
             console.error("Erro ao atualizar o avatar:", error);
-            avatarChoice.style.opacity = '1';
+            avatarChoice.classList.remove('selected-avatar'); // Remove o feedback visual em caso de erro
         }
     });
 
@@ -1278,6 +1287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
 
 
 
