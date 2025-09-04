@@ -1262,6 +1262,15 @@ document.addEventListener('DOMContentLoaded', () => {
              updateDoc(docRef, {
                  requesters: arrayUnion(auth.currentUser.uid)
              });
+
+             // Adiciona a animação ao ícone de voto
+             const voteIconContainer = button.closest('.request-card').querySelector('.request-card-votes');
+             if (voteIconContainer) {
+                 voteIconContainer.classList.add('vote-animation');
+                 setTimeout(() => {
+                     voteIconContainer.classList.remove('vote-animation');
+                 }, 400); // Mesma duração da animação CSS
+             }
         }
     });
 
@@ -1269,5 +1278,6 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
 
 

@@ -209,6 +209,10 @@ body {
     font-size: 0.875rem;
     color: #a78bfa;
     margin-top: 0.25rem;
+    transition: transform 0.2s;
+}
+.request-card-votes:hover i {
+    transform: scale(1.2);
 }
 .request-card-actions {
     display: flex;
@@ -232,7 +236,7 @@ body {
     cursor: not-allowed;
 }
 
-/* === NOVOS ESTILOS (Liquid Glass) === */
+/* === ANIMAÇÕES === */
 @keyframes episode-fade-in {
     from {
         opacity: 0;
@@ -244,6 +248,20 @@ body {
     }
 }
 
+@keyframes vote-bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+}
+
+.vote-animation i {
+  animation: vote-bounce 0.4s ease-in-out;
+}
+
+/* === NOVOS ESTILOS (Liquid Glass) === */
 .glass-panel {
     background: rgba(30, 30, 40, 0.5);
     -webkit-backdrop-filter: blur(10px);
@@ -299,4 +317,5 @@ body {
     margin-top: 0.5rem;
     color: white;
 }
+
 
