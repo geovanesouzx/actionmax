@@ -172,32 +172,30 @@
         
         <!-- Tela de Perfil -->
         <section id="profile-page" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <div class="profile-card max-w-4xl mx-auto">
+            <div class="max-w-3xl mx-auto space-y-12">
                 <!-- Profile Header -->
-                <div class="profile-header">
-                    <div class="relative group profile-avatar-wrapper">
-                        <img id="profile-avatar" src="https://placehold.co/128x128/9ca3af/ffffff?text=U" class="w-32 h-32 rounded-full object-cover border-4 border-purple-500">
+                <div class="flex flex-col sm:flex-row items-center gap-8">
+                    <div class="relative group">
+                        <img id="profile-avatar" src="https://placehold.co/128x128/9ca3af/ffffff?text=U" class="w-32 h-32 rounded-full object-cover border-4 border-gray-700 group-hover:border-purple-500 transition-colors">
                         <button id="change-avatar-button" class="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Alterar avatar">
                             <i class="fas fa-camera text-2xl"></i>
                         </button>
                     </div>
-                    <div class="relative mt-4 group flex items-center gap-2">
-                        <h3 id="profile-username" class="text-3xl font-bold">Usuário</h3>
-                        <button id="edit-username-button" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar nome de usuário"><i class="fas fa-pencil-alt"></i></button>
+                    <div class="text-center sm:text-left">
+                        <div class="relative group flex items-center justify-center sm:justify-start gap-2">
+                            <h3 id="profile-username" class="text-4xl font-bold">Usuário</h3>
+                            <button id="edit-username-button" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar nome de usuário"><i class="fas fa-pencil-alt"></i></button>
+                        </div>
+                        <p id="profile-email" class="text-gray-400 mt-1"></p>
+                         <button id="logout-button" class="mt-4 bg-red-600/20 text-red-400 font-bold py-2 px-5 rounded-lg hover:bg-red-600/40 transition">Sair</button>
                     </div>
-                    <p id="profile-email" class="text-gray-400 mt-1"></p>
                 </div>
 
                 <!-- My List Section -->
                 <div class="profile-section">
-                    <h2 class="text-2xl font-bold mb-6">Minha Lista</h2>
+                    <h2 class="text-3xl font-bold mb-6 border-l-4 border-purple-500 pl-4">Minha Lista</h2>
                     <div id="my-list-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8"></div>
                     <p id="my-list-message" class="text-center text-gray-400 mt-8 text-lg hidden">Sua lista está vazia. Adicione filmes e séries para vê-los aqui.</p>
-                </div>
-
-                <!-- Logout Button -->
-                <div class="profile-section">
-                    <button id="logout-button" class="w-full text-center bg-transparent border border-red-500 text-red-400 font-bold py-3 px-5 rounded-lg hover:bg-red-500/10 transition-colors">Sair da Conta</button>
                 </div>
             </div>
         </section>
@@ -322,3 +320,4 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
+

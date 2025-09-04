@@ -520,26 +520,63 @@ document.addEventListener('DOMContentLoaded', () => {
         newListButton.addEventListener('click', () => toggleMyList(id));
 
         const seasonsContainer = document.getElementById('seasons-container');
-        if (item.type === 'Série' && item.seasons) {
+        if (item.type === 'Série' && item.seasons && Object.keys(item.seasons).length > 0) {
             seasonsContainer.innerHTML = '';
             seasonsContainer.classList.remove('hidden');
-            Object.entries(item.seasons).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).forEach(([seasonNum, seasonData]) => {
-                const seasonEl = document.createElement('div');
-                seasonEl.className = 'mb-6';
-                seasonEl.innerHTML = `<h3 class="text-2xl font-bold mb-4">Temporada ${seasonNum}</h3>`;
-                const episodesGrid = document.createElement('div');
-                episodesGrid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
-                
-                Object.entries(seasonData).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).forEach(([epNum, epData]) => {
-                    const epButton = document.createElement('button');
-                    epButton.className = 'bg-white/10 border border-white/20 text-white font-semibold py-3 px-4 rounded-lg text-left hover:bg-white/20 transition';
-                    epButton.innerHTML = `<span class="font-bold">${epNum}.</span> ${epData.title}`;
-                    epButton.onclick = () => openPlayerWithUrl(epData.src);
-                    episodesGrid.appendChild(epButton);
-                });
-                seasonEl.appendChild(episodesGrid);
-                seasonsContainer.appendChild(seasonEl);
+    
+            const controlsContainer = document.createElement('div');
+            controlsContainer.className = 'mb-6';
+            
+            const seasonSelector = document.createElement('select');
+            seasonSelector.className = 'season-selector glass-panel';
+    
+            const sortedSeasonKeys = Object.keys(item.seasons).sort((a, b) => parseInt(a) - parseInt(b));
+    
+            sortedSeasonKeys.forEach(seasonNum => {
+                const option = document.createElement('option');
+                option.value = seasonNum;
+                option.textContent = `Temporada ${seasonNum}`;
+                seasonSelector.appendChild(option);
             });
+            
+            controlsContainer.appendChild(seasonSelector);
+            seasonsContainer.appendChild(controlsContainer);
+    
+            const episodesContainer = document.createElement('div');
+            episodesContainer.className = 'episodes-grid';
+            seasonsContainer.appendChild(episodesContainer);
+            
+            const renderEpisodes = (seasonNum) => {
+                episodesContainer.innerHTML = '';
+                const seasonData = item.seasons[seasonNum];
+                if (!seasonData) return;
+    
+                const sortedEpisodeKeys = Object.keys(seasonData).sort((a, b) => parseInt(a) - parseInt(b));
+                
+                sortedEpisodeKeys.forEach(epNum => {
+                    const epData = seasonData[epNum];
+                    const epCard = document.createElement('div');
+                    epCard.className = 'episode-card glass-panel';
+                    epCard.innerHTML = `
+                        <div class="flex justify-between items-center">
+                           <span class="episode-card-number">Episódio ${epNum}</span>
+                           <i class="fa-solid fa-play text-purple-400"></i>
+                        </div>
+                        <h4 class="episode-card-title">${epData.title}</h4>
+                    `;
+                    epCard.onclick = () => openPlayerWithUrl(epData.src);
+                    episodesContainer.appendChild(epCard);
+                });
+            };
+    
+            seasonSelector.addEventListener('change', () => {
+                renderEpisodes(seasonSelector.value);
+            });
+    
+            if (sortedSeasonKeys.length > 0) {
+                renderEpisodes(sortedSeasonKeys[0]);
+            }
+    
         } else {
             seasonsContainer.classList.add('hidden');
         }
@@ -702,19 +739,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const userDocRef = doc(db, "users", auth.currentUser.uid);
             await updateDoc(userDocRef, { avatarUrl: avatarUrl });
             
-            // O onSnapshot irá atualizar a UI, mas fazemos manualmente para feedback instantâneo
             document.getElementById('profile-avatar').src = avatarUrl;
             document.getElementById('header-avatar').src = avatarUrl;
             if (currentUserData) {
                 currentUserData.avatarUrl = avatarUrl;
             }
             
-            // Apenas fecha o overlay após o sucesso
             avatarSelectionOverlay.classList.add('hidden');
 
         } catch (error) {
             console.error("Erro ao atualizar o avatar:", error);
-            // Reverte o feedback visual em caso de erro
             avatarChoice.style.opacity = '1';
         }
     });
@@ -788,10 +822,99 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 commentsList.innerHTML = '<p class="text-gray-400 text-sm">Seja o primeiro a comentar.</p>';
             }
-            document.getElementById('comment-input').value = '';
         });
         unsubscribeListeners.push(unsubscribe);
     }
+    
+    document.getElementById('submit-comment-button').addEventListener('click', async () => {
+        const commentText = document.getElementById('comment-input').value.trim();
+        if (!commentText || !currentContentId || !currentContentType || !auth.currentUser) {
+            return;
+        }
+
+        const key = `${currentContentType}_${currentContentId}`;
+        const contentDocRef = doc(db, "content_interactions", key);
+
+        const newComment = {
+            id: Date.now(),
+            uid: auth.currentUser.uid,
+            displayName: currentUserData.displayName,
+            avatarUrl: currentUserData.avatarUrl,
+            text: commentText,
+            likes: [],
+            timestamp: serverTimestamp()
+        };
+
+        try {
+            await setDoc(contentDocRef, {
+                comments: arrayUnion(newComment)
+            }, { merge: true });
+            document.getElementById('comment-input').value = '';
+        } catch (error) {
+            console.error("Erro ao adicionar comentário:", error);
+        }
+    });
+
+    detailsPage.addEventListener('click', async (e) => {
+        const user = auth.currentUser;
+        if (!user || !currentContentType || !currentContentId) return;
+
+        const key = `${currentContentType}_${currentContentId}`;
+        const contentDocRef = doc(db, "content_interactions", key);
+        
+        const likeBtn = e.target.closest('.like-btn');
+        if (likeBtn) {
+            const commentId = parseInt(likeBtn.dataset.commentId, 10);
+            const contentSnap = await getDoc(contentDocRef);
+            if (!contentSnap.exists()) return;
+
+            const comments = contentSnap.data().comments || [];
+            const newComments = comments.map(c => {
+                if (c.id === commentId) {
+                    const likes = c.likes || [];
+                    return likes.includes(user.uid)
+                        ? { ...c, likes: likes.filter(uid => uid !== user.uid) }
+                        : { ...c, likes: [...likes, user.uid] };
+                }
+                return c;
+            });
+            await updateDoc(contentDocRef, { comments: newComments });
+        }
+
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            const commentId = parseInt(deleteBtn.dataset.commentId, 10);
+            const contentSnap = await getDoc(contentDocRef);
+            if (!contentSnap.exists()) return;
+
+            const comment = (contentSnap.data().comments || []).find(c => c.id === commentId);
+
+            if (comment && comment.uid === user.uid) {
+                commentToDelete = { contentDocRef, commentId };
+                confirmationModal.classList.remove('hidden');
+            }
+        }
+    });
+
+    document.getElementById('confirm-delete-button').addEventListener('click', async () => {
+        if (!commentToDelete) return;
+
+        const { contentDocRef, commentId } = commentToDelete;
+        const contentSnap = await getDoc(contentDocRef);
+        if (contentSnap.exists()) {
+            const comments = contentSnap.data().comments || [];
+            await updateDoc(contentDocRef, { comments: comments.filter(c => c.id !== commentId) });
+        }
+        
+        confirmationModal.classList.add('hidden');
+        commentToDelete = null;
+    });
+
+    document.getElementById('cancel-delete-button').addEventListener('click', () => {
+        confirmationModal.classList.add('hidden');
+        commentToDelete = null;
+    });
+
 
     // --- LÓGICA DO RODAPÉ ---
     function renderFooter() {
@@ -1139,3 +1262,4 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
