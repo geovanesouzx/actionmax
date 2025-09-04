@@ -1,4 +1,3 @@
-
 // Importações do Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
@@ -218,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (videoPlayerOverlay.requestFullscreen) {
                     await videoPlayerOverlay.requestFullscreen();
                 } else {
-                     console.warn('API de Tela Cheia não suportada neste navegador.');
+                       console.warn('API de Tela Cheia não suportada neste navegador.');
                 }
             } catch (err) {
                 console.error(`Erro ao tentar entrar em tela cheia: ${err.message}`);
@@ -590,6 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUserData) return;
         document.getElementById('profile-avatar').src = currentUserData.avatarUrl || 'https://placehold.co/128x128/9ca3af/ffffff?text=U';
         document.getElementById('profile-username').textContent = currentUserData.displayName;
+        document.getElementById('profile-email').textContent = currentUserData.email;
         renderMyListPage();
     }
 
@@ -844,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const userDocRef = doc(db, "users", user.uid);
         const unsubUser = onSnapshot(userDocRef, (userDoc) => {
-            currentUserData = userDoc.exists() ? userDoc.data() : { displayName: user.displayName, myList: [] };
+            currentUserData = userDoc.exists() ? userDoc.data() : { displayName: user.displayName, email: user.email, myList: [] };
             document.getElementById('header-avatar').src = currentUserData.avatarUrl || 'https://placehold.co/40x40/9ca3af/ffffff?text=U';
             if (document.getElementById('profile-page').classList.contains('hidden') === false) {
                  renderProfilePage();

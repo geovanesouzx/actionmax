@@ -129,6 +129,33 @@ body {
     color: white;
 }
 
+/* === NOVOS ESTILOS PARA A PÁGINA DE PERFIL === */
+.profile-card {
+    background-color: #111827; /* bg-gray-900 */
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 2rem;
+    border: 1px solid #374151; /* border-gray-700 */
+}
+
+.profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #374151; /* border-gray-700 */
+}
+
+.profile-avatar-wrapper {
+    width: 8rem; /* w-32 */
+    height: 8rem; /* h-32 */
+}
+
+.profile-section {
+    padding-top: 2rem;
+}
+
+
 /* Estilos da Tela de Seleção de Avatar (Estilo Netflix) */
 #avatar-selection-overlay {
     background-color: rgb(20 20 20);
