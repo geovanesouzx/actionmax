@@ -539,6 +539,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 seasonSelector.appendChild(option);
             });
             
+            const savedSeason = sessionStorage.getItem(`selectedSeason_${id}`);
+            if (savedSeason && item.seasons[savedSeason]) {
+                seasonSelector.value = savedSeason;
+            }
+
             controlsContainer.appendChild(seasonSelector);
             seasonsContainer.appendChild(controlsContainer);
     
@@ -553,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
                 const sortedEpisodeKeys = Object.keys(seasonData).sort((a, b) => parseInt(a) - parseInt(b));
                 
-                sortedEpisodeKeys.forEach(epNum => {
+                sortedEpisodeKeys.forEach((epNum, index) => {
                     const epData = seasonData[epNum];
                     const epCard = document.createElement('div');
                     epCard.className = 'episode-card glass-panel';
@@ -564,18 +569,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <h4 class="episode-card-title">${epData.title}</h4>
                     `;
+                    epCard.style.animationDelay = `${index * 50}ms`;
+                    epCard.classList.add('fade-in');
                     epCard.onclick = () => openPlayerWithUrl(epData.src);
                     episodesContainer.appendChild(epCard);
                 });
             };
     
             seasonSelector.addEventListener('change', () => {
-                renderEpisodes(seasonSelector.value);
+                const selectedSeason = seasonSelector.value;
+                sessionStorage.setItem(`selectedSeason_${id}`, selectedSeason);
+                renderEpisodes(selectedSeason);
             });
     
-            if (sortedSeasonKeys.length > 0) {
-                renderEpisodes(sortedSeasonKeys[0]);
-            }
+            renderEpisodes(seasonSelector.value);
     
         } else {
             seasonsContainer.classList.add('hidden');
@@ -1262,4 +1269,5 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
 
