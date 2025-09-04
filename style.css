@@ -315,15 +315,22 @@ body {
     background-size: 1em;
 }
 .episodes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
     margin-top: 1.5rem;
 }
 .episode-card {
     padding: 1rem;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.episode-card:last-child {
+    border-bottom: none;
 }
 
 .episode-card.fade-in {
@@ -332,19 +339,19 @@ body {
 }
 
 .episode-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(167, 139, 250, 0.6);
-    background: rgba(40, 40, 50, 0.7);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 .episode-card-number {
     font-weight: bold;
-    font-size: 0.875rem;
-    color: #d1d5db;
+    font-size: 1rem;
+    color: #9ca3af; /* gray-400 */
+    width: 2rem; /* Fixed width for alignment */
+    text-align: center;
+    flex-shrink: 0;
 }
 .episode-card-title {
-    font-weight: 600;
+    font-weight: 500;
     font-size: 1rem;
-    margin-top: 0.5rem;
     color: white;
 }
 

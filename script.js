@@ -567,11 +567,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 Object.entries(seasonData).sort((a,b) => parseInt(a[0]) - parseInt(b[0])).forEach(([epNum, epData], index) => {
                     const epCard = document.createElement('div');
-                    epCard.className = 'episode-card glass-panel fade-in';
+                    epCard.className = 'episode-card group fade-in';
                     epCard.style.animationDelay = `${index * 0.05}s`;
                     epCard.innerHTML = `
-                        <div class="episode-card-number">Episódio ${epNum}</div>
-                        <div class="episode-card-title">${epData.title || `Episódio ${epNum}`}</div>
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                            <span class="episode-card-number text-gray-400">${epNum}</span>
+                            <span class="episode-card-title truncate">${epData.title || `Episódio ${epNum}`}</span>
+                        </div>
+                        <i class="fa-solid fa-play text-gray-400 group-hover:text-white transition-colors"></i>
                     `;
                     epCard.onclick = () => openPlayerWithUrl(epData.src);
                     episodesGrid.appendChild(epCard);
@@ -620,12 +623,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- LÓGICA MINHA LISTA ---
     async function toggleMyList(id) {
-        if (!auth.currentUser) return;
+        if (!auth.currentUser || !currentUserData) return;
+
+        const button = document.getElementById('details-my-list-button');
+        button.disabled = true;
+
         const userDocRef = doc(db, "users", auth.currentUser.uid);
-        if (currentUserData.myList.includes(id)) {
-            await updateDoc(userDocRef, { myList: arrayRemove(id) });
-        } else {
-            await updateDoc(userDocRef, { myList: arrayUnion(id) });
+        try {
+            if (currentUserData.myList.includes(id)) {
+                await updateDoc(userDocRef, { myList: arrayRemove(id) });
+            } else {
+                await updateDoc(userDocRef, { myList: arrayUnion(id) });
+            }
+        } catch (error) {
+            console.error("Erro ao atualizar 'Minha Lista':", error);
+            button.disabled = false; // Re-enable on error
         }
     }
     
@@ -1229,4 +1241,5 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
 
