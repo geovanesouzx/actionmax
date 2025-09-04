@@ -515,10 +515,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         detailsWatchButton.onclick = () => handleWatchButtonClick(id);
         
+        // Botão Minha Lista
         updateMyListButton(id);
-        const newListButton = document.getElementById('details-my-list-button').cloneNode(true);
-        document.getElementById('details-my-list-button').parentNode.replaceChild(newListButton, document.getElementById('details-my-list-button'));
-        newListButton.addEventListener('click', () => toggleMyList(id));
+        const myListButton = document.getElementById('details-my-list-button');
+        const newMyListButton = myListButton.cloneNode(true); // Clonar para remover listeners antigos
+        myListButton.parentNode.replaceChild(newMyListButton, myListButton);
+        newMyListButton.addEventListener('click', () => toggleMyList(id));
+
+        // Botão Trailer
+        const trailerButton = document.getElementById('details-trailer-button');
+        if (item.trailerSrc) {
+            trailerButton.classList.remove('hidden');
+            trailerButton.onclick = () => openPlayerWithUrl(item.trailerSrc);
+        } else {
+            trailerButton.classList.add('hidden');
+        }
+
 
         const seasonsContainer = document.getElementById('seasons-container');
         if (item.type === 'Série' && item.seasons) {
@@ -619,8 +631,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateMyListButton(id) {
         const button = document.getElementById('details-my-list-button');
+        if (!button) return;
         const isInList = currentUserData && currentUserData.myList.includes(id);
-        button.innerHTML = isInList ? `<i class="fa-solid fa-check"></i> Minha Lista` : `<i class="fa-solid fa-plus"></i> Minha Lista`;
+        button.innerHTML = isInList ? `<i class="fa-solid fa-check"></i> Na Minha Lista` : `<i class="fa-solid fa-plus"></i> Minha Lista`;
     }
 
     // --- LÓGICA DE PERFIL E EDIÇÃO ---
@@ -1076,11 +1089,12 @@ document.addEventListener('DOMContentLoaded', () => {
             notificationList.appendChild(item);
         });
 
+        const badge = document.getElementById('notification-badge');
         if (unreadCount > 0) {
-            notificationBadge.textContent = unreadCount;
-            notificationBadge.classList.remove('hidden');
+            badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            badge.classList.remove('hidden');
         } else {
-            notificationBadge.classList.add('hidden');
+            badge.classList.add('hidden');
         }
     }
     

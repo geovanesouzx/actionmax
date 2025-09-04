@@ -282,6 +282,15 @@ body {
   animation: vote-bounce 0.4s ease-in-out;
 }
 
+/* Estilos de Notificação */
+#notification-button {
+    position: relative;
+}
+#notification-badge {
+    border: 2px solid #0b0c0f;
+    line-height: 1;
+}
+
 /* === NOVOS ESTILOS (Liquid Glass) === */
 .glass-panel {
     background: rgba(30, 30, 40, 0.5);

@@ -93,8 +93,8 @@
                     </button>
                     <div class="relative">
                         <button id="notification-button" class="p-2 rounded-full hover:bg-gray-700/50 relative">
-                            <i class="fa-solid fa-bell"></i>
-                            <span id="notification-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0b0c0f]"></span>
+                            <i class="fa-solid fa-bell text-xl"></i>
+                            <span id="notification-badge" class="hidden absolute -top-1 -right-1 bg-purple-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"></span>
                         </button>
                         <div id="notification-panel" class="hidden absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
                             <h3 class="text-lg font-bold mb-4">Notificações</h3>
@@ -215,7 +215,7 @@
                         <p id="details-overview" class="mb-8 text-base max-w-3xl mx-auto md:mx-0"></p>
                         <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
                             <button id="details-watch-button" class="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"><i class="fa-solid fa-play"></i> Assistir</button>
-                            <button id="details-trailer-button" class="bg-white/10 border border-white/20 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-white/20 transition"><i class="fa-solid fa-film"></i> Trailer</button>
+                            <button id="details-trailer-button" class="hidden bg-white/10 border border-white/20 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-white/20 transition"><i class="fa-solid fa-film"></i> Trailer</button>
                             <button id="details-my-list-button" class="bg-white/10 border border-white/20 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-white/20 transition"></button>
                         </div>
                     </div>
@@ -326,5 +326,4 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
 
