@@ -15,10 +15,10 @@ body {
 
 /* Gradientes suavizados */
 .hero-gradient-overlay {
-    background: linear-gradient(to right, #0b0c0f 20%, rgba(11, 12, 15, 0.7) 40%, rgba(11, 12, 15, 0.3) 60%, transparent 100%);
+    background: linear-gradient(to top, #0b0c0f 10%, rgba(11, 12, 15, 0.7) 50%, transparent 100%);
 }
 .details-gradient-overlay {
-    background: linear-gradient(to right, #0b0c0f 30%, rgba(11, 12, 15, 0.85) 55%, rgba(11, 12, 15, 0.4) 75%, transparent 100%);
+    background: linear-gradient(to top, #0b0c0f 20%, rgba(11, 12, 15, 0.8) 60%, transparent 100%);
 }
 .details-gradient-overlay-mobile {
     background: linear-gradient(to top, #0b0c0f 20%, rgba(11, 12, 15, 0.8) 50%, transparent 100%);
@@ -173,16 +173,24 @@ body {
     bottom: 0;
     border: 4px solid transparent;
     border-radius: 0.5rem;
-    transition: border-color 0.2s ease-out;
+    transition: border-color 0.2s ease-out, border-width 0.2s ease-out;
 }
-.avatar-choice:hover,
+.avatar-choice:hover {
+    transform: scale(1.08);
+}
+
+.avatar-choice:hover::after {
+    border-color: #f9fafb;
+}
+
 .avatar-choice.selected-avatar {
     transform: scale(1.08);
 }
-.avatar-choice:hover::after,
 .avatar-choice.selected-avatar::after {
-    border-color: #f9fafb;
+    border-color: #8B5CF6; /* Roxo para seleção */
+    border-width: 5px; /* Borda mais grossa */
 }
+
 
 .avatar-choice img {
     width: 100%;
@@ -330,6 +338,5 @@ body {
     margin-top: 0.5rem;
     color: white;
 }
-
 
 

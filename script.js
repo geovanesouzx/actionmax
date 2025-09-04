@@ -674,13 +674,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.getElementById('change-avatar-button').addEventListener('click', () => {
+        // Adiciona um estado ao histórico para que o botão "voltar" do navegador funcione
+        history.pushState({ page: 'avatar-selection' }, '', '#profile-page/avatar');
         renderAvatarSelectionPage();
         showOverlay(avatarSelectionOverlay);
     });
 
     document.getElementById('back-to-profile-button').addEventListener('click', () => {
-        avatarSelectionOverlay.classList.add('hidden');
-        showPage('profile-page');
+        // Simplesmente volta no histórico para fechar o overlay
+        history.back();
     });
 
     function renderAvatarSelectionPage() {
@@ -739,33 +741,35 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarSelectionGrid.appendChild(fragment);
     }
 
+    let isSavingAvatar = false;
     avatarSelectionGrid.addEventListener('click', async (e) => {
         const avatarChoice = e.target.closest('.avatar-choice');
-        if (!avatarChoice) return;
+        if (!avatarChoice || isSavingAvatar) return;
 
+        isSavingAvatar = true;
         const avatarUrl = avatarChoice.dataset.url;
+
         if (!avatarUrl || !auth.currentUser) {
             console.error("URL do avatar ou utilizador não encontrado.");
+            isSavingAvatar = false;
             return;
         }
-        
-        // Feedback visual imediato
+
         document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected-avatar'));
         avatarChoice.classList.add('selected-avatar');
-
+        
         try {
             const userDocRef = doc(db, "users", auth.currentUser.uid);
             await updateDoc(userDocRef, { avatarUrl: avatarUrl });
             
-            // Oculta o overlay após um pequeno delay para o utilizador ver a seleção
+            // On success, go back to the profile page.
             setTimeout(() => {
-                avatarSelectionOverlay.classList.add('hidden');
-                showPage('profile-page');
+                 history.back();
             }, 300);
 
         } catch (error) {
             console.error("Erro ao atualizar o avatar:", error);
-            avatarChoice.classList.remove('selected-avatar'); // Remove o feedback visual em caso de erro
+            isSavingAvatar = false; // Only reset on error
         }
     });
 
@@ -1069,6 +1073,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('popstate', (event) => {
         if (!videoPlayerOverlay.classList.contains('hidden')) {
             closePlayer();
+        } else if (!avatarSelectionOverlay.classList.contains('hidden')) {
+            // Se o overlay de avatar estiver aberto, fecha ele e mostra a página de perfil
+            avatarSelectionOverlay.classList.add('hidden');
+            showPage('profile-page');
         } else {
             handleRouting();
         }
@@ -1287,6 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
 
 
 
