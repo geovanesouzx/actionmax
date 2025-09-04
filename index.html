@@ -266,12 +266,18 @@
     <div id="avatar-selection-overlay" class="hidden fixed inset-0 z-[60] p-4 flex flex-col items-center overflow-y-auto bg-[#0b0c0f]">
         <div class="w-full max-w-5xl mx-auto my-auto">
              <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl md:text-5xl font-bold text-white">Escolha um avatar</h2>
-                <button id="back-to-profile-button" class="text-gray-400 hover:text-white transition-colors text-sm font-semibold uppercase tracking-wider">Voltar</button>
-            </div>
-            <div id="avatar-selection-grid" class="space-y-10">
+                 <h2 class="text-3xl md:text-5xl font-bold text-white">Escolha um avatar</h2>
+                 <button id="back-to-profile-button" class="text-gray-400 hover:text-white transition-colors text-sm font-semibold uppercase tracking-wider">Voltar</button>
+             </div>
+            <div id="avatar-selection-grid" class="space-y-10 pb-24">
                 <!-- As categorias e avatares serão inseridos aqui pelo JavaScript -->
             </div>
+        </div>
+         <!-- Botão de Confirmação Flutuante -->
+        <div id="avatar-confirm-container" class="hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0b0c0f] to-transparent z-10">
+            <button id="confirm-avatar-button" class="w-full max-w-xs mx-auto bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>
+                Confirmar
+            </button>
         </div>
     </div>
 
@@ -320,4 +326,5 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
 

@@ -673,7 +673,17 @@ document.addEventListener('DOMContentLoaded', () => {
         editUsernameOverlay.classList.add('hidden');
     });
     
+    let selectedAvatarUrl = null;
+
     document.getElementById('change-avatar-button').addEventListener('click', () => {
+        // Reseta o estado da seleção ao abrir
+        selectedAvatarUrl = null; 
+        const avatarConfirmContainer = document.getElementById('avatar-confirm-container');
+        const confirmAvatarButton = document.getElementById('confirm-avatar-button');
+        avatarConfirmContainer.classList.add('hidden');
+        confirmAvatarButton.disabled = true;
+        confirmAvatarButton.textContent = 'Confirmar';
+
         // Adiciona um estado ao histórico para que o botão "voltar" do navegador funcione
         history.pushState({ page: 'avatar-selection' }, '', '#profile-page/avatar');
         renderAvatarSelectionPage();
@@ -741,37 +751,44 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarSelectionGrid.appendChild(fragment);
     }
 
-    let isSavingAvatar = false;
-    avatarSelectionGrid.addEventListener('click', async (e) => {
+    avatarSelectionGrid.addEventListener('click', (e) => {
         const avatarChoice = e.target.closest('.avatar-choice');
-        if (!avatarChoice || isSavingAvatar) return;
+        if (!avatarChoice) return;
 
-        isSavingAvatar = true;
-        const avatarUrl = avatarChoice.dataset.url;
+        selectedAvatarUrl = avatarChoice.dataset.url;
 
-        if (!avatarUrl || !auth.currentUser) {
-            console.error("URL do avatar ou utilizador não encontrado.");
-            isSavingAvatar = false;
+        // Atualiza a seleção visual
+        document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected-avatar'));
+        avatarChoice.classList.add('selected-avatar');
+
+        // Mostra e ativa o botão de confirmação
+        const avatarConfirmContainer = document.getElementById('avatar-confirm-container');
+        const confirmAvatarButton = document.getElementById('confirm-avatar-button');
+        avatarConfirmContainer.classList.remove('hidden');
+        confirmAvatarButton.disabled = false;
+    });
+
+    document.getElementById('confirm-avatar-button').addEventListener('click', async () => {
+        if (!selectedAvatarUrl || !auth.currentUser) {
+            console.error("Nenhum avatar selecionado ou utilizador não autenticado.");
             return;
         }
 
-        document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected-avatar'));
-        avatarChoice.classList.add('selected-avatar');
-        
+        const confirmButton = document.getElementById('confirm-avatar-button');
+        confirmButton.disabled = true;
+        confirmButton.textContent = 'A guardar...';
+
         try {
             const userDocRef = doc(db, "users", auth.currentUser.uid);
-            await updateDoc(userDocRef, { avatarUrl: avatarUrl });
-            
-            // On success, go back to the profile page.
-            setTimeout(() => {
-                 history.back();
-            }, 300);
-
+            await updateDoc(userDocRef, { avatarUrl: selectedAvatarUrl });
+            history.back(); // Volta para a página de perfil
         } catch (error) {
             console.error("Erro ao atualizar o avatar:", error);
-            isSavingAvatar = false; // Only reset on error
+            confirmButton.disabled = false;
+            confirmButton.textContent = 'Confirmar';
         }
     });
+
 
     // --- LÓGICA DE AVALIAÇÃO E COMENTÁRIOS ---
     function setupRatingSystem(contentId, contentType) {
@@ -1295,6 +1312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTMDbForRequest(requestSearchInput.value.trim());
     });
 });
+
 
 
 
