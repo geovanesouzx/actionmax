@@ -57,26 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let catalog = [];
     let carousels = [];
     let itemDetails = {};
+    let avatarsFromFirestore = []; // Will hold avatars from Firestore
 
-    const avatars = [
-        { 
-            category: 'Especial',
-            urls: [
-                'https://pbs.twimg.com/media/EcGdw6xXsAMkqGF?format=jpg&name=large',
-                'https://pbs.twimg.com/media/EcGdw6uXgAEpGA-.jpg',
-                'https://pbs.twimg.com/media/FMs8_KeWYAAtoS3.jpg',
-                'https://pbs.twimg.com/media/EcGdw6xXsAANIu1?format=jpg&name=large'
-            ]
-        },
-        {
-            category: 'Padrão',
-            urls: [
-                'https://placehold.co/128x128/f87171/ffffff?text=A1', 'https://placehold.co/128x128/fb923c/ffffff?text=A2',
-                'https://placehold.co/128x128/fbbf24/ffffff?text=A3', 'https://placehold.co/128x128/a3e635/ffffff?text=A4',
-                'https://placehold.co/128x128/4ade80/ffffff?text=A5', 'https://placehold.co/128x128/34d399/ffffff?text=A6',
-            ]
-        }
-    ];
     
     // --- App State ---
     let PROFILES_STORAGE_KEY = 'actionMaxProfiles'; // Will be updated with UID
@@ -130,6 +112,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 carouselsData.push({ id: doc.id, ...doc.data() });
             });
             carousels = carouselsData;
+
+            // Fetch Avatars
+            const categoriesQuery = query(collection(db, 'avatar_categories'), orderBy('title'));
+            const categoriesSnapshot = await getDocs(categoriesQuery);
+            const categoriesData = [];
+            for (const categoryDoc of categoriesSnapshot.docs) {
+                const category = {
+                    id: categoryDoc.id,
+                    category: categoryDoc.data().title,
+                    urls: []
+                };
+                const avatarsSnapshot = await getDocs(collection(db, `avatar_categories/${category.id}/avatars`));
+                avatarsSnapshot.forEach(avatarDoc => {
+                    category.urls.push(avatarDoc.data().url);
+                });
+                if (category.urls.length > 0) {
+                    categoriesData.push(category);
+                }
+            }
+            avatarsFromFirestore = categoriesData;
+
             console.log("Dados iniciais carregados.");
         } catch (error) {
             console.error("Erro ao carregar dados iniciais:", error);
@@ -387,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderAvatarGridForEdit(currentAvatar) {
         const avatarContainer = document.getElementById('edit-avatar-grid-container');
         avatarContainer.innerHTML = '';
-         avatars.forEach(cat => {
+        avatarsFromFirestore.forEach(cat => {
             const categoryHTML = `
                 <h3 class="text-xl font-bold text-white mb-4">${cat.category}</h3>
                 <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4">
@@ -1586,5 +1589,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
-
 
