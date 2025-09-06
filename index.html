@@ -1,329 +1,355 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ActionMax</title>
+    
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- Google Fonts: Poppins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <!-- Biblioteca HLS.js para streaming de vídeo -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- HLS.js for HLS playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <!-- PWA Manifest (Exemplo) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- External Stylesheet -->
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="pb-24 md:pb-0">
-    <!-- Tela de Manutenção -->
-    <div id="maintenance-page" class="hidden fixed inset-0 bg-[#0b0c0f] z-[300] flex flex-col items-center justify-center text-center p-4">
-        <i class="fas fa-cog text-purple-500 text-6xl animate-spin-slow mb-6"></i>
-        <h1 class="text-4xl tracking-wider text-white uppercase logo-font">Action<span class="text-purple-500">max</span></h1>
-        <h2 class="text-2xl font-bold mt-4 mb-2">Em Manutenção</h2>
-        <p id="maintenance-message" class="text-gray-400 max-w-md">Estamos realizando algumas melhorias e voltaremos em breve. Agradecemos a sua paciência!</p>
+<body class="text-gray-200">
+
+    <!-- =========== Loading Screen =========== -->
+    <div id="loading-screen" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[300] flex transition-opacity duration-500">
+        <h1 class="text-4xl md:text-5xl font-bold text-white">Action<span class="text-indigo-500">Max</span></h1>
+        <div class="spinner"></div>
     </div>
 
-    <!-- Tela de Carregamento -->
-    <div id="loading-screen" class="fixed inset-0 bg-[#0b0c0f] z-[200] flex flex-col items-center justify-center">
-        <h1 class="text-5xl tracking-wider text-white uppercase logo-font">Action<span class="text-purple-500">max</span></h1>
-        <div class="spinner mt-8"></div>
-    </div>
-
-    <!-- Página de Autenticação -->
-    <div id="auth-page" class="hidden fixed inset-0 bg-[#0b0c0f] z-[150] flex items-center justify-center p-4">
-        <div class="w-full max-w-md">
-            <!-- Formulário de Login -->
-            <div id="login-form">
-                <h1 class="text-4xl tracking-wider text-white uppercase logo-font text-center mb-2">Action<span class="text-purple-500">max</span></h1>
-                <h2 class="text-2xl font-bold text-center mb-8">Entrar</h2>
-                <div class="space-y-4">
-                    <input type="email" id="login-email" class="w-full px-4 py-3 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Email">
-                    <input type="password" id="login-password" class="w-full px-4 py-3 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Senha">
-                    <button id="login-button" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition">Entrar</button>
-                    <p id="login-error" class="text-red-500 text-center text-sm"></p>
-                </div>
-                <p class="text-center mt-6 text-gray-400">
-                    Novo por aqui? <button id="show-register-button" class="font-semibold text-purple-400 hover:underline">Cadastre-se</button>
-                </p>
+    <!-- =========== Login View =========== -->
+    <div id="login-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden p-4">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-8">Action<span class="text-indigo-500">Max</span></h1>
+            <h2 class="text-2xl font-bold text-white mb-8">Entrar</h2>
+            <div class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="password" id="login-password" placeholder="Senha" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">Entrar</button>
+                <button id="google-login-btn" class="w-full bg-white text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-6 h-6">
+                    <span>Entrar com Google</span>
+                </button>
             </div>
-            <!-- Formulário de Cadastro -->
-            <div id="register-form" class="hidden">
-                 <h1 class="text-4xl tracking-wider text-white uppercase logo-font text-center mb-2">Action<span class="text-purple-500">max</span></h1>
-                 <h2 class="text-2xl font-bold text-center mb-8">Criar Conta</h2>
-                <div class="space-y-4">
-                    <input type="text" id="register-name" class="w-full px-4 py-3 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Nome de usuário">
-                    <input type="email" id="register-email" class="w-full px-4 py-3 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Email">
-                    <input type="password" id="register-password" class="w-full px-4 py-3 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Senha">
-                    <button id="register-button" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition">Cadastrar</button>
-                    <p id="register-error" class="text-red-500 text-center text-sm"></p>
-                </div>
-                 <p class="text-center mt-6 text-gray-400">
-                    Já tem uma conta? <button id="show-login-button" class="font-semibold text-purple-400 hover:underline">Entrar</button>
-                </p>
+            <p class="mt-6 text-gray-400">Novo por aqui? <button id="show-register-view-btn" class="font-bold text-indigo-400 hover:underline">Cadastre-se agora.</button></p>
+        </div>
+    </div>
+
+    <!-- =========== Register View =========== -->
+    <div id="register-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden p-4">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-8">Action<span class="text-indigo-500">Max</span></h1>
+            <h2 class="text-2xl font-bold text-white mb-8">Cadastrar</h2>
+            <div class="space-y-4">
+                <input type="email" id="register-email" placeholder="Email" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="password" id="register-password" placeholder="Senha" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button id="register-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">Cadastrar</button>
+                 <button id="google-register-btn" class="w-full bg-white text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-6 h-6">
+                    <span>Cadastrar com Google</span>
+                </button>
+            </div>
+            <p class="mt-6 text-gray-400">Já tem uma conta? <button id="show-login-view-btn" class="font-bold text-indigo-400 hover:underline">Entre.</button></p>
+        </div>
+    </div>
+
+
+    <!-- =========== Profile Selection Screen =========== -->
+    <div id="profile-selection-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-12">Quem está a assistir?</h2>
+        <div id="profiles-list-container" class="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            <!-- Profiles will be rendered here by JS -->
+        </div>
+        <button id="manage-profiles-btn" class="mt-12 border-2 border-gray-600 text-gray-400 font-bold py-2 px-6 rounded hover:bg-gray-700 hover:text-white transition">Gerir Perfis</button>
+    </div>
+
+    <!-- =========== Manage Profiles Screen =========== -->
+    <div id="manage-profiles-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-12">Gerir Perfis</h2>
+        <div id="manage-profiles-list-container" class="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            <!-- Manageable profiles will be rendered here -->
+        </div>
+        <button id="done-managing-btn" class="mt-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded-lg transition">Concluído</button>
+    </div>
+
+    <!-- =========== Add/Edit Profile Screen =========== -->
+    <div id="edit-profile-view" class="fixed inset-0 bg-gray-900/95 backdrop-blur-sm flex-col items-center justify-center z-[210] hidden p-4">
+        <div class="w-full max-w-4xl">
+            <h2 id="edit-profile-title" class="text-4xl md:text-5xl font-bold text-white mb-8 text-center">Adicionar Perfil</h2>
+            <div class="mb-8">
+                <input type="text" id="profile-name-input" placeholder="Nome do Perfil" class="w-full max-w-sm mx-auto block p-4 bg-gray-800/50 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center">
+            </div>
+            <div class="mb-8 flex justify-center">
+                <label for="kid-profile-toggle" class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="kid-profile-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                    <div class="ml-3 text-white font-medium">Perfil Infantil</div>
+                </label>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-4 text-center">Escolha um avatar</h3>
+            <div id="edit-avatar-grid-container" class="space-y-8 max-h-[50vh] overflow-y-auto custom-scrollbar p-4">
+                <!-- Avatar grid for editing -->
+            </div>
+            <div class="flex justify-center items-center gap-4 mt-8">
+                <button id="save-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-12 rounded-lg transition disabled:bg-gray-500 disabled:cursor-not-allowed">Salvar</button>
+                <button id="cancel-edit-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancelar</button>
+                <button id="delete-profile-btn" class="bg-red-800 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition hidden">Excluir Perfil</button>
             </div>
         </div>
     </div>
 
 
-    <!-- Video Player Overlay -->
-    <div id="video-player-overlay" class="hidden fixed inset-0 bg-black z-[100] flex items-center justify-center p-0">
-        <div id="video-spinner" class="spinner hidden"></div>
-        <button id="close-video-player" class="absolute top-4 right-4 text-white text-4xl z-10">&times;</button>
-        <video id="video-player" class="w-full h-full" controls playsinline></video>
-    </div>
-
-    <!-- Cabeçalho -->
-    <header id="main-header" class="hidden fixed top-0 left-0 right-0 z-50 border-b border-transparent">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <div class="flex-shrink-0">
-                        <h1 class="text-2xl tracking-wider text-white uppercase logo-font">Action<span class="text-purple-500">max</span></h1>
-                    </div>
-                    <nav id="desktop-nav" class="hidden md:flex items-center space-x-8">
-                        <a href="#inicio" class="nav-link text-gray-300 hover:text-white transition-colors duration-300">Início</a>
-                        <a href="#series" class="nav-link text-gray-300 hover:text-white transition-colors duration-300">Séries</a>
-                        <a href="#filmes" class="nav-link text-gray-300 hover:text-white transition-colors duration-300">Filmes</a>
-                        <a href="#pedidos" class="nav-link text-gray-300 hover:text-white transition-colors duration-300">Pedidos</a>
-                        <a href="#generos" class="nav-link text-gray-300 hover:text-white transition-colors duration-300">Gêneros</a>
-                    </nav>
-                </div>
-                <div class="flex items-center gap-4">
-                    <button id="header-search-button" class="p-2 rounded-full hover:bg-gray-700/50">
-                       <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
-                    <div class="relative">
-                        <button id="notification-button" class="p-2 rounded-full hover:bg-gray-700/50 relative">
-                            <i class="fa-solid fa-bell text-xl"></i>
-                            <span id="notification-badge" class="hidden absolute -top-1 -right-1 bg-purple-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"></span>
-                        </button>
-                        <div id="notification-panel" class="hidden absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
-                            <h3 class="text-lg font-bold mb-4">Notificações</h3>
-                            <div id="notification-list" class="space-y-3">
-                                <p class="text-gray-400">Nenhuma notificação nova.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <button id="profile-button-header" class="p-2 rounded-full hover:bg-gray-700/50">
-                        <img id="header-avatar" src="https://placehold.co/40x40/9ca3af/ffffff?text=U" class="w-8 h-8 rounded-full object-cover">
-                    </button>
-                </div>
-            </div>
+    <!-- =========== Header =========== -->
+    <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 px-4 md:px-10 transition-colors duration-300 bg-transparent hidden" id="main-header">
+        <div class="flex items-center space-x-8">
+            <h1 id="logo" class="text-2xl md:text-3xl font-bold text-white cursor-pointer">Action<span class="text-indigo-500">Max</span></h1>
+            <nav id="main-nav" class="hidden md:flex items-center space-x-8 text-base font-medium text-gray-400">
+                <a href="#home" data-action="showView" data-view-name="home" class="nav-link hover:text-white transition">Início</a>
+                <a href="#series" data-action="showView" data-view-name="series" class="nav-link hover:text-white transition">Séries</a>
+                <a href="#movies" data-action="showView" data-view-name="movies" class="nav-link hover:text-white transition">Filmes</a>
+                <a href="#genres" data-action="showView" data-view-name="genres" class="nav-link hover:text-white transition">Gêneros</a>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-4 text-gray-400">
+            <a href="#search" data-action="showView" data-view-name="search" class="cursor-pointer hover:text-indigo-400 transition"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 "><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg></a>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 cursor-pointer hover:text-indigo-400 transition"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+            <a href="#profile" data-action="showView" data-view-name="profile"><img id="header-avatar" src="https://placehold.co/40x40/4f46e5/ffffff?text=U" alt="User Avatar" class="w-8 h-8 rounded-md cursor-pointer"></a>
         </div>
     </header>
 
-    <main id="main-content" class="hidden">
-        <!-- Seção Início -->
-        <section id="inicio" class="page-section">
-            <div class="relative h-screen w-full">
-                <div id="hero-backdrop" class="absolute inset-0 w-full h-full bg-cover bg-center"></div>
-                <div class="absolute inset-0 hero-gradient-overlay"></div>
-                <div class="absolute inset-0 bg-gradient-to-t from-[#0b0c0f] via-transparent"></div>
-                <div class="relative z-10 h-full flex items-center">
-                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-white">
-                        <div class="w-full md:w-2/3 lg:w-1/2 text-center md:text-left">
-                            <h2 id="hero-title" class="text-4xl lg:text-6xl font-bold mb-4"></h2>
-                            <p id="hero-overview" class="mb-8 text-lg max-w-3xl mx-auto md:mx-0"></p>
-                            <div id="hero-buttons" class="flex flex-wrap items-center justify-center md:justify-start gap-4"></div>
-                        </div>
+    <main id="app-container">
+        <!-- =========== Home View =========== -->
+        <div id="home-view" class="hidden">
+            <!-- Hero Section -->
+            <section class="relative h-screen flex items-center text-white">
+                <div class="absolute inset-0 overflow-hidden">
+                    <img id="hero-backdrop" class="w-full h-full object-cover" src="https://image.tmdb.org/t/p/original/uNTrRKIOyKYISthoeizghtXPEOK.jpg" alt="Dandadan background">
+                    <div class="absolute inset-0 hero-gradient"></div>
+                </div>
+                <div class="relative z-10 p-6 md:p-10 lg:p-16 w-full md:w-1/2 text-center md:text-left">
+                    <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg">Dandadan</h2>
+                    <div class="flex items-center justify-center md:justify-start space-x-4 my-3 md:my-4 text-xs md:text-sm">
+                        <span class="font-semibold">2024</span>
+                        <span class="border border-gray-400 text-gray-400 px-2 py-0.5 rounded text-xs">16+</span>
+                        <span>2 Temporadas</span>
+                         <span class="bg-indigo-500 text-white font-bold px-2 py-0.5 rounded text-xs">HD</span>
                     </div>
-                </div>
-            </div>
-            <!-- Container para os carrosséis dinâmicos -->
-            <div id="home-carousels-container" class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12 bg-[#0b0c0f] relative z-20">
-                <!-- Os carrosséis de categorias serão inseridos aqui pelo JavaScript -->
-            </div>
-        </section>
-
-        <!-- Seções de Conteúdo -->
-        <section id="buscar" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24"><h1 class="text-4xl font-bold mb-8">Buscar</h1><form id="search-form" class="mb-8"><div class="relative"><input type="text" id="search-input" class="w-full px-4 py-3 pr-12 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Buscar por filmes, séries..."><button type="submit" class="absolute inset-y-0 right-0 px-4 text-gray-400 hover:text-white"><i class="fa-solid fa-magnifying-glass"></i></button></div></form><div id="search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8"></div><p id="search-message" class="text-center text-gray-400 mt-8 text-lg hidden">Nenhum resultado encontrado.</p></section>
-        <section id="series" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24"><h1 class="text-4xl font-bold mb-8">Todas as Séries</h1><div id="series-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8"></div></section>
-        <section id="filmes" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24"><h1 class="text-4xl font-bold mb-8">Todos os Filmes</h1><div id="filmes-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8"></div></section>
-        <section id="generos" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24"><h1 class="text-4xl font-bold mb-8">Gêneros</h1><div id="genres-container" class="flex flex-wrap gap-4"></div></section>
-        <section id="genre-results-page" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <h1 id="genre-results-title" class="text-4xl font-bold mb-8"></h1>
-            <div id="genre-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8"></div>
-        </section>
-        
-        <!-- Seção de Pedidos -->
-        <section id="pedidos" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <h1 class="text-4xl font-bold mb-4">Pedidos de Conteúdo</h1>
-            <p class="text-gray-400 mb-8">Não encontrou o que procurava? Pesquise e solicite um filme ou série abaixo. Você também pode votar em pedidos existentes.</p>
-
-            <!-- Search for new request -->
-            <div class="bg-gray-900/50 p-6 rounded-lg mb-12">
-                 <h2 class="text-2xl font-bold mb-4">Solicitar Novo Conteúdo</h2>
-                 <div class="flex flex-col sm:flex-row gap-4">
-                     <input type="text" id="request-search-input" placeholder="Nome do Filme ou Série" class="w-full px-4 py-3 text-lg rounded-md bg-gray-900 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                     <button id="request-search-button" class="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition whitespace-nowrap">Buscar</button>
-                 </div>
-                 <div id="request-search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-8 mt-8"></div>
-                 <p id="request-search-message" class="text-center text-gray-400 mt-8 text-lg hidden"></p>
-            </div>
-
-            <!-- List of current requests -->
-            <div>
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">Pedidos da Comunidade</h2>
-                </div>
-                <div id="requests-list" class="space-y-4"></div>
-                <p id="requests-list-message" class="text-center text-gray-400 mt-8 text-lg">Nenhum pedido pendente. Seja o primeiro a solicitar!</p>
-            </div>
-        </section>
-        
-        <!-- Tela de Perfil -->
-        <section id="profile-page" class="page-section hidden container mx-auto px-4 sm:px-6 lg:px-8 py-24">
-            <div class="max-w-3xl mx-auto space-y-12">
-                <!-- Profile Header -->
-                <div class="flex flex-col sm:flex-row items-center gap-8">
-                    <div class="relative group">
-                        <img id="profile-avatar" src="https://placehold.co/128x128/9ca3af/ffffff?text=U" class="w-32 h-32 rounded-full object-cover border-4 border-gray-700 group-hover:border-purple-500 transition-colors">
-                        <button id="change-avatar-button" class="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Alterar avatar">
-                            <i class="fas fa-camera text-2xl"></i>
+                    <p class="text-sm md:text-base text-gray-300 drop-shadow-md mb-5 md:mb-6 max-w-2xl mx-auto md:mx-0">Uma rapariga que acredita em fantasmas e um rapaz que acredita em extraterrestres deparam-se com um mundo paranormal onde ambos estão certos.</p>
+                    <div class="flex items-center justify-center md:justify-start space-x-4">
+                        <button data-action="showView" data-view-name="player" data-item-id="11" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 md:py-3 md:px-8 rounded-lg flex items-center space-x-2 transition text-sm md:text-base">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 md:w-6 md:h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+                            <span>Assistir Agora</span>
                         </button>
+                        <button id="hero-mylist-button" data-action="toggleMyList" data-item-id="11" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-2 px-4 md:py-3 md:px-8 rounded-lg flex items-center space-x-2 transition text-sm md:text-base"></button>
                     </div>
-                    <div class="text-center sm:text-left">
-                        <div class="relative group flex items-center justify-center sm:justify-start gap-2">
-                            <h3 id="profile-username" class="text-4xl font-bold">Usuário</h3>
-                            <button id="edit-username-button" class="text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Editar nome de usuário"><i class="fas fa-pencil-alt"></i></button>
-                        </div>
-                        <p id="profile-email" class="text-gray-400 mt-1"></p>
-                         <button id="logout-button" class="mt-4 bg-red-600/20 text-red-400 font-bold py-2 px-5 rounded-lg hover:bg-red-600/40 transition">Sair</button>
+                </div>
+            </section>
+            <div id="carousels-container" class="px-4 md:px-10 py-8 space-y-10"></div>
+        </div>
+
+        <div id="detail-view" class="hidden"></div>
+        <div id="search-view" class="hidden pt-24 px-4 md:px-10 pb-12">
+            <h2 class="text-3xl font-bold mb-8">Pesquisar</h2>
+            <input type="text" id="search-input" placeholder="O que quer assistir?" class="w-full p-4 mb-8 bg-gray-800/50 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <div id="search-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+            <p id="search-no-results" class="hidden text-center text-gray-400 mt-8">Nenhum resultado encontrado.</p>
+        </div>
+        
+        <!-- Player View Otimizado -->
+        <div id="player-view" class="hidden fixed inset-0 bg-black z-[100] flex items-center justify-center">
+             <div class="w-full h-full relative group" id="player-container">
+                <video id="video-player" class="w-full h-full object-contain" controlslist="nodownload" playsinline></video>
+                
+                <!-- Overlay para duplo clique e controles -->
+                <div id="video-overlay" class="absolute inset-0 z-20"></div>
+
+                <!-- Indicador de avanço/retrocesso -->
+                <div id="seek-indicator" class="seek-indicator">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
+                </div>
+                
+                <!-- Overlay de Próximo Episódio -->
+                <div id="next-episode-overlay" class="hidden absolute inset-0 bg-black/80 z-40 flex-col items-end justify-center p-8 text-right">
+                    <div class="bg-black/50 p-6 rounded-lg backdrop-blur-md">
+                        <p class="text-gray-400 text-lg">A seguir</p>
+                        <h3 id="next-episode-title" class="text-3xl font-bold text-white my-2">Episode Title</h3>
+                        <p>A reproduzir em <span id="next-episode-countdown">5</span> segundos...</p>
+                        <button id="play-next-btn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">Assistir Agora</button>
                     </div>
                 </div>
 
-                <!-- My List Section -->
-                <div class="profile-section">
-                    <h2 class="text-3xl font-bold mb-6 border-l-4 border-purple-500 pl-4">Minha Lista</h2>
-                    <div id="my-list-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8"></div>
-                    <p id="my-list-message" class="text-center text-gray-400 mt-8 text-lg hidden">Sua lista está vazia. Adicione filmes e séries para vê-los aqui.</p>
-                </div>
-            </div>
-        </section>
-
-    </main>
-    
-    <!-- Overlays -->
-    <div id="details-page" class="hidden fixed inset-0 z-50 bg-cover bg-center bg-fixed bg-no-repeat">
-        <div id="details-overlay" class="absolute inset-0"></div>
-        <div class="relative w-full h-full overflow-y-auto scrollbar-hide">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen flex flex-col justify-center pt-16 pb-32 md:py-16">
-                <div class="flex flex-col md:flex-row items-center gap-8 md:gap-12 text-white relative z-10">
-                    <div class="w-48 md:w-auto md:max-w-xs flex-shrink-0"><img id="details-poster" class="w-full mx-auto md:mx-0 rounded-lg shadow-2xl"></div>
-                    <div class="w-full md:w-2/3 text-center md:text-left">
-                        <div id="details-meta" class="text-sm text-gray-300 mb-2"></div>
-                        <h2 id="details-title" class="text-4xl lg:text-6xl font-bold mb-4"></h2>
-                        <p id="details-overview" class="mb-8 text-base max-w-3xl mx-auto md:mx-0"></p>
-                        <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                            <button id="details-watch-button" class="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"><i class="fa-solid fa-play"></i> Assistir</button>
-                            <button id="details-trailer-button" class="hidden bg-white/10 border border-white/20 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-white/20 transition"><i class="fa-solid fa-film"></i> Trailer</button>
-                            <button id="details-my-list-button" class="bg-white/10 border border-white/20 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 hover:bg-white/20 transition"></button>
-                        </div>
+                <div id="player-error-display" class="hidden absolute inset-0 flex items-center justify-center bg-black/80 z-30"><p class="text-white text-lg p-8 text-center"></p></div>
+                
+                <button id="skip-intro-btn" class="hidden absolute bottom-24 right-4 bg-black/70 text-white py-2 px-4 rounded-lg backdrop-blur-sm hover:bg-white hover:text-black transition-colors z-30">Pular Abertura</button>
+                
+                <!-- Controles do Player -->
+                <div id="player-controls" class="absolute bottom-0 left-0 right-0 p-4 pt-8 player-controls-gradient transition-opacity duration-300 z-30">
+                    <!-- Barra de Progresso -->
+                    <div id="progress-bar-container" class="w-full h-4 group/progress flex items-center cursor-pointer mb-2">
+                         <div class="w-full h-1 group-hover/progress:h-2 bg-gray-600 rounded transition-all">
+                             <div id="progress-bar" class="h-full bg-indigo-500 rounded" style="width: 0%;"></div>
+                         </div>
                     </div>
-                </div>
-                <!-- Container para temporadas e episódios (para séries) -->
-                <div id="seasons-container" class="relative z-10 mt-12 text-white hidden"></div>
+                    
+                    <div class="flex items-center justify-between text-white w-full">
+                        <!-- Controles da Esquerda -->
+                        <div class="flex items-center space-x-2 md:space-x-4">
+                            <button id="rewind-btn" class="p-2"></button>
+                            <button id="play-pause-btn" class="p-2"></button>
+                            <button id="forward-btn" class="p-2"></button>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-white relative z-10 mt-12">
-                    <div>
-                        <h3 class="text-2xl font-bold mb-4">Avaliações</h3>
-                        <div class="flex items-center gap-4 mb-2">
-                            <span class="font-semibold">Sua Avaliação:</span>
-                            <div id="star-rating-container" class="star-rating text-2xl">
-                                <i class="fa-solid fa-star" data-value="1"></i><i class="fa-solid fa-star" data-value="2"></i><i class="fa-solid fa-star" data-value="3"></i><i class="fa-solid fa-star" data-value="4"></i><i class="fa-solid fa-star" data-value="5"></i>
+                            <div class="flex items-center space-x-2 volume-container">
+                                <button id="volume-btn" class="p-2"></button>
+                                <div class="volume-slider-container">
+                                   <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" class="">
+                                </div>
                             </div>
                         </div>
-                         <div class="flex items-center gap-4 text-gray-300">
-                            <span class="font-semibold">Média:</span>
-                            <div id="average-rating-display" class="flex items-center gap-2 text-yellow-400 text-lg font-bold"></div>
+
+                        <!-- Time Display -->
+                         <div class="hidden md:flex items-center space-x-2 text-sm">
+                             <span id="current-time">00:00</span>
+                             <span>/</span>
+                             <span id="duration">00:00</span>
+                         </div>
+                        
+                        <!-- Controles da Direita -->
+                        <div class="flex items-center space-x-2 md:space-x-4">
+                            <button id="fullscreen-btn" class="p-2"></button>
                         </div>
                     </div>
-                     <div>
-                        <h3 class="text-2xl font-bold mb-4">Comentários</h3>
-                        <div class="mb-4">
-                            <textarea id="comment-input" class="w-full p-3 text-base rounded-md bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Adicionar um comentário..." rows="2"></textarea>
-                            <button id="submit-comment-button" class="mt-2 bg-purple-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-purple-700 transition">Comentar</button>
+                </div>
+             </div>
+        </div>
+
+        <div id="iframe-player-view" class="hidden fixed inset-0 bg-black z-50 flex flex-col">
+            <iframe id="iframe-player" class="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <div id="series-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
+        <div id="movies-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
+        <div id="genres-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="genre-results-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        
+        <div id="profile-view" class="hidden pt-24 px-4 md:px-10 pb-24">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-3xl font-bold mb-8">Conta e Definições</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
+                    <!-- Sidebar Navigation -->
+                    <aside class="md:col-span-1">
+                        <nav id="profile-sidebar-nav" class="flex flex-col space-y-2">
+                            <a href="#details" data-section="details" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Perfil</a>
+                            <a href="#plan" data-section="plan" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Plano e Faturação</a>
+                            <a href="#playback" data-section="playback" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Reprodução</a>
+                            <a href="#mylist" data-section="mylist" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Minha Lista</a>
+                             <a href="#switch" data-section="switch" id="logout-btn" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Sair</a>
+                        </nav>
+                    </aside>
+                    <!-- Content Area -->
+                    <main class="md:col-span-3">
+                        <!-- Profile Details Section -->
+                        <div id="profile-section-details" class="profile-section">
+                            <h3 class="text-2xl font-bold mb-6">Detalhes do Perfil</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg flex flex-col sm:flex-row items-center gap-6">
+                                <div id="change-avatar-button" data-action="editCurrentProfile" class="relative group cursor-pointer">
+                                    <img id="profile-avatar-img" src="https://placehold.co/100x100/4f46e5/ffffff?text=U" alt="User Avatar" class="w-24 h-24 rounded-full transition-all duration-300 group-hover:ring-4 group-hover:ring-indigo-500 object-cover">
+                                    <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                                    </div>
+                                </div>
+                                <div class="text-center sm:text-left">
+                                    <p id="profile-name" class="text-xl font-bold">Utilizador 1</p>
+                                </div>
+                            </div>
                         </div>
-                        <div id="comments-list" class="space-y-4 max-h-48 overflow-y-auto scrollbar-hide"></div>
-                    </div>
+                        <!-- Plan & Billing Section -->
+                        <div id="profile-section-plan" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Plano e Faturação</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-4">
+                                <div>
+                                    <p class="text-gray-400">Plano Atual</p>
+                                    <p class="text-xl font-bold">Premium</p>
+                                </div>
+                                <hr class="border-gray-700">
+                                <div>
+                                    <p class="text-gray-400">Forma de Pagamento</p>
+                                    <p>**** **** **** 1234</p>
+                                </div>
+                                <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition">Gerir Assinatura</button>
+                            </div>
+                        </div>
+                        <!-- Playback Settings Section -->
+                        <div id="profile-section-playback" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Controles de Reprodução</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-4">
+                                <div>
+                                    <label for="skip-time-input" class="block text-gray-400 mb-2">Tempo de avanço/retrocesso (segundos)</label>
+                                    <input type="number" id="skip-time-input" min="5" max="30" step="1" class="w-24 p-2 bg-gray-900/50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- My List Section -->
+                        <div id="profile-section-mylist" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Minha Lista</h3>
+                            <div id="mylist-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+                            <p id="mylist-no-results" class="hidden text-gray-400">A sua lista está vazia. Adicione conteúdo para o ver aqui.</p>
+                        </div>
+                    </main>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Overlay para Editar Nome de Usuário -->
-    <div id="edit-username-overlay" class="hidden fixed inset-0 z-50 bg-[#0b0c0f]/80 backdrop-blur-sm p-4 flex items-center justify-center">
-        <div class="bg-gray-900 rounded-lg p-6 w-full max-w-sm text-center">
-            <h2 class="text-2xl font-bold mb-6">Alterar nome de usuário</h2>
-            <input type="text" id="edit-username-input" class="w-full px-4 py-3 text-lg rounded-md bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Novo nome de usuário">
-            <div class="flex justify-center gap-4 mt-6">
-                <button id="save-username-button" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700 transition">Salvar</button>
-                <button id="cancel-edit-username-button" class="bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition">Cancelar</button>
-            </div>
+        <div id="avatar-selection-view" class="hidden"></div> <!-- Deprecated, functionality moved to edit-profile-view -->
+        
+        <!-- =========== Toast Notification =========== -->
+        <div id="toast-notification" class="fixed bottom-5 right-5 bg-indigo-600 text-white py-2 px-5 rounded-lg shadow-lg toast z-[220]">
+            <p id="toast-message"></p>
         </div>
-    </div>
-    
-    <!-- Overlay para Seleção de Avatar -->
-    <div id="avatar-selection-overlay" class="hidden fixed inset-0 z-[60] p-4 flex flex-col items-center overflow-y-auto bg-[#0b0c0f]">
-        <div class="w-full max-w-5xl mx-auto my-auto">
-             <div class="flex justify-between items-center mb-8">
-                 <h2 class="text-3xl md:text-5xl font-bold text-white">Escolha um avatar</h2>
-                 <button id="back-to-profile-button" class="text-gray-400 hover:text-white transition-colors text-sm font-semibold uppercase tracking-wider">Voltar</button>
-             </div>
-            <div id="avatar-selection-grid" class="space-y-10 pb-24">
-                <!-- As categorias e avatares serão inseridos aqui pelo JavaScript -->
-            </div>
-        </div>
-         <!-- Botão de Confirmação Flutuante -->
-        <div id="avatar-confirm-container" class="hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0b0c0f] to-transparent z-10">
-            <button id="confirm-avatar-button" class="w-full max-w-xs mx-auto bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>
-                Confirmar
-            </button>
-        </div>
-    </div>
+    </main>
 
-    <!-- Modal de Confirmação -->
-    <div id="confirmation-modal" class="hidden fixed inset-0 bg-black/70 z-[150] flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-sm text-center">
-            <p id="confirmation-message" class="text-lg mb-6">Tem certeza que deseja apagar este comentário?</p>
-            <div class="flex justify-center gap-4">
-                <button id="confirm-delete-button" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition">Apagar</button>
-                <button id="cancel-delete-button" class="bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-500 transition">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navegação Inferior Mobile -->
-    <nav id="bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 bg-[#0b0c0f] border-t border-gray-800 px-2 py-2 flex justify-around z-50 bottom-nav">
-        <a href="#inicio" class="bottom-nav-link flex-1 flex flex-col items-center text-gray-400 p-1 transition-colors duration-200"><i class="fa-solid fa-house text-xl mb-1"></i><span class="text-xs">Início</span></a>
-        <a href="#buscar" class="bottom-nav-link flex-1 flex flex-col items-center text-gray-400 p-1 transition-colors duration-200"><i class="fa-solid fa-magnifying-glass text-xl mb-1"></i><span class="text-xs">Buscar</span></a>
-        <a href="#pedidos" class="bottom-nav-link flex-1 flex flex-col items-center text-gray-400 p-1 transition-colors duration-200"><i class="fa-solid fa-inbox text-xl mb-1"></i><span class="text-xs">Pedidos</span></a>
-        <a href="#filmes" class="bottom-nav-link flex-1 flex flex-col items-center text-gray-400 p-1 transition-colors duration-200"><i class="fa-solid fa-film text-xl mb-1"></i><span class="text-xs">Filmes</span></a>
-        <a href="#series" class="bottom-nav-link flex-1 flex flex-col items-center text-gray-400 p-1 transition-colors duration-200"><i class="fa-solid fa-tv text-xl mb-1"></i><span class="text-xs">Séries</span></a>
-        <a href="#profile-page" class="bottom-nav-link flex-1 flex flex-col items-center text-gray-400 p-1 transition-colors duration-200"><i class="fa-solid fa-user text-xl mb-1"></i><span class="text-xs">Perfil</span></a>
+    <!-- =========== Mobile Navigation =========== -->
+    <nav id="mobile-nav" class="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 p-2 flex justify-around md:hidden z-50">
+        <a href="#home" data-action="showView" data-view-name="home" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span class="text-xs">Início</span>
+        </a>
+        <a href="#series" data-action="showView" data-view-name="series" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+            <span class="text-xs">Séries</span>
+        </a>
+        <a href="#movies" data-action="showView" data-view-name="movies" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            <span class="text-xs">Filmes</span>
+        </a>
+        <a href="#genres" data-action="showView" data-view-name="genres" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            <span class="text-xs">Gêneros</span>
+        </a>
     </nav>
-
-    <!-- Rodapé -->
-    <footer id="main-footer" class="hidden bg-[#0b0c0f] border-t border-gray-800 text-gray-400">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-sm">
-            <div id="footer-links" class="flex justify-center gap-6 mb-4">
-                <!-- Links serão inseridos aqui -->
-            </div>
-            <p>&copy; 2024 ActionMax. Todos os direitos reservados.</p>
-        </div>
-    </footer>
     
-    <!-- Modal para Conteúdo do Rodapé -->
-    <div id="footer-content-modal" class="hidden fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
-        <div class="bg-gray-900 rounded-lg p-6 max-w-3xl w-full max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4">
-                <h2 id="footer-modal-title" class="text-2xl font-bold"></h2>
-                <button id="close-footer-modal" class="text-3xl">&times;</button>
-            </div>
-            <div id="footer-modal-content" class="prose prose-invert max-w-none overflow-y-auto"></div>
-        </div>
-    </div>
-
+    <!-- External Script -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
