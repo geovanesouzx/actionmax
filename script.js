@@ -16,7 +16,8 @@ import {
     getDoc,
     doc,
     query,
-    orderBy
+    orderBy,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -84,13 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let hlsInstance;
 
     // --- Firestore Data Fetching ---
-    async function fetchFirestoreData() {
-        try {
-            // Fetch content (movies/series)
-            const contentSnapshot = await getDocs(collection(db, 'content'));
+    function attachRealtimeListeners() {
+        // Listener for content
+        const contentQuery = collection(db, 'content');
+        onSnapshot(contentQuery, (snapshot) => {
+            console.log("Dados de conteúdo atualizados.");
             const catalogData = [];
             const itemDetailsData = {};
-            contentSnapshot.forEach(doc => {
+            snapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
                 catalogData.push({
                     id: data.id,
@@ -102,19 +104,62 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             catalog = catalogData;
             itemDetails = itemDetailsData;
+            refreshUI(); // Refresh the UI with new data
+        }, (error) => {
+            console.error("Erro no listener de conteúdo:", error);
+            showToast("Erro ao carregar o catálogo em tempo real.");
+        });
 
-            // Fetch carousels configuration, ordered by the 'order' field
-            const carouselsQuery = query(collection(db, 'carousels'), orderBy('order'));
-            const carouselsSnapshot = await getDocs(carouselsQuery);
+        // Listener for carousels
+        const carouselsQuery = query(collection(db, 'carousels'), orderBy('order'));
+        onSnapshot(carouselsQuery, (snapshot) => {
+            console.log("Dados de carrosséis atualizados.");
             const carouselsData = [];
-            carouselsSnapshot.forEach(doc => {
+            snapshot.forEach(doc => {
                 carouselsData.push({ id: doc.id, ...doc.data() });
             });
             carousels = carouselsData;
+            refreshUI(); // Refresh the UI with new data
+        }, (error) => {
+            console.error("Erro no listener de carrosséis:", error);
+            showToast("Erro ao carregar os carrosséis em tempo real.");
+        });
+    }
 
-        } catch (error) {
-            console.error("Erro ao buscar dados do Firestore:", error);
-            showToast("Não foi possível carregar o catálogo. Tente novamente mais tarde.");
+    function refreshUI() {
+        // Only refresh if a profile is selected and the user is not watching something
+        if (!currentProfileId || isPlayerModeActive || document.fullscreenElement) {
+            return;
+        }
+
+        const viewEl = allViews.map(id => document.getElementById(id)).find(el => el && !el.classList.contains('hidden'));
+        if (!viewEl) return;
+        
+        const currentViewId = viewEl.id;
+
+        console.log(`Atualizando UI para a view: ${currentViewId}`);
+
+        // Re-render only list-based views to avoid being disruptive.
+        switch (currentViewId) {
+            case 'home-view':
+                renderHeroSection();
+                renderCarousels();
+                break;
+            case 'movies-view':
+                renderGenericPage('movies-view', 'Filmes', 'movie');
+                break;
+            case 'series-view':
+                renderGenericPage('series-view', 'Séries', 'series');
+                break;
+            case 'genres-view':
+                renderGenresPage();
+                break;
+            case 'profile-view':
+                // Refresh mylist if that's the active section
+                if (document.querySelector('#profile-section-mylist:not(.hidden)')) {
+                    renderMyListPage();
+                }
+                break;
         }
     }
     
@@ -591,6 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderItemsGrid(items, containerId) {
         const container = document.getElementById(containerId);
+        if (!container) return;
         container.innerHTML = items.map(item => `
             <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
                 <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
@@ -1326,14 +1372,14 @@ document.addEventListener('DOMContentLoaded', () => {
         registerView.classList.toggle('flex', view === 'register');
     }
 
-    onAuthStateChanged(auth, async user => {
+    onAuthStateChanged(auth, user => {
         loadingScreen.classList.remove('opacity-0');
         loadingScreen.classList.remove('hidden');
         loadingScreen.classList.add('flex');
 
         if (user) {
             console.log("Utilizador autenticado:", user.uid);
-            await fetchFirestoreData();
+            attachRealtimeListeners();
             profiles = loadProfiles(user.uid);
             loginView.classList.add('hidden');
             registerView.classList.add('hidden');
