@@ -92,6 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let nextEpisodeInterval = null;
     let progressSaveInterval = null;
 
+    let unsubscribeContent = null;
+    let unsubscribeCarousels = null;
+
     const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
     const mainHeader = document.getElementById('main-header');
     const videoPlayer = document.getElementById('video-player');
@@ -100,45 +103,68 @@ document.addEventListener('DOMContentLoaded', () => {
     let hlsInstance;
 
     // --- Firestore Data Fetching ---
-    function attachRealtimeListeners() {
-        // Listener for content
-        const contentQuery = collection(db, 'content');
-        onSnapshot(contentQuery, (snapshot) => {
-            console.log("Dados de conteúdo atualizados.");
+    function detachRealtimeListeners() {
+        if (unsubscribeContent) unsubscribeContent();
+        if (unsubscribeCarousels) unsubscribeCarousels();
+    }
+    
+    async function loadDataAndAttachListeners() {
+        // 1. Initial Fetch to prevent race conditions on page load
+        try {
+            console.log("Carregando dados iniciais...");
+            const contentSnapshot = await getDocs(collection(db, 'content'));
             const catalogData = [];
             const itemDetailsData = {};
-            snapshot.forEach(doc => {
+            contentSnapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
-                catalogData.push({
-                    id: data.id,
-                    title: data.title,
-                    type: data.type,
-                    poster: data.poster
-                });
+                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster });
                 itemDetailsData[data.id] = data;
             });
             catalog = catalogData;
             itemDetails = itemDetailsData;
-            refreshUI(); // Refresh the UI with new data
-        }, (error) => {
-            console.error("Erro no listener de conteúdo:", error);
-            showToast("Erro ao carregar o catálogo em tempo real.");
-        });
-
-        // Listener for carousels
+    
+            const carouselsQuery = query(collection(db, 'carousels'), orderBy('order'));
+            const carouselsSnapshot = await getDocs(carouselsQuery);
+            const carouselsData = [];
+            carouselsSnapshot.forEach(doc => {
+                carouselsData.push({ id: doc.id, ...doc.data() });
+            });
+            carousels = carouselsData;
+            console.log("Dados iniciais carregados.");
+        } catch (error) {
+            console.error("Erro ao carregar dados iniciais:", error);
+            showToast("Falha ao carregar o catálogo.");
+            return Promise.reject(error); // Stop execution if initial load fails
+        }
+    
+        // 2. Attach Listeners for subsequent real-time updates
+        detachRealtimeListeners(); // Ensure no old listeners are running
+    
+        const contentQuery = collection(db, 'content');
+        unsubscribeContent = onSnapshot(contentQuery, (snapshot) => {
+            console.log("Dados de conteúdo atualizados em tempo real.");
+            const catalogData = [];
+            const itemDetailsData = {};
+            snapshot.forEach(doc => {
+                const data = { id: doc.id, ...doc.data() };
+                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster });
+                itemDetailsData[data.id] = data;
+            });
+            catalog = catalogData;
+            itemDetails = itemDetailsData;
+            refreshUI(); 
+        }, (error) => console.error("Erro no listener de conteúdo:", error));
+    
         const carouselsQuery = query(collection(db, 'carousels'), orderBy('order'));
-        onSnapshot(carouselsQuery, (snapshot) => {
-            console.log("Dados de carrosséis atualizados.");
+        unsubscribeCarousels = onSnapshot(carouselsQuery, (snapshot) => {
+            console.log("Dados de carrosséis atualizados em tempo real.");
             const carouselsData = [];
             snapshot.forEach(doc => {
                 carouselsData.push({ id: doc.id, ...doc.data() });
             });
             carousels = carouselsData;
-            refreshUI(); // Refresh the UI with new data
-        }, (error) => {
-            console.error("Erro no listener de carrosséis:", error);
-            showToast("Erro ao carregar os carrosséis em tempo real.");
-        });
+            refreshUI();
+        }, (error) => console.error("Erro no listener de carrosséis:", error));
     }
 
     function refreshUI() {
@@ -1424,18 +1450,25 @@ document.addEventListener('DOMContentLoaded', () => {
         registerView.classList.toggle('flex', view === 'register');
     }
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
         loadingScreen.classList.remove('opacity-0');
         loadingScreen.classList.remove('hidden');
         loadingScreen.classList.add('flex');
 
+        detachRealtimeListeners(); 
+
         if (user) {
-            console.log("Utilizador autenticado:", user.uid);
-            attachRealtimeListeners();
-            profiles = loadProfiles(user.uid);
-            loginView.classList.add('hidden');
-            registerView.classList.add('hidden');
-            showProfileSelectionView(true);
+            try {
+                console.log("Utilizador autenticado:", user.uid);
+                await loadDataAndAttachListeners(); // Await for the initial fetch
+                
+                profiles = loadProfiles(user.uid);
+                loginView.classList.add('hidden');
+                registerView.classList.add('hidden');
+                showProfileSelectionView(true);
+            } catch (error) {
+                showToast("Erro crítico ao carregar dados. Tente novamente.");
+            }
         } else {
             console.log("Nenhum utilizador autenticado.");
             allViews.forEach(id => {
@@ -1553,5 +1586,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
-" from the Canvas and the query is "o botão de salvar em minha lista no filme de detalhes não esta funcionando corretamente"
+
 
