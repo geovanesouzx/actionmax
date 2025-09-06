@@ -28,6 +28,12 @@
 </head>
 <body class="text-gray-200">
 
+    <!-- =========== Maintenance View =========== -->
+    <div id="maintenance-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[400] hidden p-4 text-center">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Action<span class="text-indigo-500">Max</span></h1>
+        <p id="maintenance-message" class="text-lg text-gray-300 max-w-2xl">Estamos realizando algumas melhorias e voltaremos em breve. Agradecemos a sua paciência!</p>
+    </div>
+
     <!-- =========== Loading Screen =========== -->
     <div id="loading-screen" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[300] flex transition-opacity duration-500">
         <h1 class="text-4xl md:text-5xl font-bold text-white">Action<span class="text-indigo-500">Max</span></h1>
@@ -123,21 +129,34 @@
     <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 px-4 md:px-10 transition-colors duration-300 bg-transparent hidden" id="main-header">
         <div class="flex items-center space-x-8">
             <h1 id="logo" class="text-2xl md:text-3xl font-bold text-white cursor-pointer">Action<span class="text-indigo-500">Max</span></h1>
-            <nav id="main-nav" class="hidden md:flex items-center space-x-8 text-base font-medium text-gray-400">
+            <nav id="main-nav" class="hidden md:flex items-center space-x-6 text-base font-medium text-gray-400">
                 <a href="#home" data-action="showView" data-view-name="home" class="nav-link hover:text-white transition">Início</a>
                 <a href="#series" data-action="showView" data-view-name="series" class="nav-link hover:text-white transition">Séries</a>
                 <a href="#movies" data-action="showView" data-view-name="movies" class="nav-link hover:text-white transition">Filmes</a>
+                <a href="#channels" data-action="showView" data-view-name="channels" class="nav-link hover:text-white transition">Canais</a>
                 <a href="#genres" data-action="showView" data-view-name="genres" class="nav-link hover:text-white transition">Gêneros</a>
+                 <a href="#soon" data-action="showView" data-view-name="soon" class="nav-link hover:text-white transition">Em Breve</a>
             </nav>
         </div>
         <div class="flex items-center space-x-4 text-gray-400">
-            <a href="#search" data-action="showView" data-view-name="search" class="cursor-pointer hover:text-indigo-400 transition"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 "><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg></a>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 cursor-pointer hover:text-indigo-400 transition"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+            <a href="#search" data-action="showView" data-view-name="search" class="cursor-pointer hover:text-indigo-400 transition"><i class="fas fa-search text-xl"></i></a>
+            
+            <div class="relative">
+                 <button id="notifications-btn" class="cursor-pointer hover:text-indigo-400 transition relative">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span id="notifications-badge" class="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden"></span>
+                 </button>
+                 <div id="notifications-panel" class="hidden absolute top-full right-0 mt-3 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
+                      <div class="p-3 border-b border-gray-700 font-bold">Notificações</div>
+                      <div id="notifications-list" class="max-h-96 overflow-y-auto custom-scrollbar"></div>
+                 </div>
+            </div>
+           
             <a href="#profile" data-action="showView" data-view-name="profile"><img id="header-avatar" src="https://placehold.co/40x40/4f46e5/ffffff?text=U" alt="User Avatar" class="w-8 h-8 rounded-md cursor-pointer"></a>
         </div>
     </header>
 
-    <main id="app-container">
+    <main id="app-container" class="min-h-screen">
         <!-- =========== Home View =========== -->
         <div id="home-view" class="hidden">
             <!-- Hero Section -->
@@ -164,27 +183,14 @@
         </div>
 
         <div id="detail-view" class="hidden"></div>
-        <div id="search-view" class="hidden pt-24 px-4 md:px-10 pb-12">
-            <h2 class="text-3xl font-bold mb-8">Pesquisar</h2>
-            <input type="text" id="search-input" placeholder="O que quer assistir?" class="w-full p-4 mb-8 bg-gray-800/50 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            <div id="search-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-            <p id="search-no-results" class="hidden text-center text-gray-400 mt-8">Nenhum resultado encontrado.</p>
-        </div>
+        <div id="search-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
         
-        <!-- Player View Otimizado -->
+        <!-- Player View -->
         <div id="player-view" class="hidden fixed inset-0 bg-black z-[100] flex items-center justify-center">
              <div class="w-full h-full relative group" id="player-container">
                 <video id="video-player" class="w-full h-full object-contain" controlslist="nodownload" playsinline></video>
-                
-                <!-- Overlay para duplo clique e controles -->
                 <div id="video-overlay" class="absolute inset-0 z-20"></div>
-
-                <!-- Indicador de avanço/retrocesso -->
-                <div id="seek-indicator" class="seek-indicator">
-                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
-                </div>
-                
-                <!-- Overlay de Próximo Episódio -->
+                <div id="seek-indicator" class="seek-indicator"><svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg></div>
                 <div id="next-episode-overlay" class="hidden absolute inset-0 bg-black/80 z-40 flex-col items-end justify-center p-8 text-right">
                     <div class="bg-black/50 p-6 rounded-lg backdrop-blur-md">
                         <p class="text-gray-400 text-lg">A seguir</p>
@@ -193,43 +199,27 @@
                         <button id="play-next-btn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">Assistir Agora</button>
                     </div>
                 </div>
-
                 <div id="player-error-display" class="hidden absolute inset-0 flex items-center justify-center bg-black/80 z-30"><p class="text-white text-lg p-8 text-center"></p></div>
-                
                 <button id="skip-intro-btn" class="hidden absolute bottom-24 right-4 bg-black/70 text-white py-2 px-4 rounded-lg backdrop-blur-sm hover:bg-white hover:text-black transition-colors z-30">Pular Abertura</button>
-                
-                <!-- Controles do Player -->
                 <div id="player-controls" class="absolute bottom-0 left-0 right-0 p-4 pt-8 player-controls-gradient transition-opacity duration-300 z-30">
-                    <!-- Barra de Progresso -->
                     <div id="progress-bar-container" class="w-full h-4 group/progress flex items-center cursor-pointer mb-2">
                          <div class="w-full h-1 group-hover/progress:h-2 bg-gray-600 rounded transition-all">
                              <div id="progress-bar" class="h-full bg-indigo-500 rounded" style="width: 0%;"></div>
                          </div>
                     </div>
-                    
                     <div class="flex items-center justify-between text-white w-full">
-                        <!-- Controles da Esquerda -->
                         <div class="flex items-center space-x-2 md:space-x-4">
                             <button id="rewind-btn" class="p-2"></button>
                             <button id="play-pause-btn" class="p-2"></button>
                             <button id="forward-btn" class="p-2"></button>
-
                             <div class="flex items-center space-x-2 volume-container">
                                 <button id="volume-btn" class="p-2"></button>
-                                <div class="volume-slider-container">
-                                   <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" class="">
-                                </div>
+                                <div class="volume-slider-container"><input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1"></div>
                             </div>
                         </div>
-
-                        <!-- Time Display -->
                          <div class="hidden md:flex items-center space-x-2 text-sm">
-                             <span id="current-time">00:00</span>
-                             <span>/</span>
-                             <span id="duration">00:00</span>
+                             <span id="current-time">00:00</span><span>/</span><span id="duration">00:00</span>
                          </div>
-                        
-                        <!-- Controles da Direita -->
                         <div class="flex items-center space-x-2 md:space-x-4">
                             <button id="fullscreen-btn" class="p-2"></button>
                         </div>
@@ -244,78 +234,15 @@
 
         <div id="series-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
         <div id="movies-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
+        <div id="channels-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
         <div id="genres-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
         <div id="genre-results-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="soon-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="requests-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
         
-        <div id="profile-view" class="hidden pt-24 px-4 md:px-10 pb-24">
-            <div class="max-w-6xl mx-auto">
-                <h2 class="text-3xl font-bold mb-8">Conta e Definições</h2>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
-                    <!-- Sidebar Navigation -->
-                    <aside class="md:col-span-1">
-                        <nav id="profile-sidebar-nav" class="flex flex-col space-y-2">
-                            <a href="#details" data-section="details" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Perfil</a>
-                            <a href="#plan" data-section="plan" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Plano e Faturação</a>
-                            <a href="#playback" data-section="playback" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Reprodução</a>
-                            <a href="#mylist" data-section="mylist" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Minha Lista</a>
-                             <a href="#switch" data-section="switch" id="logout-btn" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Sair</a>
-                        </nav>
-                    </aside>
-                    <!-- Content Area -->
-                    <main class="md:col-span-3">
-                        <!-- Profile Details Section -->
-                        <div id="profile-section-details" class="profile-section">
-                            <h3 class="text-2xl font-bold mb-6">Detalhes do Perfil</h3>
-                            <div class="bg-gray-800/30 p-6 rounded-lg flex flex-col sm:flex-row items-center gap-6">
-                                <div id="change-avatar-button" data-action="editCurrentProfile" class="relative group cursor-pointer">
-                                    <img id="profile-avatar-img" src="https://placehold.co/100x100/4f46e5/ffffff?text=U" alt="User Avatar" class="w-24 h-24 rounded-full transition-all duration-300 group-hover:ring-4 group-hover:ring-indigo-500 object-cover">
-                                    <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
-                                    </div>
-                                </div>
-                                <div class="text-center sm:text-left">
-                                    <p id="profile-name" class="text-xl font-bold">Utilizador 1</p>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Plan & Billing Section -->
-                        <div id="profile-section-plan" class="profile-section hidden">
-                            <h3 class="text-2xl font-bold mb-6">Plano e Faturação</h3>
-                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-4">
-                                <div>
-                                    <p class="text-gray-400">Plano Atual</p>
-                                    <p class="text-xl font-bold">Premium</p>
-                                </div>
-                                <hr class="border-gray-700">
-                                <div>
-                                    <p class="text-gray-400">Forma de Pagamento</p>
-                                    <p>**** **** **** 1234</p>
-                                </div>
-                                <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition">Gerir Assinatura</button>
-                            </div>
-                        </div>
-                        <!-- Playback Settings Section -->
-                        <div id="profile-section-playback" class="profile-section hidden">
-                            <h3 class="text-2xl font-bold mb-6">Controles de Reprodução</h3>
-                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-4">
-                                <div>
-                                    <label for="skip-time-input" class="block text-gray-400 mb-2">Tempo de avanço/retrocesso (segundos)</label>
-                                    <input type="number" id="skip-time-input" min="5" max="30" step="1" class="w-24 p-2 bg-gray-900/50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                </div>
-                            </div>
-                        </div>
-                        <!-- My List Section -->
-                        <div id="profile-section-mylist" class="profile-section hidden">
-                            <h3 class="text-2xl font-bold mb-6">Minha Lista</h3>
-                            <div id="mylist-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
-                            <p id="mylist-no-results" class="hidden text-gray-400">A sua lista está vazia. Adicione conteúdo para o ver aqui.</p>
-                        </div>
-                    </main>
-                </div>
-            </div>
-        </div>
+        <div id="profile-view" class="hidden pt-24 px-4 md:px-10 pb-24"></div>
 
-        <div id="avatar-selection-view" class="hidden"></div> <!-- Deprecated, functionality moved to edit-profile-view -->
+        <div id="avatar-selection-view" class="hidden"></div>
         
         <!-- =========== Toast Notification =========== -->
         <div id="toast-notification" class="fixed bottom-5 right-5 bg-indigo-600 text-white py-2 px-5 rounded-lg shadow-lg toast z-[220]">
@@ -325,26 +252,17 @@
 
     <!-- =========== Mobile Navigation =========== -->
     <nav id="mobile-nav" class="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 p-2 flex justify-around md:hidden z-50">
-        <a href="#home" data-action="showView" data-view-name="home" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            <span class="text-xs">Início</span>
-        </a>
-        <a href="#series" data-action="showView" data-view-name="series" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
-            <span class="text-xs">Séries</span>
-        </a>
-        <a href="#movies" data-action="showView" data-view-name="movies" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
-           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-            <span class="text-xs">Filmes</span>
-        </a>
-        <a href="#genres" data-action="showView" data-view-name="genres" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-            <span class="text-xs">Gêneros</span>
-        </a>
+        <a href="#home" data-action="showView" data-view-name="home" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md"><i class="fas fa-home text-lg mb-1"></i><span class="text-xs">Início</span></a>
+        <a href="#series" data-action="showView" data-view-name="series" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md"><i class="fas fa-tv text-lg mb-1"></i><span class="text-xs">Séries</span></a>
+        <a href="#movies" data-action="showView" data-view-name="movies" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md"><i class="fas fa-film text-lg mb-1"></i><span class="text-xs">Filmes</span></a>
+        <a href="#channels" data-action="showView" data-view-name="channels" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md"><i class="fas fa-broadcast-tower text-lg mb-1"></i><span class="text-xs">Canais</span></a>
+        <a href="#genres" data-action="showView" data-view-name="genres" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md"><i class="fas fa-tags text-lg mb-1"></i><span class="text-xs">Gêneros</span></a>
     </nav>
     
+    <footer id="main-footer" class="pb-24 md:pb-0 pt-12 px-4 md:px-10 text-center text-gray-500 text-sm">
+        <!-- Footer content will be dynamically inserted here -->
+    </footer>
+
     <!-- External Script -->
     <script type="module" src="script.js"></script>
 </body>
