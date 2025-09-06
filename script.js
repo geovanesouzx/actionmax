@@ -755,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         detailView.innerHTML = `
-            <section class="relative pt-24 pb-24" style="background-image: url('${item.backdrop}'); background-size: cover; background-position: center;">
+            <section class="relative pt-24 pb-12" style="background-image: url('${item.backdrop}'); background-size: cover; background-position: center;">
                 <div class="absolute inset-0 bg-black/50 backdrop-blur-xl"></div>
                 <div class="absolute inset-0 detail-backdrop-gradient"></div>
                 <div class="relative z-10 container mx-auto px-4 md:px-10">
@@ -1103,8 +1103,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Adicionado à sua lista");
         }
         saveProfiles();
+    
+        // Update both possible buttons to keep UI consistent
         updateMyListButton(itemId, 'detail-mylist-button');
-        // updateMyListButton(11, 'hero-mylist-button'); // This should be dynamic
+        const heroItem = Object.values(itemDetails).find(item => item.isHero);
+        if (heroItem && heroItem.id === itemId) {
+            updateMyListButton(itemId, 'hero-mylist-button');
+        }
     }
 
     function updateMyListButton(itemId, elementId) {
@@ -1548,4 +1553,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+" from the Canvas and the query is "o botão de salvar em minha lista no filme de detalhes não esta funcionando corretamente"
 
