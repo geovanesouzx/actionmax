@@ -102,9 +102,6 @@ body {
 .mobile-nav-link.active {
     color: #4f46e5;
 }
-.nav-link.text-white {
-    color: #ffffff !important;
-}
 
 .spinner {
     width: 50px;
@@ -124,4 +121,3 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
-
