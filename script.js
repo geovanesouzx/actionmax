@@ -38,6 +38,21 @@ const db = getFirestore(app); // Initialize Firestore
 const googleProvider = new GoogleAuthProvider();
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Style for synopsis truncation
+    const style = document.createElement('style');
+    style.textContent = `
+        .synopsis-text {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: -webkit-line-clamp 0.3s ease-in-out;
+        }
+        .synopsis-truncated {
+            -webkit-line-clamp: 3; /* Truncate to 3 lines */
+        }
+    `;
+    document.head.appendChild(style);
+
     // Data will be loaded from Firestore
     let catalog = [];
     let carousels = [];
@@ -461,6 +476,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         mainHeader.style.position = (viewName === 'home') ? 'fixed' : 'absolute';
+        
+        if (viewName === 'home') {
+            if (window.scrollY <= 50) {
+                mainHeader.classList.remove('bg-black/80', 'backdrop-blur-sm');
+            } else {
+                mainHeader.classList.add('bg-black/80', 'backdrop-blur-sm');
+            }
+        } else {
+            mainHeader.classList.add('bg-black/80', 'backdrop-blur-sm');
+        }
+
 
         const genre = (typeof params === 'object') ? params.genre : null;
         let url = `#${viewName}`;
@@ -706,6 +732,17 @@ document.addEventListener('DOMContentLoaded', () => {
             bottomContent = `<div class="mt-8"><div class="border-b border-gray-700">${seasonTabs}</div><div id="episodes-list" class="mt-4"></div></div>`;
         }
         
+        const synopsis_limit = 250;
+        let synopsisHTML = `<p class="mb-6 max-w-3xl mx-auto md:mx-0">${item.synopsis}</p>`;
+        if (item.synopsis && item.synopsis.length > synopsis_limit) {
+            synopsisHTML = `
+                <div class="mb-6">
+                    <p id="synopsis-text" class="max-w-3xl mx-auto md:mx-0 synopsis-text synopsis-truncated">${item.synopsis}</p>
+                    <button id="synopsis-toggle-btn" class="text-indigo-400 font-semibold hover:text-indigo-300 mt-2">Ver mais</button>
+                </div>
+            `;
+        }
+
         const commentsSectionHTML = `
             <div class="mt-10 pt-8 border-t border-gray-800">
                 <h3 class="text-2xl font-bold mb-4">Comentários</h3>
@@ -718,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         detailView.innerHTML = `
-            <section class="relative pt-24 pb-24 min-h-screen" style="background-image: url('${item.backdrop}'); background-size: cover; background-position: center;">
+            <section class="relative pt-24 pb-24" style="background-image: url('${item.backdrop}'); background-size: cover; background-position: center;">
                 <div class="absolute inset-0 bg-black/50 backdrop-blur-xl"></div>
                 <div class="absolute inset-0 detail-backdrop-gradient"></div>
                 <div class="relative z-10 container mx-auto px-4 md:px-10">
@@ -727,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="md:col-span-3 text-white text-center md:text-left">
                             <h2 class="text-4xl md:text-6xl font-bold">${item.title}</h2>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 my-4 text-sm text-gray-300"><span>${item.year}</span> <span class="border border-gray-400 px-2 py-0.5 rounded text-xs">${item.rating}</span> <span>${item.duration}</span></div>
-                            <p class="mb-6 max-w-3xl mx-auto md:mx-0">${item.synopsis}</p>
+                            ${synopsisHTML}
                             <div class="mb-6"><p><span class="font-semibold text-gray-400">Gêneros:</span> ${item.genres.join(', ')}</p><p><span class="font-semibold text-gray-400">Elenco:</span> ${item.cast.join(', ')}</p></div>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
                                 <button data-action="playContent" data-item-id="${itemId}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">Assistir</button>
@@ -744,6 +781,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${commentsSectionHTML}
                 </div>
             </section>`;
+            
+        const synopsisToggleBtn = document.getElementById('synopsis-toggle-btn');
+        if (synopsisToggleBtn) {
+            synopsisToggleBtn.addEventListener('click', () => {
+                const synopsisText = document.getElementById('synopsis-text');
+                synopsisText.classList.toggle('synopsis-truncated');
+                synopsisToggleBtn.textContent = synopsisText.classList.contains('synopsis-truncated') ? 'Ver mais' : 'Ver menos';
+            });
+        }
+
 
         renderStarRating(itemId);
         if (item.type === 'series' && item.seasons) {
