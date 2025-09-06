@@ -141,26 +141,22 @@
         <!-- =========== Home View =========== -->
         <div id="home-view" class="hidden">
             <!-- Hero Section -->
-            <section class="relative h-screen flex items-center text-white">
+            <section id="hero-section" class="relative h-screen flex items-center text-white">
                 <div class="absolute inset-0 overflow-hidden">
-                    <img id="hero-backdrop" class="w-full h-full object-cover" src="https://image.tmdb.org/t/p/original/uNTrRKIOyKYISthoeizghtXPEOK.jpg" alt="Dandadan background">
+                    <img id="hero-backdrop" class="w-full h-full object-cover" src="https://placehold.co/1920x1080/0c0c0c/0c0c0c" alt="hero background">
                     <div class="absolute inset-0 hero-gradient"></div>
                 </div>
-                <div class="relative z-10 p-6 md:p-10 lg:p-16 w-full md:w-1/2 text-center md:text-left">
-                    <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg">Dandadan</h2>
-                    <div class="flex items-center justify-center md:justify-start space-x-4 my-3 md:my-4 text-xs md:text-sm">
-                        <span class="font-semibold">2024</span>
-                        <span class="border border-gray-400 text-gray-400 px-2 py-0.5 rounded text-xs">16+</span>
-                        <span>2 Temporadas</span>
-                         <span class="bg-indigo-500 text-white font-bold px-2 py-0.5 rounded text-xs">HD</span>
-                    </div>
-                    <p class="text-sm md:text-base text-gray-300 drop-shadow-md mb-5 md:mb-6 max-w-2xl mx-auto md:mx-0">Uma rapariga que acredita em fantasmas e um rapaz que acredita em extraterrestres deparam-se com um mundo paranormal onde ambos estão certos.</p>
-                    <div class="flex items-center justify-center md:justify-start space-x-4">
-                        <button data-action="showView" data-view-name="player" data-item-id="11" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 md:py-3 md:px-8 rounded-lg flex items-center space-x-2 transition text-sm md:text-base">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 md:w-6 md:h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
-                            <span>Assistir Agora</span>
-                        </button>
-                        <button id="hero-mylist-button" data-action="toggleMyList" data-item-id="11" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-2 px-4 md:py-3 md:px-8 rounded-lg flex items-center space-x-2 transition text-sm md:text-base"></button>
+                <!-- Hero content will be dynamically inserted here -->
+                <div id="hero-content-container" class="relative z-10 p-6 md:p-10 lg:p-16 w-full md:w-1/2 text-center md:text-left">
+                     <!-- Placeholder while loading -->
+                     <div class="space-y-4 animate-pulse">
+                        <div class="h-12 bg-gray-700 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-700 rounded w-1/2"></div>
+                        <div class="h-20 bg-gray-700 rounded w-full"></div>
+                        <div class="flex gap-4">
+                            <div class="h-12 bg-gray-700 rounded w-36"></div>
+                            <div class="h-12 bg-gray-700 rounded w-36"></div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -353,3 +349,4 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
+

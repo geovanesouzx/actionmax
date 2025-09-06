@@ -13,6 +13,8 @@ import {
     getFirestore,
     collection,
     getDocs,
+    getDoc,
+    doc
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -422,9 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (viewName === 'home') {
+            await renderHeroSection();
             renderCarousels();
-            // This needs to be dynamic or removed if hero is dynamic
-            // updateMyListButton(11, 'hero-mylist-button'); 
         } else if (viewName === 'detail' && itemId) {
             await renderDetailPage(itemId);
         } else if (viewName === 'player' && itemId) {
@@ -462,6 +463,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Core App Logic & Player ---
+
+    async function renderHeroSection() {
+        const heroContainer = document.getElementById('hero-content-container');
+        const heroBackdrop = document.getElementById('hero-backdrop');
+        if (!heroContainer || !heroBackdrop) return;
+
+        let heroItem = Object.values(itemDetails).find(item => item.isHero) || catalog[0];
+        
+        if (!heroItem) {
+            heroContainer.innerHTML = `<p class="text-lg">Nenhum conteúdo em destaque encontrado.</p>`;
+            return;
+        }
+        
+        const heroDetails = itemDetails[heroItem.id];
+        if(!heroDetails) return;
+
+        heroBackdrop.src = heroDetails.backdrop;
+        heroBackdrop.alt = `${heroDetails.title} background`;
+
+        heroContainer.innerHTML = `
+            <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg">${heroDetails.title}</h2>
+            <div class="flex items-center justify-center md:justify-start space-x-4 my-3 md:my-4 text-xs md:text-sm">
+                <span class="font-semibold">${heroDetails.year}</span>
+                <span class="border border-gray-400 text-gray-400 px-2 py-0.5 rounded text-xs">${heroDetails.rating}</span>
+                <span>${heroDetails.duration}</span>
+                 <span class="bg-indigo-500 text-white font-bold px-2 py-0.5 rounded text-xs">HD</span>
+            </div>
+            <p class="text-sm md:text-base text-gray-300 drop-shadow-md mb-5 md:mb-6 max-w-2xl mx-auto md:mx-0">${heroDetails.synopsis}</p>
+            <div class="flex items-center justify-center md:justify-start space-x-4">
+                <button data-action="playContent" data-item-id="${heroDetails.id}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 md:py-3 md:px-8 rounded-lg flex items-center space-x-2 transition text-sm md:text-base">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 md:w-6 md:h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+                    <span>Assistir Agora</span>
+                </button>
+                <button id="hero-mylist-button" data-action="toggleMyList" data-item-id="${heroDetails.id}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-2 px-4 md:py-3 md:px-8 rounded-lg flex items-center space-x-2 transition text-sm md:text-base"></button>
+            </div>
+        `;
+        
+        updateMyListButton(heroDetails.id, 'hero-mylist-button');
+    }
 
     function initPlayer(url, itemId) {
         const profile = getCurrentProfile();
