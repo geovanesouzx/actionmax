@@ -1336,9 +1336,12 @@ document.addEventListener('DOMContentLoaded', () => {
             progressBar.style.width = `${(videoPlayer.currentTime / videoPlayer.duration) * 100}%`; 
             document.getElementById('current-time').textContent = formatTime(videoPlayer.currentTime); 
         }
-        if (currentEpisodeData && currentEpisodeData.intro) {
+        if (currentEpisodeData && currentEpisodeData.intro && currentEpisodeData.intro.end > 0) {
             const { start, end } = currentEpisodeData.intro;
-            skipIntroBtn.classList.toggle('hidden', !(videoPlayer.currentTime > start && videoPlayer.currentTime < end));
+            const showButton = videoPlayer.currentTime > start && videoPlayer.currentTime < end;
+            skipIntroBtn.classList.toggle('hidden', !showButton);
+        } else {
+            skipIntroBtn.classList.add('hidden');
         }
         
         const remainingTime = videoPlayer.duration - videoPlayer.currentTime;
