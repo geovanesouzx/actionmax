@@ -14,7 +14,9 @@ import {
     collection,
     getDocs,
     getDoc,
-    doc
+    doc,
+    query,
+    orderBy
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -101,13 +103,14 @@ document.addEventListener('DOMContentLoaded', () => {
             catalog = catalogData;
             itemDetails = itemDetailsData;
 
-            // Fetch carousels configuration
-            const carouselsSnapshot = await getDocs(collection(db, 'carousels'));
+            // Fetch carousels configuration, ordered by the 'order' field
+            const carouselsQuery = query(collection(db, 'carousels'), orderBy('order'));
+            const carouselsSnapshot = await getDocs(carouselsQuery);
             const carouselsData = [];
             carouselsSnapshot.forEach(doc => {
                 carouselsData.push({ id: doc.id, ...doc.data() });
             });
-            carousels = carouselsData.sort((a, b) => (a.order || 0) - (b.order || 0));
+            carousels = carouselsData;
 
         } catch (error) {
             console.error("Erro ao buscar dados do Firestore:", error);
@@ -324,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getFilteredCatalog() {
         const profile = getCurrentProfile();
         if (profile && profile.isKid) {
-            const allowedRatings = ['Livre', '10+'];
+            const allowedRatings = ['Livre', '10+', 'L', '10'];
             return catalog.filter(item => {
                 const details = itemDetails[item.id];
                 return details && allowedRatings.includes(details.rating);
@@ -606,6 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!profile) return;
         const filteredCatalogForProfile = getFilteredCatalog();
         
+        // 1. Continue Watching Carousel
         const continueWatchingItems = Object.keys(profile.watchProgress)
             .map(id => {
                 const progress = profile.watchProgress[id];
@@ -621,25 +625,15 @@ document.addEventListener('DOMContentLoaded', () => {
             carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, continueWatchingItems);
         }
 
-        const dynamicCarouselsHTML = carousels.map(cat => {
+        // 2. Dynamic Carousels from Firestore
+        const dynamicCarouselsHTML = carousels.map(carouselConfig => {
             const items = filteredCatalogForProfile.filter(catalogItem => {
                 const details = itemDetails[catalogItem.id];
-                if (!details) return false;
-
-                if (cat.filter_type === 'type' && details.type === cat.filter_value) {
-                    return true;
-                }
-                if (cat.filter_type === 'ids' && Array.isArray(cat.filter_value) && cat.filter_value.includes(details.id)) {
-                    return true;
-                }
-                 if (cat.filter_type === 'genre' && Array.isArray(details.genres) && details.genres.includes(cat.filter_value)) {
-                    return true;
-                }
-                return false;
+                return details && Array.isArray(details.carousel_ids) && details.carousel_ids.includes(carouselConfig.id);
             });
-
+    
             if (items.length === 0) return '';
-            return createCarousel({ title: cat.title }, items);
+            return createCarousel({ title: carouselConfig.title }, items);
         }).join('');
         
         carouselsHTML += dynamicCarouselsHTML;
