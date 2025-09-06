@@ -9,6 +9,12 @@ import {
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { 
+    getFirestore,
+    collection,
+    getDocs,
+} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -23,74 +29,15 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app); // Initialize Firestore
 const googleProvider = new GoogleAuthProvider();
 
 document.addEventListener('DOMContentLoaded', () => {
-    const catalog = [
-        { id: 1, title: 'A Sombra do Amanhã', type: 'movie', poster: 'https://placehold.co/300x450/1a202c/ffffff?text=Sombra' },
-        { id: 2, title: 'Herdeiros da Galáxia', type: 'series', poster: 'https://placehold.co/300x450/2d3748/ffffff?text=Herdeiros' },
-        { id: 11, title: 'Dandadan', type: 'series', poster: 'https://image.tmdb.org/t/p/original/39PyLzFxVdE7sr3aoELKsv1e7d4.jpg' },
-        { id: 13, title: 'Trailer Exemplo (Iframe)', type: 'movie', poster: 'https://placehold.co/300x450/9d4edd/ffffff?text=Iframe' },
-        { id: 10, title: 'M3GAN 2.0', type: 'movie', poster: 'https://placehold.co/300x450/333333/ffffff?text=M3GAN+2.0' },
-        { id: 12, title: 'Sintel', type: 'movie', poster: 'https://placehold.co/300x450/fca311/000000?text=Sintel' },
-        { id: 5, title: 'Crônicas de Cyberia', type: 'movie', poster: 'https://placehold.co/300x450/a0aec0/000000?text=Cyberia' },
-        { id: 14, title: 'Thunderbolts', type: 'movie', poster: 'https://placehold.co/300x450/f59e0b/ffffff?text=Thunderbolts' },
-        { id: 15, title: "Grey's Anatomy", type: 'series', poster: "https://placehold.co/300x450/6b7280/ffffff?text=Grey's+Anatomy" }
-    ];
+    // Data will be loaded from Firestore
+    let catalog = [];
+    let carousels = [];
+    let itemDetails = {};
 
-    const initialCarousels = [
-        { title: 'Novas Séries', filter: item => item.type === 'series' },
-        { title: 'Tendências', filter: item => [10, 11, 12, 5, 13, 14].includes(item.id) },
-    ];
-
-    const itemDetails = {
-        1: { id: 1, title: 'A Sombra do Amanhã', type: 'movie', backdrop: 'https://placehold.co/1920x1080/1a202c/1a202c', year: 2024, rating: '14+', duration: '1h 55min', quality: ['HD', '5.1'], synopsis: 'Um detetive investiga um caso que o leva a questionar a sua própria realidade.', genres: ['Suspense', 'Mistério'], cast: ['Ator A', 'Atriz B'], trailer_url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd', ratings: { avg: 4.5, count: 120 } },
-        2: { id: 2, title: 'Herdeiros da Galáxia', type: 'series', backdrop: 'https://placehold.co/1920x1080/2d3748/2d3748', year: 2023, rating: '12+', duration: '1 Temporada', quality: ['4K', 'HD'], synopsis: 'Jovens heróis precisam de se unir para salvar a galáxia de uma antiga ameaça.', genres: ['Aventura', 'Ficção Científica'], cast: ['Ator C', 'Atriz D'], trailer_url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd', ratings: { avg: 4.8, count: 250 } },
-        5: { id: 5, type: 'movie', title: 'Crônicas de Cyberia', backdrop: 'https://placehold.co/1920x1080/111827/111827', year: 2025, rating: '16+', duration: '2h 15min', quality: ['4K', 'HD', '5.1'], synopsis: 'Num futuro distópico governado por inteligências artificiais...', genres: ['Ficção Científica', 'Ação', 'Thriller'], cast: ['Ana de Oliveira', 'Marcos Silva'], trailer_url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd', ratings: { avg: 4.2, count: 98 } },
-        10: { id: 10, type: 'movie', title: 'M3GAN 2.0', backdrop: 'https://placehold.co/1920x1080/000000/000000?text=M3GAN', year: 2025, rating: '14+', duration: '1h 45min', quality: ['4K', 'HD'], synopsis: 'A jornada de M3GAN e Cady continua...', genres: ['Terror', 'Ficção Científica'], cast: ['Allison Williams', 'Violet McGraw'], trailer_url: 'https://vods1.watchingvs.com/m/M3GAN%202.0_2025_tt26342662.mp4', ratings: { avg: 3.9, count: 150 } },
-        11: {
-            id: 11, type: 'series', title: 'Dandadan', backdrop: 'https://image.tmdb.org/t/p/original/uNTrRKIOyKYISthoeizghtXPEOK.jpg', year: 2024, rating: '16+', duration: '2 Temporadas', quality: ['HD'], synopsis: 'Uma rapariga que acredita em fantasmas e um rapaz que acredita em extraterrestres deparam-se com um mundo paranormal onde ambos estão certos.', genres: ['Ação', 'Comédia', 'Sobrenatural'], cast: ['Personagem A', 'Personagem B'], ratings: { avg: 4.9, count: 500 },
-            seasons: {
-                '1': { title: 'Temporada 1', episodes: [{ id: 's1e1', title: 'Episódio 1', url: 'https://api.anivideo.net/videohls.php?d=https://cdn-s01.mywallpaper-4k-image.net/stream/d/dandadan-dublado/01.mp4/index.m3u8&nocache1757020645', intro: { start: 15, end: 90 } }] },
-                '2': { title: 'Temporada 2', episodes: [
-                    { id: 's2e1', title: 'Episódio 1', url: 'https://api.anivideo.net/videohls.php?d=https://cdn-s01.mywallpaper-4k-image.net/stream/d/dandadan-2-dublado/01.mp4/index.m3u8&nocache1757012040', intro: { start: 10, end: 85 } },
-                    { id: 's2e8', title: 'Episódio 8', url: 'https://api.anivideo.net/videohls.php?d=https://cdn-s01.mywallpaper-4k-image.net/stream/d/dandadan-2-dublado/08.mp4/index.m3u8&nocache1757011965', intro: { start: 12, end: 88 } },
-                    { id: 's2e9', title: 'Episódio 9', url: 'https://api.anivideo.net/videohls.php?d=https://cdn-s01.mywallpaper-4k-image.net/stream/d/dandadan-2-dublado/09.mp4/index.m3u8&nocache1757074820', intro: { start: 15, end: 92 } }
-                ]}
-            }
-        },
-        12: { id: 12, type: 'movie', title: 'Sintel', backdrop: 'https://placehold.co/1920x1080/fca311/fca311', year: 2010, rating: 'Livre', duration: '15 min', quality: ['HD'], synopsis: 'Uma jovem procura pelo seu dragão de estimação.', genres: ['Animação', 'Fantasia'], cast: ['Vozes'], trailer_url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd', ratings: { avg: 4.7, count: 1000 } },
-        13: { id: 13, type: 'movie', playerType: 'iframe', title: 'Trailer Exemplo (Iframe)', backdrop: 'https://placehold.co/1920x1080/9d4edd/9d4edd', poster: 'https://placehold.co/300x450/9d4edd/ffffff?text=Iframe', year: 2024, rating: 'Livre', duration: '3 min', quality: ['HD'], synopsis: 'Este é um exemplo de conteúdo carregado através de um Iframe, como um trailer do YouTube.', genres: ['Exemplo'], cast: ['N/A'], ratings: { avg: 3.0, count: 50 } },
-        14: { id: 14, type: 'movie', playerType: 'iframe', title: 'Thunderbolts', backdrop: 'https://placehold.co/1920x1080/4b5563/4b5563?text=Thunderbolts', poster: 'https://placehold.co/300x450/f59e0b/ffffff?text=Thunderbolts', year: 2025, rating: '14+', duration: '2h 10min', quality: ['HD'], synopsis: 'Um grupo de anti-heróis e vilões reformados é recrutado pelo governo para missões perigosas.', genres: ['Ação', 'Aventura', 'Ficção Científica'], cast: ['Florence Pugh', 'Sebastian Stan', 'David Harbour'], trailer_url: 'https://redecanais.ee/player3/server.php?server=RCFServer2&subfolder=ondemand&vid=THNDRBOLTS', ratings: { avg: 4.1, count: 300 } },
-        15: { 
-            id: 15, type: 'series', title: "Grey's Anatomy", backdrop: "https://placehold.co/1920x1080/6b7280/111827?text=Grey's+Anatomy", year: 2005, rating: '10+', duration: '15+ Temporadas', quality: ['HD'], synopsis: 'Um drama que acompanha a vida pessoal e profissional de um grupo de médicos no hospital Grey Sloan Memorial, em Seattle.', genres: ['Drama', 'Médico', 'Romance'], cast: ['Ellen Pompeo', 'Chandra Wilson', 'James Pickens Jr.'], ratings: { avg: 4.6, count: 8500 },
-            seasons: {
-                '1': { title: 'Temporada 1', episodes: [
-                    { id: 's1e1', title: 'Episódio 1: A Hard Day\'s Night', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd', thumbnail: 'https://placehold.co/320x180/6b7280/ffffff?text=S1E1', synopsis: 'Meredith Grey começa o seu internato no Seattle Grace Hospital e conhece os seus colegas.' },
-                    { id: 's1e2', title: 'Episódio 2: The First Cut Is the Deepest', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd', thumbnail: 'https://placehold.co/320x180/6b7280/ffffff?text=S1E2', synopsis: 'Um caso de violação choca os internos, enquanto Meredith arrisca a sua carreira para salvar um recém-nascido.' },
-                    { id: 's1e3', title: 'Episódio 3: Winning a Battle, Losing the War', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd', thumbnail: 'https://placehold.co/320x180/6b7280/ffffff?text=S1E3', synopsis: 'Uma corrida de bicicletas anual deixa o hospital cheio de feridos, e os internos competem por casos.' }
-                ]},
-                '2': { title: 'Temporada 2', episodes: [
-                    { id: 's2e1', title: 'Episódio 1: Raindrops Keep Falling on My Head', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd', thumbnail: 'https://placehold.co/320x180/6b7280/ffffff?text=S2E1', synopsis: 'Meredith tem de lidar com a chegada de Addison, a mulher de Derek, e Joe, o dono do bar, desmaia.' },
-                    { id: 's2e2', title: 'Episódio 2: Enough is Enough', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd', thumbnail: 'https://placehold.co/320x180/6b7280/ffffff?text=S2E2', synopsis: 'Os internos continuam a lidar com os seus problemas pessoais e profissionais no hospital.' }
-                ]},
-                '3': { title: 'Temporada 3', episodes: [ { id: 's3e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '4': { title: 'Temporada 4', episodes: [ { id: 's4e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '5': { title: 'Temporada 5', episodes: [ { id: 's5e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '6': { title: 'Temporada 6', episodes: [ { id: 's6e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '7': { title: 'Temporada 7', episodes: [ { id: 's7e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '8': { title: 'Temporada 8', episodes: [ { id: 's8e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '9': { title: 'Temporada 9', episodes: [ { id: 's9e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '10': { title: 'Temporada 10', episodes: [ { id: 's10e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '11': { title: 'Temporada 11', episodes: [ { id: 's11e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '12': { title: 'Temporada 12', episodes: [ { id: 's12e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '13': { title: 'Temporada 13', episodes: [ { id: 's13e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '14': { title: 'Temporada 14', episodes: [ { id: 's14e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]},
-                '15': { title: 'Temporada 15', episodes: [ { id: 's15e1', title: 'Episódio 1', url: 'https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd' } ]}
-            }
-        }
-    };
-    
     const avatars = [
         { 
             category: 'Especial',
@@ -131,6 +78,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const iframePlayer = document.getElementById('iframe-player');
     const errorDisplay = document.getElementById('player-error-display');
     let hlsInstance;
+
+    // --- Firestore Data Fetching ---
+    async function fetchFirestoreData() {
+        try {
+            // Fetch content (movies/series)
+            const contentSnapshot = await getDocs(collection(db, 'content'));
+            const catalogData = [];
+            const itemDetailsData = {};
+            contentSnapshot.forEach(doc => {
+                const data = { id: doc.id, ...doc.data() };
+                catalogData.push({
+                    id: data.id,
+                    title: data.title,
+                    type: data.type,
+                    poster: data.poster
+                });
+                itemDetailsData[data.id] = data;
+            });
+            catalog = catalogData;
+            itemDetails = itemDetailsData;
+
+            // Fetch carousels configuration
+            const carouselsSnapshot = await getDocs(collection(db, 'carousels'));
+            const carouselsData = [];
+            carouselsSnapshot.forEach(doc => {
+                carouselsData.push({ id: doc.id, ...doc.data() });
+            });
+            carousels = carouselsData.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        } catch (error) {
+            console.error("Erro ao buscar dados do Firestore:", error);
+            showToast("Não foi possível carregar o catálogo. Tente novamente mais tarde.");
+        }
+    }
     
     // --- Player Mode Functions ---
     async function enterPlayerMode() {
@@ -442,7 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (viewName === 'home') {
             renderCarousels();
-            updateMyListButton(11, 'hero-mylist-button');
+            // This needs to be dynamic or removed if hero is dynamic
+            // updateMyListButton(11, 'hero-mylist-button'); 
         } else if (viewName === 'detail' && itemId) {
             await renderDetailPage(itemId);
         } else if (viewName === 'player' && itemId) {
@@ -582,16 +564,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let carouselsHTML = '';
         const profile = getCurrentProfile();
         if (!profile) return;
-        const filteredCatalog = getFilteredCatalog();
+        const filteredCatalogForProfile = getFilteredCatalog();
         
         const continueWatchingItems = Object.keys(profile.watchProgress)
             .map(id => {
                 const progress = profile.watchProgress[id];
-                // Filter out items that are almost finished
                 if (progress.duration > 0 && (progress.currentTime / progress.duration) > 0.95) {
                     return null;
                 }
-                return filteredCatalog.find(item => item.id == id);
+                return filteredCatalogForProfile.find(item => item.id == id);
             })
             .filter(Boolean);
 
@@ -600,19 +581,35 @@ document.addEventListener('DOMContentLoaded', () => {
             carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, continueWatchingItems);
         }
 
-        carouselsHTML += initialCarousels.map(cat => {
-            const items = filteredCatalog.filter(cat.filter);
-            if (items.length === 0) return '';
-            return createCarousel(cat, items);
-        }).join('');
+        const dynamicCarouselsHTML = carousels.map(cat => {
+            const items = filteredCatalogForProfile.filter(catalogItem => {
+                const details = itemDetails[catalogItem.id];
+                if (!details) return false;
 
+                if (cat.filter_type === 'type' && details.type === cat.filter_value) {
+                    return true;
+                }
+                if (cat.filter_type === 'ids' && Array.isArray(cat.filter_value) && cat.filter_value.includes(details.id)) {
+                    return true;
+                }
+                 if (cat.filter_type === 'genre' && Array.isArray(details.genres) && details.genres.includes(cat.filter_value)) {
+                    return true;
+                }
+                return false;
+            });
+
+            if (items.length === 0) return '';
+            return createCarousel({ title: cat.title }, items);
+        }).join('');
+        
+        carouselsHTML += dynamicCarouselsHTML;
         document.getElementById('carousels-container').innerHTML = carouselsHTML;
     }
     
     function renderGenericPage(viewId, title, type) {
         const container = document.getElementById(viewId);
-        const filteredCatalog = getFilteredCatalog();
-        const filteredItems = filteredCatalog.filter(item => item.type === type);
+        const filteredCatalogForProfile = getFilteredCatalog();
+        const filteredItems = filteredCatalogForProfile.filter(item => item.type === type);
         container.innerHTML = `<h2 class="text-3xl font-bold mb-8">${title}</h2><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="${type}-grid-container"></div>`;
         renderItemsGrid(filteredItems, `${type}-grid-container`);
     }
@@ -875,8 +872,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('mylist-container');
         const noResults = document.getElementById('mylist-no-results');
         const profile = getCurrentProfile();
-        const filteredCatalog = getFilteredCatalog();
-        const myListItems = profile.myList.map(id => filteredCatalog.find(item => item.id == id)).filter(Boolean);
+        const filteredCatalogForProfile = getFilteredCatalog();
+        const myListItems = profile.myList.map(id => filteredCatalogForProfile.find(item => item.id == id)).filter(Boolean);
 
         if (myListItems.length > 0) {
             noResults.classList.add('hidden');
@@ -890,8 +887,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderGenresPage() {
         const genresView = document.getElementById('genres-view');
-        const filteredCatalog = getFilteredCatalog();
-        const allGenres = [...new Set(filteredCatalog.flatMap(item => itemDetails[item.id]?.genres || []))].sort();
+        const filteredCatalogForProfile = getFilteredCatalog();
+        const allGenres = [...new Set(Object.values(itemDetails).flatMap(item => item.genres || []))].sort();
         
         const genresHTML = allGenres.map(genre => `
             <div class="bg-gray-800/50 rounded-lg p-6 text-center text-xl font-bold cursor-pointer hover:bg-indigo-500/50 transition-colors" data-action="showView" data-view-name="genre-results" data-genre="${genre}">
@@ -904,8 +901,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderGenreResultsPage(genre) {
         const resultsView = document.getElementById('genre-results-view');
-        const filteredCatalog = getFilteredCatalog();
-        const results = filteredCatalog.filter(item => itemDetails[item.id]?.genres.includes(genre));
+        const filteredCatalogForProfile = getFilteredCatalog();
+        const results = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.genres.includes(genre));
         
         resultsView.innerHTML = `<h2 class="text-3xl font-bold mb-8">Gênero: <span class="text-indigo-400">${genre}</span></h2><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="genre-results-grid"></div>`;
         renderItemsGrid(results, 'genre-results-grid');
@@ -927,8 +924,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 noResults.classList.add('hidden');
                 return;
             }
-            const filteredCatalog = getFilteredCatalog();
-            const results = filteredCatalog.filter(item => item.title.toLowerCase().includes(query));
+            const filteredCatalogForProfile = getFilteredCatalog();
+            const results = filteredCatalogForProfile.filter(item => item.title.toLowerCase().includes(query));
             if (results.length > 0) {
                 renderItemsGrid(results, 'search-results-container');
                 noResults.classList.add('hidden');
@@ -980,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveProfiles();
         updateMyListButton(itemId, 'detail-mylist-button');
-        updateMyListButton(11, 'hero-mylist-button');
+        // updateMyListButton(11, 'hero-mylist-button'); // This should be dynamic
     }
 
     function updateMyListButton(itemId, elementId) {
@@ -988,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!button) return;
         const profile = getCurrentProfile();
         if(!profile) return;
-        const isInList = profile.myList.includes(itemId);
+        const isInList = profile.myList.includes(String(itemId));
         if (isInList) {
             button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" /></svg><span>Na Minha Lista</span>`;
         } else {
@@ -1295,31 +1292,36 @@ document.addEventListener('DOMContentLoaded', () => {
         registerView.classList.toggle('flex', view === 'register');
     }
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async user => {
+        loadingScreen.classList.remove('opacity-0');
+        loadingScreen.classList.remove('hidden');
+        loadingScreen.classList.add('flex');
+
+        if (user) {
+            console.log("Utilizador autenticado:", user.uid);
+            await fetchFirestoreData();
+            profiles = loadProfiles(user.uid);
+            loginView.classList.add('hidden');
+            registerView.classList.add('hidden');
+            showProfileSelectionView(true);
+        } else {
+            console.log("Nenhum utilizador autenticado.");
+            allViews.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !['login-view', 'register-view', 'loading-screen'].includes(id)) {
+                     el.classList.add('hidden');
+                }
+            });
+            mainHeader.classList.add('hidden');
+            currentProfileId = null;
+            profiles = [];
+            showAuthView('login');
+        }
+
         loadingScreen.classList.add('opacity-0');
         setTimeout(() => {
             loadingScreen.classList.add('hidden');
             loadingScreen.classList.remove('flex');
-
-            if (user) {
-                console.log("Utilizador autenticado:", user.uid);
-                profiles = loadProfiles(user.uid);
-                loginView.classList.add('hidden');
-                registerView.classList.add('hidden');
-                showProfileSelectionView(true);
-            } else {
-                console.log("Nenhum utilizador autenticado.");
-                allViews.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el && !['login-view', 'register-view', 'loading-screen'].includes(id)) {
-                         el.classList.add('hidden');
-                    }
-                });
-                mainHeader.classList.add('hidden');
-                currentProfileId = null;
-                profiles = [];
-                showAuthView('login');
-            }
         }, 500);
     });
 
@@ -1394,7 +1396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     break;
                 }
-                case 'toggleMyList': toggleMyList(parseInt(itemId, 10)); break;
+                case 'toggleMyList': toggleMyList(itemId); break;
             }
         }
     });
@@ -1419,3 +1421,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
