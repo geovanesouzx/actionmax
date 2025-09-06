@@ -481,7 +481,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo(0, 0);
 
         const appContainer = document.getElementById('app-container');
-        appContainer.classList.add('pb-24' , 'md:pb-0');
+        appContainer.classList.toggle('pb-24', viewName !== 'detail-view');
+        appContainer.classList.toggle('md:pb-0', viewName !== 'detail-view');
         
         document.querySelectorAll('#main-nav .nav-link').forEach(link => {
             link.classList.toggle('text-white', link.dataset.viewName === viewName);
