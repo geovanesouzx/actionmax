@@ -1074,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detailView.innerHTML = `
             <div id="detail-background" style="background-image: url('${item.backdrop}');">
-                <div class="absolute inset-0 bg-black/50 backdrop-blur-xl"></div>
+                <div class="absolute inset-0 bg-black/50"></div>
                 <div class="absolute inset-0 detail-backdrop-gradient"></div>
             </div>
             <div id="detail-scroll-container" class="custom-scrollbar">
@@ -1839,13 +1839,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // 3. If new, request it
-        if (confirm("Gostaria de solicitar este item?")) {
-           await createRequest(tmdbId, mediaType);
-        }
+        // 3. If new, show confirmation modal
+        const url = `${TMDB_BASE_URL}/${mediaType}/${tmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const modal = document.getElementById('pedido-modal');
+        const modalContent = document.getElementById('pedido-modal-details');
+        const confirmBtn = modal.querySelector('[data-action="confirm-pedido"]');
+
+        modalContent.innerHTML = `
+            <img src="${TMDB_IMG_URL}${data.poster_path}" class="w-24 h-36 object-cover rounded-md flex-shrink-0">
+            <div class="flex-grow">
+                <h3 class="text-2xl font-bold text-white">${data.title || data.name}</h3>
+                <p class="text-gray-400">${(data.release_date || data.first_air_date || '').split('-')[0]}</p>
+            </div>
+        `;
+
+        confirmBtn.dataset.tmdbId = tmdbId;
+        confirmBtn.dataset.mediaType = mediaType;
+        
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('show'), 10);
+    }
+    
+    function closePedidoModal() {
+        const modal = document.getElementById('pedido-modal');
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
     async function createRequest(tmdbId, mediaType) {
+        closePedidoModal();
         const profile = getCurrentProfile();
         if (!profile || !TMDB_API_KEY) return;
         
