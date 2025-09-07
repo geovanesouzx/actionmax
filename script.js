@@ -1073,10 +1073,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const ratingClass = getRatingColorClass(item.rating);
 
         detailView.innerHTML = `
-            <section class="relative pt-24" style="background-image: url('${item.backdrop}'); background-size: cover; background-position: center;">
+            <div id="detail-background" style="background-image: url('${item.backdrop}');">
                 <div class="absolute inset-0 bg-black/50 backdrop-blur-xl"></div>
                 <div class="absolute inset-0 detail-backdrop-gradient"></div>
-                <div class="relative z-10 container mx-auto px-4 md:px-10 pb-12">
+            </div>
+            <div id="detail-scroll-container" class="custom-scrollbar">
+                <div class="relative z-10 container mx-auto px-4 md:px-10 pt-24 pb-12">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
                          <div class="md:col-span-1 flex justify-center"><img src="${catalog.find(c => c.id == itemId)?.poster || 'https://placehold.co/400x600/a0aec0/000000?text=' + item.title.split(' ')[0]}" alt="${item.title}" class="rounded-lg shadow-2xl w-48 md:w-full md:max-w-xs mx-auto"></div>
                         <div class="md:col-span-3 text-white text-center md:text-left">
@@ -1110,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${bottomContent}
                     ${commentsSectionHTML}
                 </div>
-            </section>`;
+            </div>`;
             
         const synopsisToggleBtn = document.getElementById('synopsis-toggle-btn');
         if (synopsisToggleBtn) {
@@ -2272,7 +2274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
         // Actions that shouldn't prevent default browser behavior
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -2364,6 +2366,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             case 'handleTMDBSelect': await handleTMDBSelect(tmdbId, mediaType); break;
             case 'voteForRequest': await voteForRequest(requestId); break;
+            case 'close-pedido-modal':
+            case 'cancel-pedido':
+                closePedidoModal();
+                break;
+            case 'confirm-pedido':
+                await createRequest(actionTarget.dataset.tmdbId, actionTarget.dataset.mediaType);
+                break;
         }
     });
 
