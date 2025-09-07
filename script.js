@@ -45,8 +45,8 @@ const auth = getAuth(app);
 const db = getFirestore(app); // Initialize Firestore
 const googleProvider = new GoogleAuthProvider();
 
-// TMDB API Configuration - **ADICIONE SUA CHAVE AQUI**
-const TMDB_API_KEY = '5a96ced132f8087950c268c2253381e4'; // Substitua pelo seu TMDB API Key
+// TMDB API Configuration
+const TMDB_API_KEY = '5954890d9e9b723ff3032f2ec429fec3'; // Chave da API TMDB
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
@@ -2403,3 +2403,4 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 });
+
