@@ -20,7 +20,8 @@ import {
     onSnapshot,
     updateDoc,
     arrayUnion,
-    writeBatch
+    writeBatch,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -64,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     // --- App State ---
-    let PROFILES_STORAGE_KEY = 'actionMaxProfiles'; // Will be updated with UID
     let profiles = [];
     let currentProfileId = null;
     let editingProfileId = null;
@@ -361,17 +361,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // --- Profile Management Functions ---
+    // --- Profile Management Functions (Firestore) ---
 
-    function loadProfiles(uid) {
-        PROFILES_STORAGE_KEY = `actionMaxProfiles_${uid}`;
-        const profilesJson = localStorage.getItem(PROFILES_STORAGE_KEY);
-        return profilesJson ? JSON.parse(profilesJson) : [];
+    async function loadProfiles(uid) {
+        if (!uid) return [];
+        const profileDocRef = doc(db, 'profiles', uid);
+        try {
+            const docSnap = await getDoc(profileDocRef);
+            if (docSnap.exists()) {
+                return docSnap.data().profiles || [];
+            } else {
+                return [];
+            }
+        } catch (error) {
+            console.error("Erro ao carregar perfis do Firestore:", error);
+            showToast("Não foi possível carregar seus perfis.", true);
+            return [];
+        }
     }
 
-    function saveProfiles() {
-        localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
+    async function saveProfiles() {
+        const user = auth.currentUser;
+        if (!user || !user.uid) {
+            console.error("Tentativa de salvar perfis sem utilizador autenticado.");
+            return;
+        }
+        const profileDocRef = doc(db, 'profiles', user.uid);
+        try {
+            await setDoc(profileDocRef, { profiles: profiles });
+        } catch (error) {
+            console.error("Erro ao salvar perfis no Firestore:", error);
+            showToast("Ocorreu um erro ao salvar suas alterações.", true);
+        }
     }
+
 
     function getCurrentProfile() {
         if (!currentProfileId) return null;
@@ -473,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-profile-view').classList.remove('hidden');
     }
 
-    function handleSaveProfile() {
+    async function handleSaveProfile() {
         const nameInput = document.getElementById('profile-name-input');
         const kidToggle = document.getElementById('kid-profile-toggle');
         const name = nameInput.value.trim();
@@ -502,14 +525,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        saveProfiles();
+        await saveProfiles();
         showManageProfilesView();
     }
 
-    function handleDeleteProfile() {
+    async function handleDeleteProfile() {
          if (editingProfileId) {
             profiles = profiles.filter(p => p.id !== editingProfileId);
-            saveProfiles();
+            await saveProfiles();
             showManageProfilesView();
         }
     }
@@ -1011,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function setupCommentsSection(itemId) {
-        document.getElementById('add-comment-btn').addEventListener('click', () => {
+        document.getElementById('add-comment-btn').addEventListener('click', async () => {
             const commentInput = document.getElementById('comment-input');
             const text = commentInput.value.trim();
             if (text) {
@@ -1028,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     likes: []
                 });
                 
-                saveProfiles();
+                await saveProfiles();
                 renderComments(itemId);
                 commentInput.value = '';
             }
@@ -1045,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderComments(itemId);
     }
 
-    function handleCommentAction(action, itemId, timestamp) {
+    async function handleCommentAction(action, itemId, timestamp) {
         const profile = getCurrentProfile();
         if (!profile.comments || !profile.comments[itemId]) return;
 
@@ -1065,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 profile.comments[itemId].splice(commentIndex, 1);
             }
         }
-        saveProfiles();
+        await saveProfiles();
         renderComments(itemId);
     }
 
@@ -1139,14 +1162,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         skipTimeInput.value = profile.skipTime || 10;
 
-        skipTimeInput.addEventListener('change', (e) => {
+        skipTimeInput.addEventListener('change', async (e) => {
             let value = parseInt(e.target.value, 10);
             if (isNaN(value) || value < 5) value = 5;
             if (value > 30) value = 30;
             
             profile.skipTime = value;
             e.target.value = value;
-            saveProfiles();
+            await saveProfiles();
             showToast(`Tempo de pulo definido para ${value} segundos.`);
         });
     }
@@ -1229,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function saveProgress() {
+    async function saveProgress() {
         const profile = getCurrentProfile();
         if (profile && currentPlayingItemId && videoPlayer.duration > 0 && !videoPlayer.paused) {
              let progressData = {
@@ -1243,11 +1266,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressData.epIndex = currentEpisodeData.epIndex;
             }
             profile.watchProgress[currentPlayingItemId] = progressData;
-            saveProfiles();
+            await saveProfiles();
         }
     }
 
-    function toggleMyList(itemId) {
+    async function toggleMyList(itemId) {
         const profile = getCurrentProfile();
         if (!profile) return;
         const index = profile.myList.indexOf(itemId);
@@ -1258,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             profile.myList.push(itemId);
             showToast("Adicionado à sua lista");
         }
-        saveProfiles();
+        await saveProfiles();
     
         // Update both possible buttons to keep UI consistent
         updateMyListButton(itemId, 'detail-mylist-button');
@@ -1595,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Utilizador autenticado:", user.uid);
                 await loadDataAndAttachListeners(); // Await for the initial fetch
                 
-                profiles = loadProfiles(user.uid);
+                profiles = await loadProfiles(user.uid);
                 loginView.classList.add('hidden');
                 registerView.classList.add('hidden');
                 showProfileSelectionView(true);
@@ -1747,13 +1770,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 }
                 case 'toggleMyList': 
-                    toggleMyList(itemId); 
+                    await toggleMyList(itemId); 
                     break;
             }
         }
     });
 
-    document.getElementById('detail-view').addEventListener('click', (e) => {
+    document.getElementById('detail-view').addEventListener('click', async (e) => {
          const star = e.target.closest('.star');
          if(star) {
             const container = star.parentElement;
@@ -1763,7 +1786,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!currentProfile.userRatings) currentProfile.userRatings = {};
             currentProfile.userRatings[itemId] = rating;
-            saveProfiles();
+            await saveProfiles();
 
             const stars = container.querySelectorAll('.star');
             stars.forEach(s => {
