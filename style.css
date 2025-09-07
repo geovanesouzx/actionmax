@@ -100,7 +100,7 @@ body {
 
 /* Mobile Navigation */
 .mobile-nav-link.active {
-    color: #818cf8; /* indigo-400 */
+    color: #4f46e5;
 }
 
 .spinner {
@@ -169,74 +169,13 @@ body {
     padding-top: 0.5rem;
 }
 
-/* Admin Panel Styles */
-.admin-view {
-    display: flex;
-}
-.sidebar {
-    width: 250px;
-    background-color: #1f2937; /* bg-gray-800 */
-    padding: 1rem;
-}
-.main-content {
-    flex-grow: 1;
-    padding: 2rem;
-}
-.form-section {
-    background-color: #1f2937; /* bg-gray-800 */
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-.hero-star.active { color: #f59e0b; /* amber-500 */ }
-.tab-link.active { border-color: #4f46e5; color: #e5e7eb; }
-.sub-tab-link.active { border-color: #4f46e5; color: #e5e7eb; }
-.draggable-item { cursor: grab; }
-.draggable-item:active { cursor: grabbing; }
-.dragging { opacity: 0.5; background: #374151; }
-.drag-over { border-top: 2px solid #4f46e5; }
-
-/* Toast Notifications */
-#toast-container {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-.toast {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    opacity: 0;
-    transform: translateX(100%);
-    animation: slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards;
-}
-.toast-success { background-color: #16a34a; } /* green-600 */
-.toast-error { background-color: #dc2626; } /* red-600 */
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: translateX(100%); } }
-
-/* Confirmation Modal & Generic Modal*/
-.modal, #confirm-modal { z-index: 110; }
-.modal-content { animation: fadeIn 0.2s ease-out; }
-
-/* Button Loading Spinner */
-.btn-loading .btn-text { display: none; }
-.btn-loading .spinner { display: inline-block; }
-
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes shake {
@@ -245,3 +184,4 @@ body {
   30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
   40%, 60% { transform: translate3d(3px, 0, 0); }
 }
+
