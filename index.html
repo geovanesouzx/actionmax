@@ -350,6 +350,24 @@
         </div>
     </main>
 
+    <!-- =========== Notification Permission Modal =========== -->
+    <div id="permission-modal" class="hidden fixed inset-0 bg-black/80 z-[250] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md text-center p-8 transform scale-95 transition-all duration-300">
+            <div class="text-indigo-400 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold text-white mb-4">Receba as Novidades!</h2>
+            <p class="text-gray-400 mb-8">Gostaria de receber notificações sobre novos episódios, filmes e outras novidades diretamente no seu dispositivo?</p>
+            <div class="flex justify-center gap-4">
+                <button id="permission-deny-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Agora não</button>
+                <button id="permission-allow-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg transition">Permitir</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Trailer Modal -->
     <div id="trailer-modal" class="hidden fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
         <div class="bg-black rounded-lg shadow-2xl w-full max-w-4xl aspect-video relative">

@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingProfileId = null;
     let selectedAvatarUrl = null;
     let isPlayerModeActive = false;
+    let commentsToShow = 5;
 
     let currentPlayingItemId = null;
     let currentEpisodeData = null;
@@ -168,15 +169,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentQuery = collection(db, 'content');
         unsubscribeContent = onSnapshot(contentQuery, (snapshot) => {
             console.log("Dados de conteúdo atualizados em tempo real.");
-            const catalogData = [];
             const itemDetailsData = {};
-            snapshot.forEach(doc => {
-                const data = { id: doc.id, ...doc.data() };
-                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster });
-                itemDetailsData[data.id] = data;
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added" || change.type === "modified") {
+                    const data = { id: change.doc.id, ...change.doc.data() };
+                    const index = catalog.findIndex(item => item.id === data.id);
+                    if (index > -1) {
+                       catalog[index] = { id: data.id, title: data.title, type: data.type, poster: data.poster };
+                    } else {
+                       catalog.push({ id: data.id, title: data.title, type: data.type, poster: data.poster });
+                    }
+                    itemDetails[data.id] = data;
+                }
+                if (change.type === "removed") {
+                    catalog = catalog.filter(item => item.id !== change.doc.id);
+                    delete itemDetails[change.doc.id];
+                }
             });
-            catalog = catalogData;
-            itemDetails = itemDetailsData;
+
             refreshUI(); 
         }, (error) => console.error("Erro no listener de conteúdo:", error));
     
@@ -224,6 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Refresh mylist if that's the active section
                 if (document.querySelector('#profile-section-mylist:not(.hidden)')) {
                     renderMyListPage();
+                }
+                break;
+             case 'detail-view':
+                const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                if(currentItemId) {
+                    renderStarRating(currentItemId);
                 }
                 break;
         }
@@ -299,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. Show Push Notification
-            if (profile.pushEnabled && Notification.permission === 'granted') {
+            if (profile.pushEnabled && 'Notification' in window && Notification.permission === 'granted') {
                 new Notification(newNotification.title, {
                     body: newNotification.message,
                     icon: 'https://placehold.co/192x192/4f46e5/ffffff?text=A' // Placeholder icon
@@ -451,12 +467,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setupNotificationListener();
 
         // Ask for permission on profile selection if not already set
-        if (Notification.permission === "default") {
-            Notification.requestPermission().then(permission => {
-                profile.pushEnabled = (permission === 'granted');
-                saveProfiles();
-            });
+        if ('Notification' in window && Notification.permission === "default") {
+             const modal = document.getElementById('permission-modal');
+             modal.classList.remove('hidden');
+             setTimeout(() => {
+                 modal.classList.add('show');
+             }, 10);
         }
+        
+        // Unlock audio context by playing a muted sound on first user interaction
+        notificationSound.muted = true;
+        notificationSound.play().catch(e => {}); // This might fail silently, but it's okay.
+        setTimeout(() => {
+            notificationSound.muted = false; // Unmute for actual notifications
+        }, 100);
 
         const hash = window.location.hash.slice(1);
         const [view, param1] = hash.split('/');
@@ -565,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 watchProgress: {},
                 userRatings: {},
                 soundEnabled: true,
-                pushEnabled: Notification.permission === 'granted',
+                pushEnabled: ('Notification' in window) && Notification.permission === 'granted',
             });
         }
 
@@ -648,6 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             unsubscribeComments(); // Stop listening to old comments when changing view
             unsubscribeComments = null;
         }
+        commentsToShow = 5; // Reset comment limit when changing view
 
         if (!auth.currentUser || !currentProfileId) {
             handleLogout(); 
@@ -1019,6 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button data-action="add-comment" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition">Comentar</button>
                 </div>
                 <div class="space-y-4" id="comments-list-container"></div>
+                <div id="comments-footer" class="mt-6 text-center"></div>
             </div>
         `;
 
@@ -1054,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="mt-6">
                                 <h4 class="font-semibold text-lg mb-2">A sua classificação</h4>
                                 <div id="star-rating-container" class="flex items-center justify-center md:justify-start space-x-1 text-3xl text-gray-600 cursor-pointer star-rating" data-item-id="${itemId}"></div>
-                                <p class="text-sm text-gray-400 mt-2">Classificação Média: <span id="average-rating" class="font-bold text-yellow-400"></span></p>
+                                <p class="text-sm text-gray-400 mt-2">Classificação Média: <span id="average-rating" class="font-bold"></span></p>
                             </div>
                         </div>
                     </div>
@@ -1117,13 +1143,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
     
+    async function handleRating(target) {
+        const itemId = target.closest('[data-item-id]').dataset.itemId;
+        const newRating = parseInt(target.dataset.value, 10);
+        const profile = getCurrentProfile();
+        const contentRef = doc(db, 'content', itemId);
+
+        if (!profile || !itemId || !newRating) return;
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const contentDoc = await transaction.get(contentRef);
+                if (!contentDoc.exists()) {
+                    throw "Document does not exist!";
+                }
+                
+                let ratings = contentDoc.data().ratings || { total: 0, count: 0, avg: 0 };
+                const oldRating = profile.userRatings?.[itemId] || 0;
+
+                if (oldRating > 0) {
+                    ratings.total -= oldRating;
+                    ratings.count -= 1;
+                }
+                
+                ratings.total += newRating;
+                ratings.count += 1;
+                ratings.avg = (ratings.total / ratings.count).toFixed(1);
+
+                transaction.update(contentRef, { ratings: ratings });
+                
+                if (!profile.userRatings) {
+                    profile.userRatings = {};
+                }
+                profile.userRatings[itemId] = newRating;
+            });
+
+            await saveProfiles();
+            renderStarRating(itemId);
+            showToast(`Avaliado com ${newRating} estrelas!`);
+
+        } catch (error) {
+            console.error("Erro ao avaliar:", error);
+            showToast("Não foi possível registrar a sua avaliação.", true);
+        }
+    }
+
+
     function renderStarRating(itemId) {
         const container = document.getElementById('star-rating-container');
         const avgRatingEl = document.getElementById('average-rating');
         if (!container || !avgRatingEl) return;
+
         const item = itemDetails[itemId];
         const profile = getCurrentProfile();
         const userRating = (profile.userRatings && profile.userRatings[itemId]) || 0;
+
+        let ratingColor = '';
+        if (userRating >= 5) ratingColor = 'yellow';
+        else if (userRating >= 3) ratingColor = 'orange';
+        else if (userRating > 0) ratingColor = 'red';
+        container.dataset.ratingColor = ratingColor;
 
         container.innerHTML = '';
         for (let i = 1; i <= 5; i++) {
@@ -1133,8 +1212,18 @@ document.addEventListener('DOMContentLoaded', () => {
             star.dataset.value = i;
             container.appendChild(star);
         }
+
         const ratings = item.ratings || { avg: 0, count: 0 };
-        avgRatingEl.textContent = `${ratings.avg} (${ratings.count} votos)`;
+        const avgRating = parseFloat(ratings.avg);
+        avgRatingEl.textContent = `${avgRating.toFixed(1)} (${ratings.count} votos)`;
+
+        let avgRatingColorClass = '';
+        if (avgRating >= 4.5) avgRatingColorClass = 'rating-color-yellow';
+        else if (avgRating >= 3.0) avgRatingColorClass = 'rating-color-orange';
+        else if (avgRating > 0) avgRatingColorClass = 'rating-color-red';
+        
+        avgRatingEl.className = 'font-bold'; // Reset classes
+        if(avgRatingColorClass) avgRatingEl.classList.add(avgRatingColorClass);
     }
     
     function setupCommentsSection(itemId) {
@@ -1256,18 +1345,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderComments(itemId, comments) {
         const container = document.getElementById('comments-list-container');
-        if (!container) return;
+        const footer = document.getElementById('comments-footer');
+        if (!container || !footer) return;
+
         const profile = getCurrentProfile();
-    
+        
+        container.innerHTML = '';
+        footer.innerHTML = '';
+
         if (comments.length === 0) {
             container.innerHTML = '<p class="text-gray-400">Nenhum comentário ainda. Seja o primeiro a comentar!</p>';
             return;
         }
-    
-        container.innerHTML = comments.map(comment => {
+
+        const commentsToDisplay = comments.slice(0, commentsToShow);
+        
+        const commentsHTML = commentsToDisplay.map(comment => {
             const isLiked = (comment.likes || []).includes(profile.id);
             const isMyComment = comment.profileId === profile.id;
-    
+        
             const repliesHTML = (comment.replies || []).map(reply => {
                 const isReplyLiked = (reply.likes || []).includes(profile.id);
                 const isMyReply = reply.profileId === profile.id;
@@ -1293,7 +1389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }).join('');
-    
+        
             return `
                 <div class="comment-container" data-item-id="${itemId}" data-comment-id="${comment.id}">
                     <div class="flex items-start space-x-4 bg-gray-800/30 p-4 rounded-lg">
@@ -1316,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="pl-14">
                         <div class="replies-container">${repliesHTML}</div>
-                        <div class="comment-reply-form">
+                        <div class="comment-reply-form" style="display: none;">
                             <textarea class="w-full p-2 bg-gray-700/80 rounded-lg text-sm" rows="2" placeholder="Escreva uma resposta..."></textarea>
                             <div class="text-right mt-2">
                                 <button data-action="add-reply" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded-lg text-sm">Enviar</button>
@@ -1326,6 +1422,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         }).join('');
+
+        container.innerHTML = commentsHTML;
+
+        if (comments.length > commentsToShow) {
+            footer.innerHTML = `<button data-action="show-more-comments" class="show-more-btn font-bold py-2 px-6 rounded-lg transition">Ver mais comentários</button>`;
+        }
     }
 
     
@@ -1382,8 +1484,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const profile = getCurrentProfile();
         if (!profile) return;
 
-        // Update UI based on current permission and profile settings
         function updatePushUI() {
+            if (!('Notification' in window)) {
+                pushBtn.textContent = 'Indisponível';
+                pushBtn.disabled = true;
+                return;
+            }
             if (Notification.permission === 'denied') {
                 pushBtn.textContent = 'Bloqueado';
                 pushBtn.disabled = true;
@@ -1399,8 +1505,9 @@ document.addEventListener('DOMContentLoaded', () => {
         soundToggle.checked = profile.soundEnabled ?? true;
         updatePushUI();
 
-        // Event listener for Push Notifications Button
         pushBtn.addEventListener('click', async () => {
+            if (!('Notification' in window)) return;
+
             if (Notification.permission === 'granted') {
                 profile.pushEnabled = !profile.pushEnabled;
                 await saveProfiles();
@@ -1414,7 +1521,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Event listener for Sound Toggle
         soundToggle.addEventListener('change', async () => {
             profile.soundEnabled = soundToggle.checked;
             await saveProfiles();
@@ -1940,7 +2046,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl } = actionTarget.dataset;
 
         // Actions that shouldn't prevent default browser behavior
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -2018,6 +2124,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 trailerModal.classList.add('hidden');
                 break;
             }
+            case 'show-more-comments': {
+                commentsToShow += 5; // Show 5 more comments
+                const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                if(currentItemId) {
+                    const commentsQuery = query(collection(db, `content/${currentItemId}/comments`), orderBy('timestamp', 'desc'));
+                    const snapshot = await getDocs(commentsQuery);
+                    const comments = [];
+                    snapshot.forEach(doc => comments.push({ id: doc.id, ...doc.data() }));
+                    renderComments(currentItemId, comments);
+                }
+                break;
+            }
         }
     });
 
@@ -2034,5 +2152,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    document.getElementById('permission-allow-btn').addEventListener('click', async () => {
+        if (!('Notification' in window)) {
+            showToast("Notificações não são suportadas neste navegador.", true);
+            return;
+        }
+        const permission = await Notification.requestPermission();
+        const profile = getCurrentProfile();
+        if (profile) {
+            profile.pushEnabled = (permission === 'granted');
+            await saveProfiles();
+            showToast(permission === 'granted' ? 'Notificações ativadas!' : 'As notificações não foram permitidas.');
+        }
+        const modal = document.getElementById('permission-modal');
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    document.getElementById('permission-deny-btn').addEventListener('click', () => {
+        const modal = document.getElementById('permission-modal');
+        modal.classList.remove('show');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
 });
 
