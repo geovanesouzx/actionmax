@@ -910,6 +910,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const seasonTabs = seasons.map(s => `<button class="season-tab border-b-2 border-transparent text-gray-400 py-2 px-4 transition" data-season="${s}" data-itemid="${itemId}">${item.seasons[s].title}</button>`).join('');
             bottomContent = `<div class="mt-8"><div class="border-b border-gray-700">${seasonTabs}</div><div id="episodes-list" class="mt-4"></div></div>`;
         }
+
+        let castSectionHTML = '';
+        if (item.cast && item.cast.length > 0) {
+            // Check if cast is new format (array of objects) or old format (array of strings)
+            const isNewFormat = typeof item.cast[0] === 'object';
+
+            if (isNewFormat) {
+                 castSectionHTML = `
+                    <div class="mt-10 pt-8 border-t border-gray-800">
+                        <h3 class="text-2xl font-bold mb-4">Elenco Principal</h3>
+                        <div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">
+                            ${item.cast.map(actor => `
+                                <div class="flex-shrink-0 w-32 text-center">
+                                    <img src="${actor.photo || 'https://placehold.co/185x278/1f2937/ffffff?text=N/A'}" alt="${actor.name}" class="w-full h-48 object-cover rounded-lg mb-2 shadow-md">
+                                    <p class="font-bold text-sm text-white truncate">${actor.name}</p>
+                                    <p class="text-xs text-gray-400 truncate">${actor.character}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Fallback for old string-based cast data
+                castSectionHTML = `<div class="mb-6"><p><span class="font-semibold text-gray-400">Elenco:</span> ${item.cast.join(', ')}</p></div>`;
+            }
+        }
         
         const synopsis_limit = 250;
         let synopsisHTML = `<p class="mb-6 max-w-3xl mx-auto md:mx-0">${item.synopsis}</p>`;
@@ -944,7 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h2 class="text-4xl md:text-6xl font-bold">${item.title}</h2>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 my-4 text-sm text-gray-300"><span>${item.year}</span> <span class="border border-gray-400 px-2 py-0.5 rounded text-xs">${item.rating}</span> <span>${item.duration}</span></div>
                             ${synopsisHTML}
-                            <div class="mb-6"><p><span class="font-semibold text-gray-400">Gêneros:</span> ${item.genres.join(', ')}</p><p><span class="font-semibold text-gray-400">Elenco:</span> ${item.cast.join(', ')}</p></div>
+                            <div class="mb-6"><p><span class="font-semibold text-gray-400">Gêneros:</span> ${item.genres.join(', ')}</p></div>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
                                 <button data-action="playContent" data-item-id="${itemId}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">Assistir</button>
                                 <button id="detail-mylist-button" data-action="toggleMyList" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2 transition"></button>
@@ -956,6 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     </div>
+                    ${castSectionHTML}
                     ${bottomContent}
                     ${commentsSectionHTML}
                 </div>
@@ -1796,4 +1823,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+" in the canvas document. I would like you to make the following changes to the selection:
+
+em vez do elenco ficar em um carrossel, eu queria que eles ficassem todos na tela, em formato de grade
 
