@@ -1643,6 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(actionTarget.dataset.action === 'dismiss-notification') {
                 e.stopPropagation(); 
             }
+            e.preventDefault(); // FIX: Prevents default browser navigation
 
             const { action, viewName, itemId, genre, season, epIndex } = actionTarget.dataset;
             let params = {};
@@ -1747,4 +1748,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
 
