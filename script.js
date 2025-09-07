@@ -21,7 +21,10 @@ import {
     updateDoc,
     arrayUnion,
     writeBatch,
-    setDoc
+    setDoc,
+    addDoc,
+    serverTimestamp,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -81,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeContent = null;
     let unsubscribeCarousels = null;
     let unsubscribeNotifications = null;
+    let unsubscribeComments = null; // Listener for comments
 
     const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
     const mainHeader = document.getElementById('main-header');
@@ -96,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unsubscribeContent) unsubscribeContent();
         if (unsubscribeCarousels) unsubscribeCarousels();
         if (unsubscribeNotifications) unsubscribeNotifications();
+        if (unsubscribeComments) unsubscribeComments();
         if (notificationShakeInterval) {
             clearInterval(notificationShakeInterval);
             notificationShakeInterval = null;
@@ -521,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 myList: [],
                 watchProgress: {},
                 userRatings: {},
-                comments: {}
+                comments: {} // This is now legacy, comments are public. Could be removed in a future migration.
             });
         }
 
@@ -600,6 +605,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function showView(viewName, params = {}, pushState = true) {
+        if (unsubscribeComments) {
+            unsubscribeComments(); // Stop listening to old comments when changing view
+            unsubscribeComments = null;
+        }
+
         if (!auth.currentUser || !currentProfileId) {
             handleLogout(); 
             return;
@@ -1031,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('.season-tab').click();
         }
         updateMyListButton(itemId, 'detail-mylist-button');
-        renderComments(itemId);
+        setupCommentsSection(itemId);
     }
 
     function handleSeasonTabClick(event) {
@@ -1084,53 +1094,78 @@ document.addEventListener('DOMContentLoaded', () => {
             star.dataset.value = i;
             container.appendChild(star);
         }
-
-        avgRatingEl.textContent = `${item.ratings.avg} (${item.ratings.count} votos)`;
+        const ratings = item.ratings || { avg: 0, count: 0 };
+        avgRatingEl.textContent = `${ratings.avg} (${ratings.count} votos)`;
     }
     
+    function setupCommentsSection(itemId) {
+        if (unsubscribeComments) unsubscribeComments();
+
+        const container = document.getElementById('comments-list-container');
+        if (!container) return;
+
+        const commentsQuery = query(collection(db, `content/${itemId}/comments`), orderBy('timestamp', 'desc'));
+        
+        unsubscribeComments = onSnapshot(commentsQuery, (snapshot) => {
+            const comments = [];
+            snapshot.forEach(doc => comments.push({ id: doc.id, ...doc.data() }));
+            renderComments(itemId, comments);
+        }, (error) => {
+            console.error("Erro ao buscar comentários:", error);
+            container.innerHTML = '<p class="text-red-400">Não foi possível carregar os comentários.</p>';
+        });
+    }
+
     async function handleCommentAction(action, target) {
         const profile = getCurrentProfile();
         const itemId = target.closest('[data-item-id]').dataset.itemId;
         const commentId = target.closest('[data-comment-id]').dataset.commentId;
+        const commentRef = doc(db, `content/${itemId}/comments`, commentId);
 
-        if (action === 'like') {
-            const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
-            const comment = profile.comments[itemId].find(c => c.id === commentId);
-            if (!comment) return;
+        try {
+            await runTransaction(db, async (transaction) => {
+                const commentDoc = await transaction.get(commentRef);
+                if (!commentDoc.exists()) return;
+                
+                let commentData = commentDoc.data();
 
-            const targetItem = replyId ? comment.replies.find(r => r.id === replyId) : comment;
-            if (!targetItem) return;
+                if (action === 'like') {
+                    const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
+                    const targetItem = replyId ? commentData.replies.find(r => r.id === replyId) : commentData;
 
-            const likeIndex = targetItem.likes.indexOf(profile.id);
-            if (likeIndex > -1) {
-                targetItem.likes.splice(likeIndex, 1);
-            } else {
-                targetItem.likes.push(profile.id);
-            }
-        } else if (action === 'delete') {
-            const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
-            if (replyId) {
-                const comment = profile.comments[itemId].find(c => c.id === commentId);
-                if (comment) {
-                    comment.replies = comment.replies.filter(r => r.id !== replyId);
+                    if (!targetItem) return;
+                    
+                    const likeIndex = (targetItem.likes || []).indexOf(profile.id);
+                    if (likeIndex > -1) {
+                        targetItem.likes.splice(likeIndex, 1);
+                    } else {
+                        if(!targetItem.likes) targetItem.likes = [];
+                        targetItem.likes.push(profile.id);
+                    }
+                } else if (action === 'delete') {
+                    const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
+                    if (replyId) {
+                        if (commentData.replies) {
+                           commentData.replies = commentData.replies.filter(r => !(r.id === replyId && r.profileId === profile.id));
+                        }
+                    } else if (commentData.profileId === profile.id) {
+                        // To delete the main comment, we use transaction.delete
+                        transaction.delete(commentRef);
+                        return; // Exit transaction early after delete
+                    }
                 }
-            } else {
-                profile.comments[itemId] = profile.comments[itemId].filter(c => c.id !== commentId);
-            }
-        } else if (action === 'showReplyForm') {
-            const form = target.closest('.comment-container').querySelector('.comment-reply-form');
-            if (form) form.style.display = form.style.display === 'block' ? 'none' : 'block';
+                transaction.update(commentRef, commentData);
+            });
+        } catch (error) {
+            console.error("Erro na ação do comentário:", error);
+            showToast("Ocorreu um erro.", true);
         }
-
-        await saveProfiles();
-        renderComments(itemId);
     }
     
-    function renderComments(itemId) {
+    function renderComments(itemId, comments) {
         const container = document.getElementById('comments-list-container');
         if (!container) return;
         const profile = getCurrentProfile();
-        const comments = (profile.comments && profile.comments[itemId]) ? profile.comments[itemId] : [];
     
         if (comments.length === 0) {
             container.innerHTML = '<p class="text-gray-400">Nenhum comentário ainda. Seja o primeiro a comentar!</p>';
@@ -1138,11 +1173,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     
         container.innerHTML = comments.map(comment => {
-            const isLiked = comment.likes.includes(profile.id);
+            const isLiked = (comment.likes || []).includes(profile.id);
             const isMyComment = comment.profileId === profile.id;
     
             const repliesHTML = (comment.replies || []).map(reply => {
-                const isReplyLiked = reply.likes.includes(profile.id);
+                const isReplyLiked = (reply.likes || []).includes(profile.id);
                 const isMyReply = reply.profileId === profile.id;
                 return `
                     <div class="comment-reply mt-4" data-reply-id="${reply.id}">
@@ -1157,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="flex items-center space-x-4 mt-2 text-xs">
                                     <button data-action="like" class="flex items-center space-x-1 text-gray-400 hover:text-white">
                                         <i class="${isReplyLiked ? 'fas' : 'far'} fa-heart ${isReplyLiked ? 'text-red-500' : ''}"></i>
-                                        <span>${reply.likes.length}</span>
+                                        <span>${(reply.likes || []).length}</span>
                                     </button>
                                     ${isMyReply ? `<button data-action="delete" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
                                 </div>
@@ -1174,24 +1209,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="flex-1">
                             <div class="flex items-center justify-between">
                                 <p class="font-bold text-white">${comment.name}</p>
-                                <p class="text-xs text-gray-500">${new Date(comment.timestamp).toLocaleString('pt-BR')}</p>
+                                <p class="text-xs text-gray-500">${comment.timestamp ? formatTimeAgo(comment.timestamp) : 'agora'}</p>
                             </div>
                             <p class="text-gray-300 mt-1 whitespace-pre-wrap break-words">${comment.text}</p>
                             <div class="flex items-center space-x-4 mt-2">
                                 <button data-action="like" class="flex items-center space-x-1 text-gray-400 hover:text-white">
                                     <i class="${isLiked ? 'fas' : 'far'} fa-heart ${isLiked ? 'text-red-500' : ''}"></i>
-                                    <span>${comment.likes.length}</span>
+                                    <span>${(comment.likes || []).length}</span>
                                 </button>
                                 <button data-action="showReplyForm" class="text-gray-400 hover:text-white text-sm">Responder</button>
                                 ${isMyComment ? `<button data-action="delete" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
                     </div>
-                    <div class="replies-container">${repliesHTML}</div>
-                    <div class="comment-reply-form">
-                        <textarea class="w-full p-2 bg-gray-700/80 rounded-lg text-sm" rows="2" placeholder="Escreva uma resposta..."></textarea>
-                        <div class="text-right mt-2">
-                            <button data-action="add-reply" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded-lg text-sm">Enviar</button>
+                    <div class="pl-14">
+                        <div class="replies-container">${repliesHTML}</div>
+                        <div class="comment-reply-form">
+                            <textarea class="w-full p-2 bg-gray-700/80 rounded-lg text-sm" rows="2" placeholder="Escreva uma resposta..."></textarea>
+                            <div class="text-right mt-2">
+                                <button data-action="add-reply" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded-lg text-sm">Enviar</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1855,19 +1892,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (action === 'add-comment') {
             const text = document.getElementById('comment-input').value.trim();
-            if (text) {
-                if (!profile.comments) profile.comments = {};
-                if (!profile.comments[itemId]) profile.comments[itemId] = [];
-                
-                profile.comments[itemId].unshift({
-                    id: `c${Date.now()}`,
+            if (text && itemId) {
+                const newComment = {
                     profileId: profile.id, name: profile.name, avatar: profile.avatar,
-                    text: text, timestamp: new Date().toISOString(), likes: [], replies: []
-                });
-                
-                await saveProfiles();
-                renderComments(itemId);
-                document.getElementById('comment-input').value = '';
+                    text: text, timestamp: serverTimestamp(), likes: [], replies: []
+                };
+                try {
+                    await addDoc(collection(db, `content/${itemId}/comments`), newComment);
+                    document.getElementById('comment-input').value = '';
+                } catch (error) {
+                    console.error("Error adding comment: ", error);
+                    showToast("Erro ao enviar comentário.", true);
+                }
             }
         } else if (action === 'add-reply') {
             const container = actionTarget.closest('.comment-container');
@@ -1876,16 +1912,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = textarea.value.trim();
 
             if (text && commentId) {
-                const comment = profile.comments[itemId].find(c => c.id === commentId);
-                if (comment) {
-                    if (!comment.replies) comment.replies = [];
-                    comment.replies.push({
-                        id: `r${Date.now()}`,
-                        profileId: profile.id, name: profile.name, avatar: profile.avatar,
-                        text: text, timestamp: new Date().toISOString(), likes: []
-                    });
-                    await saveProfiles();
-                    renderComments(itemId);
+                const commentRef = doc(db, `content/${itemId}/comments`, commentId);
+                const newReply = {
+                    id: `r${Date.now()}`,
+                    profileId: profile.id, name: profile.name, avatar: profile.avatar,
+                    text: text, timestamp: new Date().toISOString(), likes: []
+                };
+                try {
+                    await updateDoc(commentRef, { replies: arrayUnion(newReply) });
+                } catch (error) { 
+                    console.error("Error adding reply: ", error);
+                    showToast("Erro ao enviar resposta.", true);
                 }
             }
         } else if (['like', 'delete', 'showReplyForm'].includes(action)) {
@@ -1895,13 +1932,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const starItemId = container.dataset.itemId;
             const rating = parseInt(actionTarget.dataset.value, 10);
             
-            if (!profile.userRatings) profile.userRatings = {};
+            const oldRating = profile.userRatings[starItemId] || 0;
             profile.userRatings[starItemId] = rating;
             await saveProfiles();
 
-            container.querySelectorAll('.star').forEach(s => {
-                s.classList.toggle('selected', s.dataset.value <= rating);
-            });
+            const contentRef = doc(db, 'content', starItemId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const contentDoc = await transaction.get(contentRef);
+                    if (!contentDoc.exists()) throw "Document does not exist!";
+                    
+                    const data = contentDoc.data();
+                    let ratings = data.ratings || { avg: 0, count: 0 };
+                    let total = ratings.avg * ratings.count;
+
+                    if (oldRating > 0) {
+                        total = total - oldRating + rating;
+                    } else {
+                        total += rating;
+                        ratings.count += 1;
+                    }
+                    ratings.avg = parseFloat((total / ratings.count).toFixed(2));
+                    transaction.update(contentRef, { ratings: ratings });
+                });
+                showToast("Sua avaliação foi enviada!");
+                const updatedDoc = await getDoc(contentRef);
+                itemDetails[starItemId] = { id: starItemId, ...updatedDoc.data() };
+                renderStarRating(starItemId);
+
+            } catch (e) {
+                console.error("Transaction failed: ", e);
+                showToast("Não foi possível enviar sua avaliação.", true);
+                profile.userRatings[starItemId] = oldRating; // Revert local change
+                await saveProfiles();
+            }
         }
     });
 
