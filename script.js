@@ -913,16 +913,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let castSectionHTML = '';
         if (item.cast && item.cast.length > 0) {
-            // Check if cast is new format (array of objects) or old format (array of strings)
             const isNewFormat = typeof item.cast[0] === 'object';
 
             if (isNewFormat) {
                  castSectionHTML = `
                     <div class="mt-10 pt-8 border-t border-gray-800">
                         <h3 class="text-2xl font-bold mb-4">Elenco Principal</h3>
-                        <div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-x-4 gap-y-6">
                             ${item.cast.map(actor => `
-                                <div class="flex-shrink-0 w-32 text-center">
+                                <div class="text-center">
                                     <img src="${actor.photo || 'https://placehold.co/185x278/1f2937/ffffff?text=N/A'}" alt="${actor.name}" class="w-full h-48 object-cover rounded-lg mb-2 shadow-md">
                                     <p class="font-bold text-sm text-white truncate">${actor.name}</p>
                                     <p class="text-xs text-gray-400 truncate">${actor.character}</p>
@@ -1823,3 +1822,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
