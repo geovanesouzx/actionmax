@@ -24,7 +24,8 @@ import {
     setDoc,
     addDoc,
     serverTimestamp,
-    runTransaction
+    runTransaction,
+    where
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -43,6 +44,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app); // Initialize Firestore
 const googleProvider = new GoogleAuthProvider();
+
+// TMDB API Configuration - **ADICIONE SUA CHAVE AQUI**
+const TMDB_API_KEY = '5a96ced132f8087950c268c2253381e4'; // Substitua pelo seu TMDB API Key
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Style for synopsis truncation
@@ -77,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAvatarUrl = null;
     let isPlayerModeActive = false;
     let commentsToShow = 5;
+    let tmdbSearchTimeout = null;
 
     let currentPlayingItemId = null;
     let currentEpisodeData = null;
@@ -90,8 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeCarousels = null;
     let unsubscribeNotifications = null;
     let unsubscribeComments = null; // Listener for comments
+    let unsubscribePedidos = null; // Listener para pedidos
 
-    const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
+    const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'pedidos-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
     const mainHeader = document.getElementById('main-header');
     const videoPlayer = document.getElementById('video-player');
     const iframePlayer = document.getElementById('iframe-player');
@@ -106,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unsubscribeCarousels) unsubscribeCarousels();
         if (unsubscribeNotifications) unsubscribeNotifications();
         if (unsubscribeComments) unsubscribeComments();
+        if (unsubscribePedidos) unsubscribePedidos();
         if (notificationShakeInterval) {
             clearInterval(notificationShakeInterval);
             notificationShakeInterval = null;
@@ -122,12 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemDetailsData = {};
             contentSnapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
-                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster });
+                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdbId });
                 itemDetailsData[data.id] = data;
             });
             catalog = catalogData;
             itemDetails = itemDetailsData;
-    
+        
             const carouselsQuery = query(collection(db, 'carousels'), orderBy('order'));
             const carouselsSnapshot = await getDocs(carouselsQuery);
             const carouselsData = [];
@@ -169,20 +179,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentQuery = collection(db, 'content');
         unsubscribeContent = onSnapshot(contentQuery, (snapshot) => {
             console.log("Dados de conteúdo atualizados em tempo real.");
-            const itemDetailsData = {};
             snapshot.docChanges().forEach((change) => {
+                const data = { id: change.doc.id, ...change.doc.data() };
+                const index = catalog.findIndex(item => item.id === data.id);
+                
                 if (change.type === "added" || change.type === "modified") {
-                    const data = { id: change.doc.id, ...change.doc.data() };
-                    const index = catalog.findIndex(item => item.id === data.id);
+                    const catalogItem = { id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdbId };
                     if (index > -1) {
-                       catalog[index] = { id: data.id, title: data.title, type: data.type, poster: data.poster };
+                        catalog[index] = catalogItem;
                     } else {
-                       catalog.push({ id: data.id, title: data.title, type: data.type, poster: data.poster });
+                        catalog.push(catalogItem);
                     }
                     itemDetails[data.id] = data;
                 }
                 if (change.type === "removed") {
-                    catalog = catalog.filter(item => item.id !== change.doc.id);
+                    if (index > -1) {
+                       catalog.splice(index, 1);
+                    }
                     delete itemDetails[change.doc.id];
                 }
             });
@@ -230,6 +243,9 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'genres-view':
                 renderGenresPage();
                 break;
+            case 'pedidos-view':
+                // O onSnapshot já cuida disso
+                break;
             case 'profile-view':
                 // Refresh mylist if that's the active section
                 if (document.querySelector('#profile-section-mylist:not(.hidden)')) {
@@ -237,11 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
              case 'detail-view':
-                const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
-                if(currentItemId) {
-                    renderStarRating(currentItemId);
-                }
-                break;
+                 const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                 if(currentItemId) {
+                     renderStarRating(currentItemId);
+                 }
+                 break;
         }
     }
 
@@ -516,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${profile.avatar}" alt="${profile.name}" class="w-24 h-24 md:w-36 md:h-36 rounded-md object-cover">
                  <div class="absolute inset-0 bg-black/60 rounded-md flex items-center justify-center">
                      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
-                </div>
+                 </div>
                 <p class="mt-2 text-gray-400 font-medium">${profile.name}</p>
             </div>
         `).join('');
@@ -599,9 +615,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleDeleteProfile() {
          if (editingProfileId) {
-            profiles = profiles.filter(p => p.id !== editingProfileId);
-            await saveProfiles();
-            showManageProfilesView();
+             profiles = profiles.filter(p => p.id !== editingProfileId);
+             await saveProfiles();
+             showManageProfilesView();
         }
     }
 
@@ -707,13 +723,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const appContainer = document.getElementById('app-container');
         appContainer.classList.add('pb-24', 'md:pb-0');
         
-        document.querySelectorAll('#main-nav .nav-link').forEach(link => {
-            link.classList.toggle('text-white', link.dataset.viewName === viewName);
-            link.classList.toggle('text-gray-400', link.dataset.viewName !== viewName);
+        document.querySelectorAll('#main-nav .nav-link, #mobile-nav .mobile-nav-link').forEach(link => {
+            const isMainNavLink = link.classList.contains('nav-link');
+            const isActive = link.dataset.viewName === viewName;
+
+            link.classList.toggle('active', isActive);
+            if (isMainNavLink) {
+                link.classList.toggle('text-white', isActive);
+                link.classList.toggle('text-gray-400', !isActive);
+            }
         });
-        document.querySelectorAll('#mobile-nav .mobile-nav-link').forEach(link => {
-            link.classList.toggle('active', link.dataset.viewName === viewName);
-        });
+        
 
         const itemId = (typeof params === 'object') ? params.itemId : params;
         let targetViewId = `${viewName}-view`;
@@ -786,6 +806,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setupProfilePage();
         } else if (viewName === 'search') {
             renderSearchPage();
+        } else if (viewName === 'pedidos') {
+            renderPedidosPage();
         }
     }
     
@@ -1547,7 +1569,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderGenresPage() {
         const genresView = document.getElementById('genres-view');
-        const filteredCatalogForProfile = getFilteredCatalog();
         const allGenres = [...new Set(Object.values(itemDetails).flatMap(item => item.genres || []))].sort();
         
         const genresHTML = allGenres.map(genre => `
@@ -1667,6 +1688,211 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.classList.remove('show');
         }, 3000);
     }
+
+    // ===============================================
+    // =========== PEDIDOS / REQUESTS V1 =============
+    // ===============================================
+
+    function renderPedidosPage() {
+        const view = document.getElementById('pedidos-view');
+        view.innerHTML = `
+            <h2 class="text-3xl font-bold mb-4">Pedidos de Conteúdo</h2>
+            <p class="text-gray-400 mb-8">Não encontrou o que procurava? Pesquise e solicite um novo filme ou série.</p>
+            
+            <div class="relative mb-8">
+                <input type="text" id="tmdb-search-input" placeholder="Pesquisar por filme ou série..." class="w-full p-4 pl-12 bg-gray-800/50 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <svg class="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            </div>
+
+            <div id="tmdb-search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-12"></div>
+            
+            <div class="border-t border-gray-700 pt-8">
+                <h3 class="text-2xl font-bold mb-6">Pedidos em Aberto</h3>
+                <div id="pending-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <p class="text-gray-500">A carregar pedidos...</p>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('tmdb-search-input').addEventListener('input', (e) => {
+            clearTimeout(tmdbSearchTimeout);
+            const query = e.target.value;
+            if (query.length > 2) {
+                tmdbSearchTimeout = setTimeout(() => searchTMDB(query), 500);
+            } else {
+                document.getElementById('tmdb-search-results').innerHTML = '';
+            }
+        });
+        
+        setupPedidosListener();
+    }
+
+    async function searchTMDB(query) {
+        if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            showToast("A chave da API TMDB não foi configurada.");
+            return;
+        }
+        const url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(query)}`;
+        const resultsContainer = document.getElementById('tmdb-search-results');
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const validResults = data.results.filter(r => (r.media_type === 'movie' || r.media_type === 'tv') && r.poster_path);
+            
+            if (validResults.length === 0) {
+                 resultsContainer.innerHTML = `<p class="col-span-full text-center text-gray-400">Nenhum resultado encontrado na base de dados.</p>`;
+                 return;
+            }
+
+            resultsContainer.innerHTML = validResults.map(item => {
+                const title = item.title || item.name;
+                const year = (item.release_date || item.first_air_date || '').split('-')[0];
+                return `
+                    <div class="group cursor-pointer" data-action="handleTMDBSelect" data-tmdb-id="${item.id}" data-media-type="${item.media_type}">
+                        <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
+                            <img src="${TMDB_IMG_URL}${item.poster_path}" alt="${title}" class="w-full h-full object-cover">
+                        </div>
+                        <h4 class="font-bold mt-2 truncate">${title}</h4>
+                        <p class="text-sm text-gray-400">${year}</p>
+                    </div>
+                `;
+            }).join('');
+
+        } catch (error) {
+            console.error("Erro ao pesquisar no TMDB:", error);
+            resultsContainer.innerHTML = `<p class="col-span-full text-center text-red-400">Erro ao conectar com a base de dados.</p>`;
+        }
+    }
+    
+    function setupPedidosListener() {
+        if (unsubscribePedidos) unsubscribePedidos();
+
+        const q = query(collection(db, "pedidos"), where("status", "==", "pending"));
+        unsubscribePedidos = onSnapshot(q, (querySnapshot) => {
+            const pendingRequests = [];
+            querySnapshot.forEach((doc) => {
+                pendingRequests.push({ id: doc.id, ...doc.data() });
+            });
+            renderPendingRequests(pendingRequests);
+        }, (error) => {
+            console.error("Erro ao escutar pedidos:", error);
+            document.getElementById('pending-requests-container').innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`;
+        });
+    }
+
+    function renderPendingRequests(requests) {
+        const container = document.getElementById('pending-requests-container');
+        const profile = getCurrentProfile();
+        if (!container || !profile) return;
+
+        if (requests.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 col-span-full">Ainda não há pedidos em aberto.</p>';
+            return;
+        }
+
+        container.innerHTML = requests.map(req => {
+            const voteCount = req.requesters?.length || 0;
+            const hasVoted = req.requesters?.includes(profile.id);
+
+            return `
+                <div class="bg-gray-800/50 p-4 rounded-lg flex gap-4">
+                    <img src="${req.posterUrl}" alt="${req.title}" class="w-24 h-36 object-cover rounded-md flex-shrink-0">
+                    <div class="flex flex-col justify-between w-full">
+                        <div>
+                            <h4 class="font-bold text-lg">${req.title}</h4>
+                            <p class="text-sm text-gray-400">${req.year}</p>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                             <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
+                             <button 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition disabled:bg-gray-500 disabled:cursor-not-allowed" 
+                                data-action="voteForRequest" 
+                                data-request-id="${req.id}"
+                                ${hasVoted ? 'disabled' : ''}>
+                                ${hasVoted ? 'Votado' : 'Votar'}
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+
+    async function handleTMDBSelect(tmdbId, mediaType) {
+        // 1. Check if it already exists in our catalog
+        const existingItem = catalog.find(item => String(item.tmdbId) === String(tmdbId));
+        if (existingItem) {
+            showToast("Este item já está disponível!");
+            await showView('detail', { itemId: existingItem.id });
+            return;
+        }
+
+        // 2. Check if it has already been requested
+        const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            showToast("Este item já foi solicitado. Você pode votar nele abaixo.");
+            return;
+        }
+        
+        // 3. If new, request it
+        if (confirm("Gostaria de solicitar este item?")) {
+           await createRequest(tmdbId, mediaType);
+        }
+    }
+
+    async function createRequest(tmdbId, mediaType) {
+        const profile = getCurrentProfile();
+        if (!profile || !TMDB_API_KEY) return;
+        
+        try {
+            const url = `${TMDB_BASE_URL}/${mediaType}/${tmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            const newRequest = {
+                tmdbId: String(data.id),
+                title: data.title || data.name,
+                year: (data.release_date || data.first_air_date || '').split('-')[0],
+                posterUrl: `${TMDB_IMG_URL}${data.poster_path}`,
+                overview: data.overview,
+                mediaType: mediaType,
+                requesters: [profile.id],
+                status: 'pending',
+                requestedAt: serverTimestamp(),
+                // Store all data for the admin panel
+                fullData: data
+            };
+
+            await addDoc(collection(db, "pedidos"), newRequest);
+            showToast("Pedido enviado com sucesso!");
+            document.getElementById('tmdb-search-results').innerHTML = '';
+            document.getElementById('tmdb-search-input').value = '';
+
+        } catch (error) {
+            console.error("Erro ao criar pedido:", error);
+            showToast("Não foi possível criar o pedido.", true);
+        }
+    }
+
+    async function voteForRequest(requestId) {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
+        const requestRef = doc(db, "pedidos", requestId);
+        try {
+            await updateDoc(requestRef, {
+                requesters: arrayUnion(profile.id)
+            });
+            showToast("Voto computado!");
+        } catch(error) {
+            console.error("Erro ao votar:", error);
+            showToast("Não foi possível registrar o seu voto.", true);
+        }
+    }
+
 
     // ===============================================
     // =========== PLAYER CONTROLS & UX V2 ===========
@@ -1872,7 +2098,7 @@ document.addEventListener('DOMContentLoaded', () => {
          fullscreenBtn.innerHTML = document.fullscreenElement ? icons.exitFullscreen : icons.fullscreen;
          isPlayerModeActive = !!document.fullscreenElement;
          if (!isPlayerModeActive && screen.orientation && screen.orientation.unlock) {
-            screen.orientation.unlock();
+             screen.orientation.unlock();
          }
     });
 
@@ -2043,7 +2269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const actionTarget = e.target.closest('[data-action]');
         if (!actionTarget) return;
 
-        const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl } = actionTarget.dataset;
+        const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
         // Actions that shouldn't prevent default browser behavior
         const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments'];
@@ -2136,6 +2362,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             }
+            case 'handleTMDBSelect': await handleTMDBSelect(tmdbId, mediaType); break;
+            case 'voteForRequest': await voteForRequest(requestId); break;
         }
     });
 
@@ -2175,4 +2403,3 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 });
-
