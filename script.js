@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let nextEpisodeData = null;
     let nextEpisodeInterval = null;
     let progressSaveInterval = null;
+    let notificationShakeInterval = null;
 
     let unsubscribeContent = null;
     let unsubscribeCarousels = null;
@@ -88,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorDisplay = document.getElementById('player-error-display');
     const notificationsPanel = document.getElementById('notifications-panel');
     const notificationsList = document.getElementById('notifications-list');
-    const notificationIndicator = document.getElementById('notification-indicator');
     let hlsInstance;
 
     // --- Firestore Data Fetching ---
@@ -96,6 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unsubscribeContent) unsubscribeContent();
         if (unsubscribeCarousels) unsubscribeCarousels();
         if (unsubscribeNotifications) unsubscribeNotifications();
+        if (notificationShakeInterval) {
+            clearInterval(notificationShakeInterval);
+            notificationShakeInterval = null;
+            document.getElementById('notification-btn')?.classList.remove('has-notifications', 'shaking');
+        }
     }
     
     async function loadDataAndAttachListeners() {
@@ -244,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         notificationsList.innerHTML = '';
         let unreadCount = 0;
+        const notificationBtn = document.getElementById('notification-btn');
 
         if (notifications.length === 0) {
             notificationsList.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhuma notificação por enquanto.</p>';
@@ -269,11 +275,20 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        // Clear previous state
+        clearInterval(notificationShakeInterval);
+        notificationShakeInterval = null;
+        notificationBtn.classList.remove('has-notifications', 'shaking');
+
         if (unreadCount > 0) {
-            notificationIndicator.textContent = unreadCount > 9 ? '9+' : unreadCount;
-            notificationIndicator.classList.remove('hidden');
-        } else {
-            notificationIndicator.classList.add('hidden');
+            notificationBtn.classList.add('has-notifications');
+            // Start shaking interval
+            notificationShakeInterval = setInterval(() => {
+                notificationBtn.classList.add('shaking');
+                setTimeout(() => {
+                    notificationBtn.classList.remove('shaking');
+                }, 500); // Duration of the animation
+            }, 5000); // Every 5 seconds
         }
     }
 
@@ -301,6 +316,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             await batch.commit();
+
+             // Instant UI feedback
+            const notificationBtn = document.getElementById('notification-btn');
+            if (notificationBtn) {
+                notificationBtn.classList.remove('has-notifications', 'shaking');
+            }
+            if (notificationShakeInterval) {
+                clearInterval(notificationShakeInterval);
+                notificationShakeInterval = null;
+            }
         } catch (error) {
             console.error("Erro ao marcar notificações como lidas:", error);
         }
@@ -1748,5 +1773,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
-
 

@@ -157,6 +157,30 @@ body {
     background-color: #9333ea; /* purple-600 */
 }
 
+/* New Notification Bell Styles */
+#notification-btn.has-notifications {
+    color: #818cf8; /* indigo-400, a cor do hover */
+}
+
+#notification-btn.shaking {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%, 50%, 70% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  40%, 60% {
+    transform: translate3d(3px, 0, 0);
+  }
+}
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
