@@ -912,17 +912,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let castSectionHTML = '';
+        let castToggleButtonHTML = '';
         if (item.cast && item.cast.length > 0) {
             const isNewFormat = typeof item.cast[0] === 'object';
 
             if (isNewFormat) {
-                 castSectionHTML = `
-                    <div class="mt-10 pt-8 border-t border-gray-800">
+                castToggleButtonHTML = `<button data-action="toggleCastVisibility" class="mt-2 text-indigo-400 font-semibold hover:text-indigo-300">Ver Elenco</button>`;
+                castSectionHTML = `
+                    <div id="cast-container" class="mt-10 pt-8 border-t border-gray-800 hidden">
                         <h3 class="text-2xl font-bold mb-4">Elenco Principal</h3>
-                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-x-4 gap-y-6">
+                        <div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">
                             ${item.cast.map(actor => `
-                                <div class="text-center">
-                                    <img src="${actor.photo || 'https://placehold.co/185x278/1f2937/ffffff?text=N/A'}" alt="${actor.name}" class="w-full h-48 object-cover rounded-lg mb-2 shadow-md">
+                                <div class="flex-shrink-0 w-24 text-center">
+                                    <img src="${actor.photo || 'https://placehold.co/185x185/1f2937/ffffff?text=N/A'}" alt="${actor.name}" class="w-24 h-24 object-cover rounded-full mb-2 shadow-md mx-auto">
                                     <p class="font-bold text-sm text-white truncate">${actor.name}</p>
                                     <p class="text-xs text-gray-400 truncate">${actor.character}</p>
                                 </div>
@@ -932,12 +934,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             } else {
                 // Fallback for old string-based cast data
-                castSectionHTML = `<div class="mb-6"><p><span class="font-semibold text-gray-400">Elenco:</span> ${item.cast.join(', ')}</p></div>`;
+                castSectionHTML = `<div class="mt-4"><p><span class="font-semibold text-gray-400">Elenco:</span> ${item.cast.join(', ')}</p></div>`;
             }
         }
         
         const synopsis_limit = 250;
-        let synopsisHTML = `<p class="mb-6 max-w-3xl mx-auto md:mx-0">${item.synopsis}</p>`;
+        let synopsisHTML = `<p class="mb-6 max-w-3xl mx-auto md:mx-0">${item.synopsis || ''}</p>`;
         if (item.synopsis && item.synopsis.length > synopsis_limit) {
             synopsisHTML = `
                 <div class="mb-6">
@@ -969,7 +971,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h2 class="text-4xl md:text-6xl font-bold">${item.title}</h2>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 my-4 text-sm text-gray-300"><span>${item.year}</span> <span class="border border-gray-400 px-2 py-0.5 rounded text-xs">${item.rating}</span> <span>${item.duration}</span></div>
                             ${synopsisHTML}
-                            <div class="mb-6"><p><span class="font-semibold text-gray-400">Gêneros:</span> ${item.genres.join(', ')}</p></div>
+                            <div class="mb-6">
+                                <p><span class="font-semibold text-gray-400">Gêneros:</span> ${(item.genres || []).join(', ')}</p>
+                                ${castToggleButtonHTML}
+                            </div>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
                                 <button data-action="playContent" data-item-id="${itemId}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">Assistir</button>
                                 <button id="detail-mylist-button" data-action="toggleMyList" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2 transition"></button>
@@ -1639,37 +1644,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         detachRealtimeListeners(); 
 
-        if (user) {
-            try {
+        try {
+            if (user) {
                 console.log("Utilizador autenticado:", user.uid);
-                await loadDataAndAttachListeners(); // Await for the initial fetch
-                
+                await loadDataAndAttachListeners();
                 profiles = await loadProfiles(user.uid);
                 loginView.classList.add('hidden');
                 registerView.classList.add('hidden');
                 showProfileSelectionView(true);
-            } catch (error) {
-                showToast("Erro crítico ao carregar dados. Tente novamente.");
+            } else {
+                console.log("Nenhum utilizador autenticado.");
+                allViews.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && !['login-view', 'register-view', 'loading-screen'].includes(id)) {
+                         el.classList.add('hidden');
+                    }
+                });
+                mainHeader.classList.add('hidden');
+                currentProfileId = null;
+                profiles = [];
+                showAuthView('login');
             }
-        } else {
-            console.log("Nenhum utilizador autenticado.");
-            allViews.forEach(id => {
-                const el = document.getElementById(id);
-                if (el && !['login-view', 'register-view', 'loading-screen'].includes(id)) {
-                     el.classList.add('hidden');
-                }
-            });
-            mainHeader.classList.add('hidden');
-            currentProfileId = null;
-            profiles = [];
-            showAuthView('login');
+        } catch (error) {
+            console.error("Erro crítico durante a inicialização:", error);
+            showToast("Erro crítico ao carregar dados. Tente novamente.");
+        } finally {
+            // This will always run, ensuring the loading screen is hidden.
+            loadingScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                loadingScreen.classList.remove('flex');
+            }, 500);
         }
-
-        loadingScreen.classList.add('opacity-0');
-        setTimeout(() => {
-            loadingScreen.classList.add('hidden');
-            loadingScreen.classList.remove('flex');
-        }, 500);
     });
 
     // Event listeners for auth forms
@@ -1759,6 +1765,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     } catch (error) {
                         console.error("Erro ao dispensar notificação:", error);
+                    }
+                    break;
+                }
+                case 'toggleCastVisibility': {
+                    const castContainer = document.getElementById('cast-container');
+                    if (castContainer) {
+                        castContainer.classList.toggle('hidden');
+                        const button = actionTarget; // The button is the actionTarget
+                        if (castContainer.classList.contains('hidden')) {
+                            button.textContent = 'Ver Elenco';
+                        } else {
+                            button.textContent = 'Ocultar Elenco';
+                        }
                     }
                     break;
                 }
