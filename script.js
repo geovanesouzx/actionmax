@@ -1823,7 +1823,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
-" in the canvas document. I would like you to make the following changes to the selection:
-
-em vez do elenco ficar em um carrossel, eu queria que eles ficassem todos na tela, em formato de grade
-
