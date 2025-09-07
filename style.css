@@ -131,7 +131,7 @@ body {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: #6366f1; /* indigo-500 */
+    background-color: #9333ea; /* purple-600 */
 }
 
 @keyframes spin {
@@ -142,4 +142,5 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
 

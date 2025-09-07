@@ -243,14 +243,14 @@ document.addEventListener('DOMContentLoaded', () => {
         snapshot.forEach(doc => notifications.push({ id: doc.id, ...doc.data() }));
 
         notificationsList.innerHTML = '';
-        let hasUnread = false;
+        let unreadCount = 0;
 
         if (notifications.length === 0) {
             notificationsList.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhuma notificação por enquanto.</p>';
         } else {
             notifications.forEach(notif => {
                 const isRead = notif.readBy && notif.readBy.includes(profile.id);
-                if (!isRead) hasUnread = true;
+                if (!isRead) unreadCount++;
 
                 const item = document.createElement('div');
                 item.className = `notification-item relative bg-gray-800/50 hover:bg-gray-700/50 p-3 rounded-lg cursor-pointer pl-8 ${!isRead ? 'unread' : ''}`;
@@ -267,7 +267,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 notificationsList.appendChild(item);
             });
         }
-        notificationIndicator.classList.toggle('hidden', !hasUnread);
+        
+        if (unreadCount > 0) {
+            notificationIndicator.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            notificationIndicator.classList.remove('hidden');
+        } else {
+            notificationIndicator.classList.add('hidden');
+        }
     }
 
     function setupNotificationListener() {
@@ -1716,4 +1722,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
 
