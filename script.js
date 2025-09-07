@@ -717,6 +717,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Core App Logic & Player ---
 
+    function getRatingColorClass(rating) {
+        if (!rating) return '';
+        const r = rating.toString().toLowerCase();
+        if (r === 'l' || r === 'livre') return 'rating-l';
+        if (r.includes('10')) return 'rating-10';
+        if (r.includes('12')) return 'rating-12';
+        if (r.includes('14')) return 'rating-14';
+        if (r.includes('16')) return 'rating-16';
+        if (r.includes('18')) return 'rating-18';
+        return 'bg-gray-600'; // Default
+    }
+
     async function renderHeroSection() {
         const heroContainer = document.getElementById('hero-content-container');
         const heroBackdrop = document.getElementById('hero-backdrop');
@@ -735,11 +747,13 @@ document.addEventListener('DOMContentLoaded', () => {
         heroBackdrop.src = heroDetails.backdrop;
         heroBackdrop.alt = `${heroDetails.title} background`;
 
+        const ratingClass = getRatingColorClass(heroDetails.rating);
+
         heroContainer.innerHTML = `
             <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg">${heroDetails.title}</h2>
             <div class="flex items-center justify-center md:justify-start space-x-4 my-3 md:my-4 text-xs md:text-sm">
                 <span class="font-semibold">${heroDetails.year}</span>
-                <span class="border border-gray-400 text-gray-400 px-2 py-0.5 rounded text-xs">${heroDetails.rating}</span>
+                <span class="rating-badge ${ratingClass}">${heroDetails.rating}</span>
                 <span>${heroDetails.duration}</span>
                  <span class="bg-indigo-500 text-white font-bold px-2 py-0.5 rounded text-xs">HD</span>
             </div>
@@ -933,7 +947,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             } else {
-                // Fallback for old string-based cast data
                 castSectionHTML = `<div class="mt-4"><p><span class="font-semibold text-gray-400">Elenco:</span> ${item.cast.join(', ')}</p></div>`;
             }
         }
@@ -960,6 +973,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
+        const ratingClass = getRatingColorClass(item.rating);
+
         detailView.innerHTML = `
             <section class="relative pt-24" style="background-image: url('${item.backdrop}'); background-size: cover; background-position: center;">
                 <div class="absolute inset-0 bg-black/50 backdrop-blur-xl"></div>
@@ -969,15 +984,23 @@ document.addEventListener('DOMContentLoaded', () => {
                          <div class="md:col-span-1 flex justify-center"><img src="${catalog.find(c => c.id == itemId)?.poster || 'https://placehold.co/400x600/a0aec0/000000?text=' + item.title.split(' ')[0]}" alt="${item.title}" class="rounded-lg shadow-2xl w-48 md:w-full md:max-w-xs mx-auto"></div>
                         <div class="md:col-span-3 text-white text-center md:text-left">
                             <h2 class="text-4xl md:text-6xl font-bold">${item.title}</h2>
-                            <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 my-4 text-sm text-gray-300"><span>${item.year}</span> <span class="border border-gray-400 px-2 py-0.5 rounded text-xs">${item.rating}</span> <span>${item.duration}</span></div>
+                            <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 my-4 text-sm text-gray-300">
+                                <span>${item.year}</span> 
+                                <span class="rating-badge ${ratingClass}">${item.rating}</span> 
+                                <span>${item.duration}</span>
+                            </div>
                             ${synopsisHTML}
                             <div class="mb-6">
                                 <p><span class="font-semibold text-gray-400">Gêneros:</span> ${(item.genres || []).join(', ')}</p>
                                 ${castToggleButtonHTML}
                             </div>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                                <button data-action="playContent" data-item-id="${itemId}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg">Assistir</button>
-                                <button id="detail-mylist-button" data-action="toggleMyList" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-8 rounded-lg flex items-center space-x-2 transition"></button>
+                                <button data-action="playContent" data-item-id="${itemId}" class="bg-white text-gray-900 font-bold py-3 px-8 rounded-lg flex items-center gap-2 hover:bg-gray-300 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+                                    Assistir
+                                </button>
+                                ${item.trailer_url ? `<button data-action="showTrailer" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-8 rounded-lg">Ver Trailer</button>` : ''}
+                                <button id="detail-mylist-button" data-action="toggleMyList" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2 transition"></button>
                             </div>
                             <div class="mt-6">
                                 <h4 class="font-semibold text-lg mb-2">A sua classificação</h4>
@@ -1065,99 +1088,120 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function setupCommentsSection(itemId) {
-        document.getElementById('add-comment-btn').addEventListener('click', async () => {
-            const commentInput = document.getElementById('comment-input');
-            const text = commentInput.value.trim();
-            if (text) {
-                const profile = getCurrentProfile();
-                if (!profile.comments) profile.comments = {};
-                if (!profile.comments[itemId]) profile.comments[itemId] = [];
-                
-                profile.comments[itemId].unshift({
-                    profileId: profile.id,
-                    name: profile.name,
-                    avatar: profile.avatar,
-                    text: text,
-                    timestamp: new Date().toISOString(),
-                    likes: []
-                });
-                
-                await saveProfiles();
-                renderComments(itemId);
-                commentInput.value = '';
-            }
-        });
-
-        document.getElementById('comments-list-container').addEventListener('click', (e) => {
-             const target = e.target.closest('[data-comment-action]');
-             if (target) {
-                 const { commentAction, itemId, commentTimestamp } = target.dataset;
-                 handleCommentAction(commentAction, itemId, commentTimestamp);
-             }
-        });
-
-        renderComments(itemId);
+        // This listener is now on the detail-view container for better event handling
     }
 
-    async function handleCommentAction(action, itemId, timestamp) {
+    async function handleCommentAction(action, target) {
         const profile = getCurrentProfile();
-        if (!profile.comments || !profile.comments[itemId]) return;
-
-        const commentIndex = profile.comments[itemId].findIndex(c => c.timestamp === timestamp);
-        if (commentIndex === -1) return;
+        const itemId = target.closest('[data-item-id]').dataset.itemId;
+        const commentId = target.closest('[data-comment-id]').dataset.commentId;
 
         if (action === 'like') {
-            const comment = profile.comments[itemId][commentIndex];
-            const likeIndex = comment.likes.indexOf(profile.id);
+            const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
+            const comment = profile.comments[itemId].find(c => c.id === commentId);
+            if (!comment) return;
+
+            const targetItem = replyId ? comment.replies.find(r => r.id === replyId) : comment;
+            if (!targetItem) return;
+
+            const likeIndex = targetItem.likes.indexOf(profile.id);
             if (likeIndex > -1) {
-                comment.likes.splice(likeIndex, 1);
+                targetItem.likes.splice(likeIndex, 1);
             } else {
-                comment.likes.push(profile.id);
+                targetItem.likes.push(profile.id);
             }
         } else if (action === 'delete') {
-            if (profile.comments[itemId][commentIndex].profileId === profile.id) {
-                profile.comments[itemId].splice(commentIndex, 1);
+            const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
+            if (replyId) {
+                const comment = profile.comments[itemId].find(c => c.id === commentId);
+                if (comment) {
+                    comment.replies = comment.replies.filter(r => r.id !== replyId);
+                }
+            } else {
+                profile.comments[itemId] = profile.comments[itemId].filter(c => c.id !== commentId);
             }
+        } else if (action === 'showReplyForm') {
+            const form = target.closest('.comment-container').querySelector('.comment-reply-form');
+            if (form) form.style.display = form.style.display === 'block' ? 'none' : 'block';
         }
+
         await saveProfiles();
         renderComments(itemId);
     }
-
+    
     function renderComments(itemId) {
         const container = document.getElementById('comments-list-container');
         if (!container) return;
         const profile = getCurrentProfile();
         const comments = (profile.comments && profile.comments[itemId]) ? profile.comments[itemId] : [];
-
+    
         if (comments.length === 0) {
             container.innerHTML = '<p class="text-gray-400">Nenhum comentário ainda. Seja o primeiro a comentar!</p>';
             return;
         }
-
+    
         container.innerHTML = comments.map(comment => {
             const isLiked = comment.likes.includes(profile.id);
             const isMyComment = comment.profileId === profile.id;
-
-            return `
-            <div class="flex items-start space-x-4 bg-gray-800/30 p-4 rounded-lg">
-                <img src="${comment.avatar}" alt="${comment.name}" class="w-10 h-10 rounded-full object-cover">
-                <div class="flex-1">
-                    <div class="flex items-center justify-between">
-                         <p class="font-bold text-white">${comment.name}</p>
-                         <p class="text-xs text-gray-500">${new Date(comment.timestamp).toLocaleString('pt-BR')}</p>
+    
+            const repliesHTML = (comment.replies || []).map(reply => {
+                const isReplyLiked = reply.likes.includes(profile.id);
+                const isMyReply = reply.profileId === profile.id;
+                return `
+                    <div class="comment-reply mt-4" data-reply-id="${reply.id}">
+                        <div class="flex items-start space-x-4">
+                            <img src="${reply.avatar}" alt="${reply.name}" class="w-8 h-8 rounded-full object-cover">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <p class="font-bold text-white text-sm">${reply.name}</p>
+                                    <p class="text-xs text-gray-500">${new Date(reply.timestamp).toLocaleString('pt-BR')}</p>
+                                </div>
+                                <p class="text-gray-300 mt-1 text-sm whitespace-pre-wrap break-words">${reply.text}</p>
+                                <div class="flex items-center space-x-4 mt-2 text-xs">
+                                    <button data-action="like" class="flex items-center space-x-1 text-gray-400 hover:text-white">
+                                        <i class="${isReplyLiked ? 'fas' : 'far'} fa-heart ${isReplyLiked ? 'text-red-500' : ''}"></i>
+                                        <span>${reply.likes.length}</span>
+                                    </button>
+                                    ${isMyReply ? `<button data-action="delete" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-gray-300 mt-1 whitespace-pre-wrap break-words">${comment.text}</p>
-                    <div class="flex items-center space-x-4 mt-2">
-                        <button data-comment-action="like" data-item-id="${itemId}" data-comment-timestamp="${comment.timestamp}" class="flex items-center space-x-1 text-gray-400 hover:text-white">
-                            <i class="${isLiked ? 'fas' : 'far'} fa-heart ${isLiked ? 'text-red-500' : ''}"></i>
-                            <span>${comment.likes.length}</span>
-                        </button>
-                        ${isMyComment ? `<button data-comment-action="delete" data-item-id="${itemId}" data-comment-timestamp="${comment.timestamp}" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
+                `;
+            }).join('');
+    
+            return `
+                <div class="comment-container" data-item-id="${itemId}" data-comment-id="${comment.id}">
+                    <div class="flex items-start space-x-4 bg-gray-800/30 p-4 rounded-lg">
+                        <img src="${comment.avatar}" alt="${comment.name}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <p class="font-bold text-white">${comment.name}</p>
+                                <p class="text-xs text-gray-500">${new Date(comment.timestamp).toLocaleString('pt-BR')}</p>
+                            </div>
+                            <p class="text-gray-300 mt-1 whitespace-pre-wrap break-words">${comment.text}</p>
+                            <div class="flex items-center space-x-4 mt-2">
+                                <button data-action="like" class="flex items-center space-x-1 text-gray-400 hover:text-white">
+                                    <i class="${isLiked ? 'fas' : 'far'} fa-heart ${isLiked ? 'text-red-500' : ''}"></i>
+                                    <span>${comment.likes.length}</span>
+                                </button>
+                                <button data-action="showReplyForm" class="text-gray-400 hover:text-white text-sm">Responder</button>
+                                ${isMyComment ? `<button data-action="delete" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="replies-container">${repliesHTML}</div>
+                    <div class="comment-reply-form">
+                        <textarea class="w-full p-2 bg-gray-700/80 rounded-lg text-sm" rows="2" placeholder="Escreva uma resposta..."></textarea>
+                        <div class="text-right mt-2">
+                            <button data-action="add-reply" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded-lg text-sm">Enviar</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `}).join('');
+            `;
+        }).join('');
     }
+
     
     function setupProfilePage() {
         const navLinks = document.querySelectorAll('#profile-sidebar-nav .profile-nav-link');
@@ -1718,126 +1762,150 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.body.addEventListener('click', async (e) => {
         const actionTarget = e.target.closest('[data-action]');
-        if (actionTarget) {
+        if (!actionTarget) return;
+
+        const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl } = actionTarget.dataset;
+
+        // Actions that shouldn't prevent default browser behavior
+        const nonPreventActions = ['handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete'];
+        if (!nonPreventActions.includes(action)) {
+             e.preventDefault();
+        }
             
-            if(actionTarget.dataset.action === 'dismiss-notification') {
-                e.stopPropagation(); 
+        let params = {};
+            
+        switch (action) {
+            case 'showNotifications':
+                notificationsPanel.classList.remove('hidden');
+                setTimeout(() => notificationsPanel.classList.remove('translate-x-full'), 10);
+                markNotificationsAsRead();
+                break;
+            case 'closeNotifications':
+                notificationsPanel.classList.add('translate-x-full');
+                setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
+                break;
+            case 'handleNotificationClick':
+                if (contentId) await showView('detail', { itemId: contentId });
+                else if (linkUrl) window.open(linkUrl, '_blank');
+                notificationsPanel.classList.add('translate-x-full');
+                setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
+                break;
+            case 'dismiss-notification': {
+                e.stopPropagation();
+                const profile = getCurrentProfile();
+                if (!profile || !id) return;
+                actionTarget.closest('.notification-item')?.remove();
+                const docRef = doc(db, 'notifications', id);
+                try { await updateDoc(docRef, { readBy: arrayUnion(profile.id) }); } 
+                catch (error) { console.error("Erro ao dispensar notificação:", error); }
+                break;
             }
-            e.preventDefault(); // FIX: Prevents default browser navigation
-
-            const { action, viewName, itemId, genre, season, epIndex } = actionTarget.dataset;
-            let params = {};
-            
-            switch (action) {
-                case 'showNotifications':
-                    notificationsPanel.classList.remove('hidden');
-                    setTimeout(() => notificationsPanel.classList.remove('translate-x-full'), 10);
-                    markNotificationsAsRead();
-                    break;
-                case 'closeNotifications':
-                    notificationsPanel.classList.add('translate-x-full');
-                    setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
-                    break;
-                case 'handleNotificationClick':
-                    const contentId = actionTarget.dataset.contentId;
-                    const linkUrl = actionTarget.dataset.linkUrl;
-                    if (contentId) {
-                        await showView('detail', { itemId: contentId });
-                    } else if (linkUrl) {
-                        window.open(linkUrl, '_blank');
-                    }
-                    notificationsPanel.classList.add('translate-x-full');
-                    setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
-                    break;
-                 case 'dismiss-notification': {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const notificationId = actionTarget.dataset.id;
-                    const profile = getCurrentProfile();
-                    if (!profile || !notificationId) return;
-                    
-                    actionTarget.closest('.notification-item')?.remove();
-
-                    const docRef = doc(db, 'notifications', notificationId);
-                    try {
-                        await updateDoc(docRef, {
-                            readBy: arrayUnion(profile.id)
-                        });
-                    } catch (error) {
-                        console.error("Erro ao dispensar notificação:", error);
-                    }
-                    break;
+            case 'toggleCastVisibility': {
+                const castContainer = document.getElementById('cast-container');
+                if (castContainer) {
+                    castContainer.classList.toggle('hidden');
+                    actionTarget.textContent = castContainer.classList.contains('hidden') ? 'Ver Elenco' : 'Ocultar Elenco';
                 }
-                case 'toggleCastVisibility': {
-                    const castContainer = document.getElementById('cast-container');
-                    if (castContainer) {
-                        castContainer.classList.toggle('hidden');
-                        const button = actionTarget; // The button is the actionTarget
-                        if (castContainer.classList.contains('hidden')) {
-                            button.textContent = 'Ver Elenco';
-                        } else {
-                            button.textContent = 'Ocultar Elenco';
-                        }
-                    }
-                    break;
+                break;
+            }
+            case 'selectProfile': await selectProfile(itemId); break;
+            case 'showEditProfileView': showEditProfileView(itemId); break;
+            case 'editCurrentProfile': showEditProfileView(currentProfileId); break;
+            case 'showView':
+                if (itemId) params.itemId = itemId;
+                if (genre) params.genre = genre;
+                if (season) params.season = season;
+                if (epIndex) params.epIndex = epIndex;
+                await showView(viewName, params);
+                break;
+            case 'playContent': await playContent(itemId); break;
+            case 'continuePlayback': {
+                const profile = getCurrentProfile();
+                const progress = profile.watchProgress[itemId];
+                if (progress && progress.isSeries) await showView('player', { itemId: itemId, season: progress.season, epIndex: progress.epIndex });
+                else if (progress) await showView('player', { itemId: itemId });
+                else await showView('detail', { itemId: itemId });
+                break;
+            }
+            case 'toggleMyList': await toggleMyList(itemId); break;
+            case 'showTrailer': {
+                const item = itemDetails[itemId];
+                if (item && item.trailer_url) {
+                    const trailerModal = document.getElementById('trailer-modal');
+                    const trailerIframe = document.getElementById('trailer-iframe');
+                    trailerIframe.src = item.trailer_url;
+                    trailerModal.classList.remove('hidden');
                 }
-                case 'selectProfile': 
-                    await selectProfile(itemId); 
-                    break;
-                case 'showEditProfileView': 
-                    showEditProfileView(itemId); 
-                    break;
-                case 'editCurrentProfile': 
-                    showEditProfileView(currentProfileId); 
-                    break;
-                case 'showView':
-                    if (itemId) params.itemId = itemId;
-                    if (genre) params.genre = genre;
-                    if (season) params.season = season;
-                    if (epIndex) params.epIndex = epIndex;
-                    await showView(viewName, params);
-                    break;
-                case 'playContent': 
-                    await playContent(itemId); 
-                    break;
-                case 'continuePlayback': {
-                    const profile = getCurrentProfile();
-                    const progress = profile.watchProgress[itemId];
-                    if (progress) {
-                        if (progress.isSeries) {
-                            await showView('player', { itemId: itemId, season: progress.season, epIndex: progress.epIndex });
-                        } else {
-                            await showView('player', { itemId: itemId });
-                        }
-                    } else {
-                        await showView('detail', { itemId: itemId });
-                    }
-                    break;
-                }
-                case 'toggleMyList': 
-                    await toggleMyList(itemId); 
-                    break;
+                break;
+            }
+            case 'close-trailer-modal': {
+                const trailerModal = document.getElementById('trailer-modal');
+                const trailerIframe = document.getElementById('trailer-iframe');
+                trailerIframe.src = '';
+                trailerModal.classList.add('hidden');
+                break;
             }
         }
     });
 
     document.getElementById('detail-view').addEventListener('click', async (e) => {
-         const star = e.target.closest('.star');
-         if(star) {
-            const container = star.parentElement;
-            const itemId = container.dataset.itemId;
-            const rating = parseInt(star.dataset.value, 10);
-            const currentProfile = getCurrentProfile();
+        const actionTarget = e.target.closest('[data-action]');
+        if (!actionTarget) return;
 
-            if (!currentProfile.userRatings) currentProfile.userRatings = {};
-            currentProfile.userRatings[itemId] = rating;
+        const { action } = actionTarget.dataset;
+        const profile = getCurrentProfile();
+        const itemId = actionTarget.closest('[data-item-id]')?.dataset.itemId;
+
+        if (action === 'add-comment') {
+            const text = document.getElementById('comment-input').value.trim();
+            if (text) {
+                if (!profile.comments) profile.comments = {};
+                if (!profile.comments[itemId]) profile.comments[itemId] = [];
+                
+                profile.comments[itemId].unshift({
+                    id: `c${Date.now()}`,
+                    profileId: profile.id, name: profile.name, avatar: profile.avatar,
+                    text: text, timestamp: new Date().toISOString(), likes: [], replies: []
+                });
+                
+                await saveProfiles();
+                renderComments(itemId);
+                document.getElementById('comment-input').value = '';
+            }
+        } else if (action === 'add-reply') {
+            const container = actionTarget.closest('.comment-container');
+            const commentId = container.dataset.commentId;
+            const textarea = container.querySelector('.comment-reply-form textarea');
+            const text = textarea.value.trim();
+
+            if (text && commentId) {
+                const comment = profile.comments[itemId].find(c => c.id === commentId);
+                if (comment) {
+                    if (!comment.replies) comment.replies = [];
+                    comment.replies.push({
+                        id: `r${Date.now()}`,
+                        profileId: profile.id, name: profile.name, avatar: profile.avatar,
+                        text: text, timestamp: new Date().toISOString(), likes: []
+                    });
+                    await saveProfiles();
+                    renderComments(itemId);
+                }
+            }
+        } else if (['like', 'delete', 'showReplyForm'].includes(action)) {
+            await handleCommentAction(action, actionTarget);
+        } else if (actionTarget.classList.contains('star')) {
+            const container = actionTarget.parentElement;
+            const starItemId = container.dataset.itemId;
+            const rating = parseInt(actionTarget.dataset.value, 10);
+            
+            if (!profile.userRatings) profile.userRatings = {};
+            profile.userRatings[starItemId] = rating;
             await saveProfiles();
 
-            const stars = container.querySelectorAll('.star');
-            stars.forEach(s => {
+            container.querySelectorAll('.star').forEach(s => {
                 s.classList.toggle('selected', s.dataset.value <= rating);
             });
-         }
+        }
     });
 
 });

@@ -113,72 +113,60 @@ body {
     margin-top: 2rem;
 }
 
-/* Notification Styles */
-.notification-item {
-    transition: background-color 0.2s;
-    padding-right: 2.5rem; /* Make space for the X button */
+/* Notification Bell */
+#notification-btn.has-notifications {
+    color: #818cf8; /* indigo-400 */
 }
-
+#notification-btn.shaking {
+    animation: shake 0.5s;
+}
+.notification-item.unread {
+    border-left: 3px solid #818cf8; /* indigo-400 */
+}
 .notification-dismiss-btn {
     position: absolute;
-    top: 0.5rem;
-    right: 0.75rem;
-    font-size: 1.5rem;
+    top: 0.25rem;
+    right: 0.5rem;
+    font-size: 1.25rem;
     line-height: 1;
-    color: #9ca3af; /* gray-400 */
+    color: #9ca3af;
     background: none;
     border: none;
-    cursor: pointer;
-    transition: color 0.2s ease-in-out;
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 .notification-dismiss-btn:hover {
-    color: #f9fafb; /* gray-50 */
+    color: #fff;
 }
 
-.notification-item.unread {
-    background-color: rgba(79, 70, 229, 0.2); /* bg-indigo-500/20 */
+/* Rating Badges */
+.rating-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    text-align: center;
 }
+.rating-l { background-color: #22c55e; } /* green-500 */
+.rating-10 { background-color: #3b82f6; } /* blue-500 */
+.rating-12 { background-color: #eab308; } /* yellow-500 */
+.rating-14 { background-color: #f97316; } /* orange-500 */
+.rating-16 { background-color: #ef4444; } /* red-500 */
+.rating-18 { background-color: #111827; border: 1px solid #4b5563; } /* gray-900 with gray-600 border */
 
-.notification-item.unread::before {
-    content: '';
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #9333ea; /* purple-600 */
+
+/* Comments Section */
+.comment-reply-form {
+    display: none;
+    margin-left: 56px;
+    margin-top: 8px;
+    animation: fadeIn 0.3s;
 }
-
-/* New Notification Bell Styles */
-#notification-btn.has-notifications {
-    color: #818cf8; /* indigo-400, a cor do hover */
-}
-
-#notification-btn.shaking {
-    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-
-@keyframes shake {
-  10%, 90% {
-    transform: translate3d(-1px, 0, 0);
-  }
-  20%, 80% {
-    transform: translate3d(2px, 0, 0);
-  }
-  30%, 50%, 70% {
-    transform: translate3d(-3px, 0, 0);
-  }
-  40%, 60% {
-    transform: translate3d(3px, 0, 0);
-  }
+.comment-reply {
+    margin-left: 56px;
+    border-left: 2px solid #374151; /* gray-700 */
+    padding-left: 1rem;
+    padding-top: 0.5rem;
 }
 
 @keyframes spin {
@@ -188,5 +176,12 @@ body {
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
 }
 
