@@ -694,7 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentUrl = episode.url;
                 currentEpisodeData = { ...episode, seasonKey, epIndex: Number(epIndex) };
             } else {
-                contentUrl = item.trailer_url;
+                contentUrl = item.url; // Use item.url for movies
             }
             
             if (contentUrl) {
@@ -719,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getRatingColorClass(rating) {
         if (!rating) return '';
-        const r = rating.toString().toLowerCase();
+        const r = rating.toString().toLowerCase().replace('+', '');
         if (r === 'l' || r === 'livre') return 'rating-l';
         if (r.includes('10')) return 'rating-10';
         if (r.includes('12')) return 'rating-12';
@@ -963,11 +963,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const commentsSectionHTML = `
-            <div class="mt-10 pt-8 border-t border-gray-800">
+            <div class="mt-10 pt-8 border-t border-gray-800" data-item-id="${itemId}">
                 <h3 class="text-2xl font-bold mb-4">Comentários</h3>
                 <div class="mb-6">
                     <textarea id="comment-input" class="w-full p-3 bg-gray-800/50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none" rows="3" placeholder="Adicione um comentário..."></textarea>
-                    <button id="add-comment-btn" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition">Comentar</button>
+                    <button data-action="add-comment" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg transition">Comentar</button>
                 </div>
                 <div class="space-y-4" id="comments-list-container"></div>
             </div>
@@ -1031,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('.season-tab').click();
         }
         updateMyListButton(itemId, 'detail-mylist-button');
-        setupCommentsSection(itemId);
+        renderComments(itemId);
     }
 
     function handleSeasonTabClick(event) {
@@ -1080,6 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 1; i <= 5; i++) {
             const star = document.createElement('i');
             star.className = `fa-solid fa-star star transition-colors ${i <= userRating ? 'selected' : ''}`;
+            star.dataset.action = 'rate';
             star.dataset.value = i;
             container.appendChild(star);
         }
@@ -1087,10 +1088,6 @@ document.addEventListener('DOMContentLoaded', () => {
         avgRatingEl.textContent = `${item.ratings.avg} (${item.ratings.count} votos)`;
     }
     
-    function setupCommentsSection(itemId) {
-        // This listener is now on the detail-view container for better event handling
-    }
-
     async function handleCommentAction(action, target) {
         const profile = getCurrentProfile();
         const itemId = target.closest('[data-item-id]').dataset.itemId;
@@ -1767,7 +1764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl } = actionTarget.dataset;
 
         // Actions that shouldn't prevent default browser behavior
-        const nonPreventActions = ['handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -1893,7 +1890,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (['like', 'delete', 'showReplyForm'].includes(action)) {
             await handleCommentAction(action, actionTarget);
-        } else if (actionTarget.classList.contains('star')) {
+        } else if (action === 'rate') {
             const container = actionTarget.parentElement;
             const starItemId = container.dataset.itemId;
             const rating = parseInt(actionTarget.dataset.value, 10);
