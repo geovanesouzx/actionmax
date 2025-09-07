@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let carousels = [];
     let itemDetails = {};
     let avatarsFromFirestore = []; // Will hold avatars from Firestore
+    
+    // Notification Sound
+    const notificationSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_2747e1b9b6.mp3');
 
     
     // --- App State ---
@@ -80,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let nextEpisodeInterval = null;
     let progressSaveInterval = null;
     let notificationShakeInterval = null;
+    let lastUnreadCount = -1; // -1 indicates the first run
 
     let unsubscribeContent = null;
     let unsubscribeCarousels = null;
@@ -280,6 +284,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        // --- Trigger Sound and Push Notification ---
+        const previousUnreadCount = lastUnreadCount;
+        lastUnreadCount = unreadCount;
+
+        if (previousUnreadCount !== -1 && unreadCount > previousUnreadCount) {
+            const newNotification = notifications[0]; // Latest is always first
+            
+            // 1. Play Sound
+            if (profile.soundEnabled) {
+                notificationSound.play().catch(error => {
+                    console.warn("A reprodução do som de notificação foi bloqueada pelo navegador.", error);
+                });
+            }
+
+            // 2. Show Push Notification
+            if (profile.pushEnabled && Notification.permission === 'granted') {
+                new Notification(newNotification.title, {
+                    body: newNotification.message,
+                    icon: 'https://placehold.co/192x192/4f46e5/ffffff?text=A' // Placeholder icon
+                });
+            }
+        }
+
+
         // Clear previous state
         clearInterval(notificationShakeInterval);
         notificationShakeInterval = null;
@@ -299,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupNotificationListener() {
         if (unsubscribeNotifications) unsubscribeNotifications();
+        lastUnreadCount = -1; // Reset for the new profile session
         const notificationsQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
         unsubscribeNotifications = onSnapshot(notificationsQuery, processAndRenderNotifications, (error) => {
             console.error("Erro no listener de notificações:", error);
@@ -421,6 +450,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Setup notification listener for the selected profile
         setupNotificationListener();
 
+        // Ask for permission on profile selection if not already set
+        if (Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                profile.pushEnabled = (permission === 'granted');
+                saveProfiles();
+            });
+        }
+
         const hash = window.location.hash.slice(1);
         const [view, param1] = hash.split('/');
         let params = {};
@@ -431,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleLogout() {
+        lastUnreadCount = -1; // Reset on logout
         signOut(auth).catch(error => {
             console.error("Erro ao sair:", error);
             showToast(`Erro: ${error.message}`);
@@ -526,6 +564,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 myList: [],
                 watchProgress: {},
                 userRatings: {},
+                soundEnabled: true,
+                pushEnabled: Notification.permission === 'granted',
             });
         }
 
@@ -1303,6 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             navLinks.forEach(link => link.classList.toggle('active', link.dataset.section === sectionId));
             if (sectionId === 'mylist') renderMyListPage();
             if (sectionId === 'playback') setupPlaybackSettings();
+            if (sectionId === 'notifications') setupNotificationsSettings();
         }
 
         navLinks.forEach(link => {
@@ -1332,6 +1373,52 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.value = value;
             await saveProfiles();
             showToast(`Tempo de pulo definido para ${value} segundos.`);
+        });
+    }
+
+    function setupNotificationsSettings() {
+        const pushBtn = document.getElementById('enable-push-notifications-btn');
+        const soundToggle = document.getElementById('enable-sound-toggle');
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
+        // Update UI based on current permission and profile settings
+        function updatePushUI() {
+            if (Notification.permission === 'denied') {
+                pushBtn.textContent = 'Bloqueado';
+                pushBtn.disabled = true;
+            } else if (Notification.permission === 'granted' && profile.pushEnabled) {
+                pushBtn.textContent = 'Desativar';
+                pushBtn.disabled = false;
+            } else {
+                pushBtn.textContent = 'Ativar';
+                pushBtn.disabled = false;
+            }
+        }
+
+        soundToggle.checked = profile.soundEnabled ?? true;
+        updatePushUI();
+
+        // Event listener for Push Notifications Button
+        pushBtn.addEventListener('click', async () => {
+            if (Notification.permission === 'granted') {
+                profile.pushEnabled = !profile.pushEnabled;
+                await saveProfiles();
+                updatePushUI();
+                showToast(`Notificações Push ${profile.pushEnabled ? 'ativadas' : 'desativadas'}.`);
+            } else if (Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                profile.pushEnabled = (permission === 'granted');
+                await saveProfiles();
+                updatePushUI();
+            }
+        });
+
+        // Event listener for Sound Toggle
+        soundToggle.addEventListener('change', async () => {
+            profile.soundEnabled = soundToggle.checked;
+            await saveProfiles();
+            showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
         });
     }
     
