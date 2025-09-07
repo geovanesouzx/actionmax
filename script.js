@@ -526,7 +526,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 myList: [],
                 watchProgress: {},
                 userRatings: {},
-                comments: {} // This is now legacy, comments are public. Could be removed in a future migration.
             });
         }
 
@@ -1118,40 +1117,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleCommentAction(action, target) {
         const profile = getCurrentProfile();
+        if (!profile) return;
+        
         const itemId = target.closest('[data-item-id]').dataset.itemId;
+        if (!itemId) return;
+
+        if (action === 'add-comment') {
+            const text = document.getElementById('comment-input').value.trim();
+            if (text) {
+                const newComment = {
+                    profileId: profile.id,
+                    name: profile.name,
+                    avatar: profile.avatar,
+                    text: text,
+                    timestamp: serverTimestamp(),
+                    likes: [],
+                    replies: []
+                };
+                try {
+                    await addDoc(collection(db, `content/${itemId}/comments`), newComment);
+                    document.getElementById('comment-input').value = '';
+                } catch (error) {
+                    console.error("Error adding comment: ", error);
+                    showToast("Erro ao enviar comentário.", true);
+                }
+            }
+            return;
+        }
+
         const commentId = target.closest('[data-comment-id]').dataset.commentId;
+        if (!commentId) return;
         const commentRef = doc(db, `content/${itemId}/comments`, commentId);
 
+        if (action === 'add-reply') {
+            const container = target.closest('.comment-container');
+            const textarea = container.querySelector('.comment-reply-form textarea');
+            const text = textarea.value.trim();
+            if (text) {
+                const newReply = {
+                    id: `r${Date.now()}`,
+                    profileId: profile.id, name: profile.name, avatar: profile.avatar,
+                    text: text, timestamp: new Date().toISOString(), likes: []
+                };
+                try {
+                    await updateDoc(commentRef, { replies: arrayUnion(newReply) });
+                } catch (error) { 
+                    console.error("Error adding reply: ", error);
+                    showToast("Erro ao enviar resposta.", true);
+                }
+            }
+            return;
+        }
+
+        if (action === 'showReplyForm') {
+            const form = target.closest('.comment-container').querySelector('.comment-reply-form');
+            if (form) form.style.display = form.style.display === 'block' ? 'none' : 'block';
+            return;
+        }
+        
+        // Use a transaction for likes and deletes to ensure atomicity
         try {
             await runTransaction(db, async (transaction) => {
                 const commentDoc = await transaction.get(commentRef);
                 if (!commentDoc.exists()) return;
                 
                 let commentData = commentDoc.data();
+                const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
 
                 if (action === 'like') {
-                    const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
-                    const targetItem = replyId ? commentData.replies.find(r => r.id === replyId) : commentData;
-
+                    const targetItem = replyId ? (commentData.replies || []).find(r => r.id === replyId) : commentData;
                     if (!targetItem) return;
                     
-                    const likeIndex = (targetItem.likes || []).indexOf(profile.id);
+                    targetItem.likes = targetItem.likes || [];
+                    const likeIndex = targetItem.likes.indexOf(profile.id);
+                    
                     if (likeIndex > -1) {
                         targetItem.likes.splice(likeIndex, 1);
                     } else {
-                        if(!targetItem.likes) targetItem.likes = [];
                         targetItem.likes.push(profile.id);
                     }
                 } else if (action === 'delete') {
-                    const replyId = target.closest('[data-reply-id]')?.dataset.replyId;
                     if (replyId) {
                         if (commentData.replies) {
                            commentData.replies = commentData.replies.filter(r => !(r.id === replyId && r.profileId === profile.id));
                         }
                     } else if (commentData.profileId === profile.id) {
-                        // To delete the main comment, we use transaction.delete
                         transaction.delete(commentRef);
-                        return; // Exit transaction early after delete
+                        return;
                     }
                 }
                 transaction.update(commentRef, commentData);
@@ -1801,7 +1853,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl } = actionTarget.dataset;
 
         // Actions that shouldn't prevent default browser behavior
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -1887,85 +1939,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!actionTarget) return;
 
         const { action } = actionTarget.dataset;
-        const profile = getCurrentProfile();
-        const itemId = actionTarget.closest('[data-item-id]')?.dataset.itemId;
-
-        if (action === 'add-comment') {
-            const text = document.getElementById('comment-input').value.trim();
-            if (text && itemId) {
-                const newComment = {
-                    profileId: profile.id, name: profile.name, avatar: profile.avatar,
-                    text: text, timestamp: serverTimestamp(), likes: [], replies: []
-                };
-                try {
-                    await addDoc(collection(db, `content/${itemId}/comments`), newComment);
-                    document.getElementById('comment-input').value = '';
-                } catch (error) {
-                    console.error("Error adding comment: ", error);
-                    showToast("Erro ao enviar comentário.", true);
-                }
-            }
-        } else if (action === 'add-reply') {
-            const container = actionTarget.closest('.comment-container');
-            const commentId = container.dataset.commentId;
-            const textarea = container.querySelector('.comment-reply-form textarea');
-            const text = textarea.value.trim();
-
-            if (text && commentId) {
-                const commentRef = doc(db, `content/${itemId}/comments`, commentId);
-                const newReply = {
-                    id: `r${Date.now()}`,
-                    profileId: profile.id, name: profile.name, avatar: profile.avatar,
-                    text: text, timestamp: new Date().toISOString(), likes: []
-                };
-                try {
-                    await updateDoc(commentRef, { replies: arrayUnion(newReply) });
-                } catch (error) { 
-                    console.error("Error adding reply: ", error);
-                    showToast("Erro ao enviar resposta.", true);
-                }
-            }
-        } else if (['like', 'delete', 'showReplyForm'].includes(action)) {
+        
+        if (['add-comment', 'add-reply', 'like', 'delete', 'showReplyForm'].includes(action)) {
             await handleCommentAction(action, actionTarget);
         } else if (action === 'rate') {
-            const container = actionTarget.parentElement;
-            const starItemId = container.dataset.itemId;
-            const rating = parseInt(actionTarget.dataset.value, 10);
-            
-            const oldRating = profile.userRatings[starItemId] || 0;
-            profile.userRatings[starItemId] = rating;
-            await saveProfiles();
-
-            const contentRef = doc(db, 'content', starItemId);
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const contentDoc = await transaction.get(contentRef);
-                    if (!contentDoc.exists()) throw "Document does not exist!";
-                    
-                    const data = contentDoc.data();
-                    let ratings = data.ratings || { avg: 0, count: 0 };
-                    let total = ratings.avg * ratings.count;
-
-                    if (oldRating > 0) {
-                        total = total - oldRating + rating;
-                    } else {
-                        total += rating;
-                        ratings.count += 1;
-                    }
-                    ratings.avg = parseFloat((total / ratings.count).toFixed(2));
-                    transaction.update(contentRef, { ratings: ratings });
-                });
-                showToast("Sua avaliação foi enviada!");
-                const updatedDoc = await getDoc(contentRef);
-                itemDetails[starItemId] = { id: starItemId, ...updatedDoc.data() };
-                renderStarRating(starItemId);
-
-            } catch (e) {
-                console.error("Transaction failed: ", e);
-                showToast("Não foi possível enviar sua avaliação.", true);
-                profile.userRatings[starItemId] = oldRating; // Revert local change
-                await saveProfiles();
-            }
+            await handleRating(actionTarget);
         }
     });
 
