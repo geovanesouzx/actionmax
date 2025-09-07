@@ -17,7 +17,10 @@ import {
     doc,
     query,
     orderBy,
-    onSnapshot
+    onSnapshot,
+    updateDoc,
+    arrayUnion,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -76,18 +79,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let unsubscribeContent = null;
     let unsubscribeCarousels = null;
+    let unsubscribeNotifications = null;
 
     const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
     const mainHeader = document.getElementById('main-header');
     const videoPlayer = document.getElementById('video-player');
     const iframePlayer = document.getElementById('iframe-player');
     const errorDisplay = document.getElementById('player-error-display');
+    const notificationsPanel = document.getElementById('notifications-panel');
+    const notificationsList = document.getElementById('notifications-list');
+    const notificationIndicator = document.getElementById('notification-indicator');
     let hlsInstance;
 
     // --- Firestore Data Fetching ---
     function detachRealtimeListeners() {
         if (unsubscribeContent) unsubscribeContent();
         if (unsubscribeCarousels) unsubscribeCarousels();
+        if (unsubscribeNotifications) unsubscribeNotifications();
     }
     
     async function loadDataAndAttachListeners() {
@@ -206,6 +214,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     }
+
+    // --- NOTIFICATION LOGIC ---
+    function formatTimeAgo(timestamp) {
+        if (!timestamp) return '';
+        const date = timestamp.toDate();
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        let interval = seconds / 31536000;
+        if (interval > 1) return `${Math.floor(interval)}a atrás`;
+        interval = seconds / 2592000;
+        if (interval > 1) return `${Math.floor(interval)}m atrás`;
+        interval = seconds / 86400;
+        if (interval > 1) return `${Math.floor(interval)}d atrás`;
+        interval = seconds / 3600;
+        if (interval > 1) return `${Math.floor(interval)}h atrás`;
+        interval = seconds / 60;
+        if (interval > 1) return `${Math.floor(interval)}min atrás`;
+        return 'agora mesmo';
+    }
+
+    function processAndRenderNotifications(snapshot) {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
+        const notifications = [];
+        snapshot.forEach(doc => notifications.push({ id: doc.id, ...doc.data() }));
+
+        notificationsList.innerHTML = '';
+        let hasUnread = false;
+
+        if (notifications.length === 0) {
+            notificationsList.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhuma notificação por enquanto.</p>';
+        } else {
+            notifications.forEach(notif => {
+                const isRead = notif.readBy && notif.readBy.includes(profile.id);
+                if (!isRead) hasUnread = true;
+
+                const item = document.createElement('div');
+                item.className = `notification-item relative bg-gray-800/50 hover:bg-gray-700/50 p-3 rounded-lg cursor-pointer pl-8 ${!isRead ? 'unread' : ''}`;
+                item.dataset.action = 'handleNotificationClick';
+                item.dataset.id = notif.id;
+                if (notif.contentId) item.dataset.contentId = notif.contentId;
+                if (notif.linkUrl) item.dataset.linkUrl = notif.linkUrl;
+
+                item.innerHTML = `
+                    <h4 class="font-bold">${notif.title}</h4>
+                    <p class="text-sm text-gray-300">${notif.message}</p>
+                    <p class="text-xs text-gray-500 mt-1">${formatTimeAgo(notif.timestamp)}</p>
+                `;
+                notificationsList.appendChild(item);
+            });
+        }
+        notificationIndicator.classList.toggle('hidden', !hasUnread);
+    }
+
+    function setupNotificationListener() {
+        if (unsubscribeNotifications) unsubscribeNotifications();
+        const notificationsQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
+        unsubscribeNotifications = onSnapshot(notificationsQuery, processAndRenderNotifications, (error) => {
+            console.error("Erro no listener de notificações:", error);
+        });
+    }
+
+    async function markNotificationsAsRead() {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
+        const unreadItems = notificationsList.querySelectorAll('.notification-item.unread');
+        if (unreadItems.length === 0) return;
+
+        try {
+            const batch = writeBatch(db);
+            unreadItems.forEach(item => {
+                const docRef = doc(db, 'notifications', item.dataset.id);
+                batch.update(docRef, {
+                    readBy: arrayUnion(profile.id)
+                });
+            });
+            await batch.commit();
+        } catch (error) {
+            console.error("Erro ao marcar notificações como lidas:", error);
+        }
+    }
     
     // --- Player Mode Functions ---
     async function enterPlayerMode() {
@@ -265,6 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         showProfileSelectionView(false);
         mainHeader.classList.remove('hidden');
+
+        // Setup notification listener for the selected profile
+        setupNotificationListener();
 
         const hash = window.location.hash.slice(1);
         const [view, param1] = hash.split('/');
@@ -910,8 +1005,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('comments-list-container').addEventListener('click', (e) => {
              const target = e.target.closest('[data-comment-action]');
              if (target) {
-                const { commentAction, itemId, commentTimestamp } = target.dataset;
-                handleCommentAction(commentAction, itemId, commentTimestamp);
+                 const { commentAction, itemId, commentTimestamp } = target.dataset;
+                 handleCommentAction(commentAction, itemId, commentTimestamp);
              }
         });
 
@@ -1537,14 +1632,39 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', async (e) => {
         const actionTarget = e.target.closest('[data-action]');
         if (actionTarget) {
-            e.preventDefault();
             const { action, viewName, itemId, genre, season, epIndex } = actionTarget.dataset;
             let params = {};
             
             switch (action) {
-                case 'selectProfile': await selectProfile(itemId); break;
-                case 'showEditProfileView': showEditProfileView(itemId); break;
-                case 'editCurrentProfile': showEditProfileView(currentProfileId); break;
+                case 'showNotifications':
+                    notificationsPanel.classList.remove('hidden');
+                    setTimeout(() => notificationsPanel.classList.remove('translate-x-full'), 10);
+                    markNotificationsAsRead();
+                    break;
+                case 'closeNotifications':
+                    notificationsPanel.classList.add('translate-x-full');
+                    setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
+                    break;
+                case 'handleNotificationClick':
+                    const contentId = actionTarget.dataset.contentId;
+                    const linkUrl = actionTarget.dataset.linkUrl;
+                    if (contentId) {
+                        await showView('detail', { itemId: contentId });
+                    } else if (linkUrl) {
+                        window.open(linkUrl, '_blank');
+                    }
+                    notificationsPanel.classList.add('translate-x-full');
+                    setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
+                    break;
+                case 'selectProfile': 
+                    await selectProfile(itemId); 
+                    break;
+                case 'showEditProfileView': 
+                    showEditProfileView(itemId); 
+                    break;
+                case 'editCurrentProfile': 
+                    showEditProfileView(currentProfileId); 
+                    break;
                 case 'showView':
                     if (itemId) params.itemId = itemId;
                     if (genre) params.genre = genre;
@@ -1552,7 +1672,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (epIndex) params.epIndex = epIndex;
                     await showView(viewName, params);
                     break;
-                case 'playContent': await playContent(itemId); break;
+                case 'playContent': 
+                    await playContent(itemId); 
+                    break;
                 case 'continuePlayback': {
                     const profile = getCurrentProfile();
                     const progress = profile.watchProgress[itemId];
@@ -1567,7 +1689,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     break;
                 }
-                case 'toggleMyList': toggleMyList(itemId); break;
+                case 'toggleMyList': 
+                    toggleMyList(itemId); 
+                    break;
             }
         }
     });
