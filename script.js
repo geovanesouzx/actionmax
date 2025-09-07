@@ -260,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (notif.linkUrl) item.dataset.linkUrl = notif.linkUrl;
 
                 item.innerHTML = `
+                    <button data-action="dismiss-notification" data-id="${notif.id}" class="notification-dismiss-btn" aria-label="Dispensar">&times;</button>
                     <h4 class="font-bold">${notif.title}</h4>
                     <p class="text-sm text-gray-300">${notif.message}</p>
                     <p class="text-xs text-gray-500 mt-1">${formatTimeAgo(notif.timestamp)}</p>
@@ -1638,6 +1639,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', async (e) => {
         const actionTarget = e.target.closest('[data-action]');
         if (actionTarget) {
+            
+            if(actionTarget.dataset.action === 'dismiss-notification') {
+                e.stopPropagation(); 
+            }
+
             const { action, viewName, itemId, genre, season, epIndex } = actionTarget.dataset;
             let params = {};
             
@@ -1662,6 +1668,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     notificationsPanel.classList.add('translate-x-full');
                     setTimeout(() => notificationsPanel.classList.add('hidden'), 300);
                     break;
+                 case 'dismiss-notification': {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const notificationId = actionTarget.dataset.id;
+                    const profile = getCurrentProfile();
+                    if (!profile || !notificationId) return;
+                    
+                    actionTarget.closest('.notification-item')?.remove();
+
+                    const docRef = doc(db, 'notifications', notificationId);
+                    try {
+                        await updateDoc(docRef, {
+                            readBy: arrayUnion(profile.id)
+                        });
+                    } catch (error) {
+                        console.error("Erro ao dispensar notificação:", error);
+                    }
+                    break;
+                }
                 case 'selectProfile': 
                     await selectProfile(itemId); 
                     break;
@@ -1722,5 +1747,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
-
 

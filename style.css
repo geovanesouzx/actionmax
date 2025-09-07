@@ -116,6 +116,29 @@ body {
 /* Notification Styles */
 .notification-item {
     transition: background-color 0.2s;
+    padding-right: 2.5rem; /* Make space for the X button */
+}
+
+.notification-dismiss-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #9ca3af; /* gray-400 */
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.notification-dismiss-btn:hover {
+    color: #f9fafb; /* gray-50 */
 }
 
 .notification-item.unread {
@@ -142,5 +165,4 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
-
 
