@@ -874,7 +874,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const heroDetails = itemDetails[heroItem.id];
         if(!heroDetails) return;
 
-        heroBackdrop.src = heroDetails.backdrop;
+        // NEW: Select mobile or desktop backdrop
+        const isMobile = window.innerWidth < 768;
+        const backdropUrl = isMobile && heroDetails.backdrop_mobile ? heroDetails.backdrop_mobile : heroDetails.backdrop;
+
+        heroBackdrop.src = backdropUrl;
         heroBackdrop.alt = `${heroDetails.title} background`;
 
         const ratingClass = getRatingColorClass(heroDetails.rating);
@@ -1260,8 +1264,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ratingClass = getRatingColorClass(item.rating);
 
+        // NEW: Select mobile or desktop backdrop
+        const isMobile = window.innerWidth < 768;
+        const backdropUrl = isMobile && item.backdrop_mobile ? item.backdrop_mobile : item.backdrop;
+
         detailView.innerHTML = `
-            <div id="detail-background" style="background-image: url('${item.backdrop}');">
+            <div id="detail-background" style="background-image: url('${backdropUrl}');">
                 <div class="absolute inset-0 bg-black/50 backdrop-blur-xl"></div>
                 <div class="absolute inset-0 detail-backdrop-gradient"></div>
             </div>
