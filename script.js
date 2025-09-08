@@ -262,11 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
              case 'detail-view':
-                  const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
-                  if(currentItemId) {
-                       renderStarRating(currentItemId);
-                  }
-                  break;
+                 const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                 if(currentItemId) {
+                     renderStarRating(currentItemId);
+                 }
+                 break;
         }
     }
 
@@ -493,11 +493,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Ask for permission on profile selection if not already set
         if ('Notification' in window && Notification.permission === "default") {
-              const modal = document.getElementById('permission-modal');
-              modal.classList.remove('hidden');
-              setTimeout(() => {
-                  modal.classList.add('show');
-              }, 10);
+             const modal = document.getElementById('permission-modal');
+             modal.classList.remove('hidden');
+             setTimeout(() => {
+                 modal.classList.add('show');
+             }, 10);
         }
         
         // Unlock audio context by playing a muted sound on first user interaction
@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
             profilesHTML += `
             <div class="text-center group cursor-pointer" data-action="showEditProfileView">
                 <div class="w-24 h-24 md:w-36 md:h-36 rounded-md bg-gray-800 flex items-center justify-center border-4 border-transparent group-hover:border-gray-500 transition">
-                       <svg class="w-12 h-12 text-gray-500 group-hover:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                     <svg class="w-12 h-12 text-gray-500 group-hover:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </div>
                 <p class="mt-2 text-gray-400 font-medium">Adicionar Perfil</p>
             </div>`;
@@ -1102,6 +1102,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>`
         }).join('');
+
+        // NEW: Check for banner type
+        if (category.carouselType === 'banner' && category.backgroundImageUrl) {
+            const logoHTML = category.logoImageUrl ? `<img src="${category.logoImageUrl}" alt="${category.title} logo" class="banner-logo h-12 md:h-20 w-auto mb-4">` : `<h2 class="text-3xl md:text-5xl font-bold text-white mb-4">${category.title}</h2>`;
+            const seeMoreButtonHTML = category.seeMoreUrl ? `<a href="${category.seeMoreUrl}" class="banner-seemore-btn bg-white/90 text-black font-bold py-2 px-6 rounded-lg hover:bg-white transition-transform hover:scale-105">Ver Mais</a>` : '';
+
+            return `
+                <section class="carousel-banner-section">
+                    <div class="banner-background">
+                        <img src="${category.backgroundImageUrl}" alt="${category.title} background" class="w-full h-full object-cover">
+                        <div class="banner-gradient"></div>
+                    </div>
+                    <div class="banner-content">
+                        <div class="banner-info">
+                            ${logoHTML}
+                            ${seeMoreButtonHTML}
+                        </div>
+                        <div class="flex space-x-4 overflow-x-auto custom-scrollbar pb-4 -mx-4 px-4">${itemsHTML}</div>
+                    </div>
+                </section>
+            `;
+        }
+
+        // Default carousel rendering
         return `<div><h2 class="text-xl md:text-2xl font-bold mb-4">${category.title}</h2><div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">${itemsHTML}</div></div>`;
     }
     
@@ -1146,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, []);
 
         if (uniqueContinueWatching.length > 0) {
-            carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, uniqueContinueWatching);
+            carouselsHTML += createCarousel({ title: 'Continuar a Assistir', carouselType: 'default' }, uniqueContinueWatching);
         }
 
         // 2. Dynamic Carousels from Firestore
@@ -1157,7 +1181,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         
             if (items.length === 0) return '';
-            return createCarousel({ title: carouselConfig.title }, items);
+            // Pass the entire config object to createCarousel
+            return createCarousel(carouselConfig, items);
         }).join('');
         
         carouselsHTML += dynamicCarouselsHTML;
@@ -2447,7 +2472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // CORREÇÃO: Força a navegação para trás ao sair da tela cheia no celular com o botão "Voltar" do sistema
         const onPlayerView = !document.getElementById('player-view').classList.contains('hidden') ||
-                               !document.getElementById('iframe-player-view').classList.contains('hidden');
+                             !document.getElementById('iframe-player-view').classList.contains('hidden');
     
         if (!isPlayerModeActive && onPlayerView && window.location.hash.includes('player')) {
             history.back();
@@ -2837,4 +2862,3 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
-
