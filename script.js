@@ -253,11 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
              case 'detail-view':
-                 const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
-                 if(currentItemId) {
-                     renderStarRating(currentItemId);
-                 }
-                 break;
+                  const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                  if(currentItemId) {
+                      renderStarRating(currentItemId);
+                  }
+                  break;
         }
     }
 
@@ -484,11 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Ask for permission on profile selection if not already set
         if ('Notification' in window && Notification.permission === "default") {
-             const modal = document.getElementById('permission-modal');
-             modal.classList.remove('hidden');
-             setTimeout(() => {
-                 modal.classList.add('show');
-             }, 10);
+              const modal = document.getElementById('permission-modal');
+              modal.classList.remove('hidden');
+              setTimeout(() => {
+                  modal.classList.add('show');
+              }, 10);
         }
         
         // Unlock audio context by playing a muted sound on first user interaction
@@ -694,30 +694,49 @@ document.addEventListener('DOMContentLoaded', () => {
             handleLogout(); 
             return;
         }
+        
+        // **BUG FIX**: Check if we are transitioning from a player view to another player view
+        const isTransitioningPlayer = !document.getElementById('player-view').classList.contains('hidden') && viewName === 'player';
+
+        if (!isTransitioningPlayer) {
+             if (isPlayerModeActive) {
+                await exitPlayerMode();
+            }
+        }
+       
+        // Stop current playback regardless
         clearInterval(progressSaveInterval);
         hideNextEpisodeOverlay();
-        currentPlayingItemId = null;
-        currentEpisodeData = null;
+        if (hlsInstance) {
+            hlsInstance.destroy();
+            hlsInstance = null;
+        }
+        videoPlayer.src = ''; 
+        iframePlayer.src = '';
         
-        if(isPlayerModeActive){
-            await exitPlayerMode();
+        // Reset player-specific UI only if we are NOT just changing episodes
+        if (!isTransitioningPlayer) {
+            document.getElementById('progress-bar').style.width = '0%';
+            document.getElementById('current-time').textContent = '00:00';
+            document.getElementById('duration').textContent = '00:00';
+            errorDisplay.classList.add('hidden');
         }
 
-        if (hlsInstance) {
-            hlsInstance.destroy(); hlsInstance = null;
-        }
-        videoPlayer.src = ''; iframePlayer.src = '';
-        document.getElementById('progress-bar').style.width = '0%';
-        document.getElementById('current-time').textContent = '00:00';
-        document.getElementById('duration').textContent = '00:00';
-        errorDisplay.classList.add('hidden');
+        currentPlayingItemId = null;
+        currentEpisodeData = null;
         
         allViews.forEach(id => {
             const el = document.getElementById(id);
             if(el && !['profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'].includes(id)) {
-                el.classList.add('hidden');
+                 // If we are transitioning between episodes, don't hide the player view
+                if (isTransitioningPlayer && id === 'player-view') {
+                    // Do nothing, leave it visible for the new content
+                } else {
+                    el.classList.add('hidden');
+                }
             }
         });
+
         window.scrollTo(0, 0);
 
         const appContainer = document.getElementById('app-container');
@@ -888,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { /* Ignora URLs inválidas */ }
         
         const isMobile = window.innerWidth < 768;
-        if (isMobile) {
+        if (isMobile && !document.fullscreenElement) {
             videoPlayer.addEventListener('play', enterPlayerMode, { once: true });
         }
 
@@ -1387,7 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const commentsHTML = commentsToDisplay.map(comment => {
             const isLiked = (comment.likes || []).includes(profile.id);
             const isMyComment = comment.profileId === profile.id;
-        
+    
             const repliesHTML = (comment.replies || []).map(reply => {
                 const isReplyLiked = (reply.likes || []).includes(profile.id);
                 const isMyReply = reply.profileId === profile.id;
@@ -1413,7 +1432,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             }).join('');
-        
+    
             return `
                 <div class="comment-container" data-item-id="${itemId}" data-comment-id="${comment.id}">
                     <div class="flex items-start space-x-4 bg-gray-800/30 p-4 rounded-lg">
@@ -1632,11 +1651,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveProgress() {
         const profile = getCurrentProfile();
         if (profile && currentPlayingItemId && videoPlayer.duration > 0 && !videoPlayer.paused) {
-             let progressData = {
-                 currentTime: videoPlayer.currentTime,
-                 duration: videoPlayer.duration,
-                 lastUpdated: Date.now()
-             };
+              let progressData = {
+                  currentTime: videoPlayer.currentTime,
+                  duration: videoPlayer.duration,
+                  lastUpdated: Date.now()
+              };
             if (currentEpisodeData) {
                 progressData.isSeries = true;
                 progressData.season = currentEpisodeData.seasonKey;
@@ -1660,7 +1679,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await saveProfiles();
     
-        // Update both possible buttons to keep UI consistent
+        // **BUG FIX**: Update both possible buttons to keep UI consistent
         updateMyListButton(itemId, 'detail-mylist-button');
         const heroItem = Object.values(itemDetails).find(item => item.isHero);
         if (heroItem && heroItem.id === itemId) {
@@ -1808,11 +1827,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="flex items-center justify-between mt-2">
                              <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
                              <button 
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition disabled:bg-gray-500 disabled:cursor-not-allowed" 
-                                data-action="voteForRequest" 
-                                data-request-id="${req.id}"
-                                ${hasVoted ? 'disabled' : ''}>
-                                ${hasVoted ? 'Votado' : 'Votar'}
+                                 class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition disabled:bg-gray-500 disabled:cursor-not-allowed" 
+                                 data-action="voteForRequest" 
+                                 data-request-id="${req.id}"
+                                 ${hasVoted ? 'disabled' : ''}>
+                                 ${hasVoted ? 'Votado' : 'Votar'}
                              </button>
                         </div>
                     </div>
@@ -2412,4 +2431,3 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 });
-
