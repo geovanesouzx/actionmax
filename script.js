@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isTransitioningPlayer = !document.getElementById('player-view').classList.contains('hidden') && viewName === 'player';
 
         if (!isTransitioningPlayer) {
-             if (isPlayerModeActive) {
+             if (isPlayerModeActive || document.fullscreenElement) {
                 await exitPlayerMode();
             }
             // Only stop playback completely if we are not transitioning episodes
@@ -868,7 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ratingClass = getRatingColorClass(heroDetails.rating);
 
         heroContainer.innerHTML = `
-            <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg">${heroDetails.title}</h2>
+            <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg cursor-pointer hover:text-gray-300 transition-colors" data-action="showView" data-view-name="detail" data-item-id="${heroDetails.id}">${heroDetails.title}</h2>
             <div class="flex items-center justify-center md:justify-start space-x-4 my-3 md:my-4 text-xs md:text-sm">
                 <span class="font-semibold">${heroDetails.year}</span>
                 <span class="rating-badge ${ratingClass}">${heroDetails.rating}</span>
@@ -2220,9 +2220,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleLogout(); 
             return;
         };
-        if (isPlayerModeActive || document.fullscreenElement) {
-            await exitPlayerMode();
-        }
         const state = event.state || { viewName: 'home', params: {} };
         await showView(state.viewName, state.params, false);
     });
