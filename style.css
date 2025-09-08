@@ -1,8 +1,23 @@
+/* Estilos para o carrossel arrastável */
+.custom-scrollbar {
+    cursor: grab; /* Mãozinha para indicar que é arrastável */
+    user-select: none; /* Impede a seleção de texto ao arrastar */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    scroll-behavior: auto; /* Garante que o scroll por JS funcione bem */
+    scrollbar-width: none; /* Esconde a barra de rolagem no Firefox */
+}
+
+.custom-scrollbar.active-dragging {
+    cursor: grabbing; /* Mãozinha "agarrando" ao arrastar */
+}
+
 body {
     font-family: 'Poppins', sans-serif;
     background-color: #0c0c0c;
 }
-.custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+.custom-scrollbar::-webkit-scrollbar { display: none; /* Esconde a barra de rolagem para uma melhor experiência de arrastar */ }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
 .hero-gradient { background: linear-gradient(to top, #0c0c0c 5%, rgba(12, 12, 12, 0.6) 25%, transparent 70%); }
@@ -217,4 +232,3 @@ body {
   30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
   40%, 60% { transform: translate3d(3px, 0, 0); }
 }
-

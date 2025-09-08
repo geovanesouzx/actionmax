@@ -967,6 +967,49 @@ document.addEventListener('DOMContentLoaded', () => {
         errorDisplay.classList.remove('hidden');
     }
 
+    // =========== NEW FUNCTION FOR DRAG-TO-SCROLL ===========
+    function enableDragScroll() {
+        const sliders = document.querySelectorAll('.custom-scrollbar');
+        if (!sliders.length) return;
+
+        sliders.forEach(slider => {
+            // Avoid re-attaching listeners if already enabled
+            if (slider.hasAttribute('data-drag-scroll-enabled')) return;
+            slider.setAttribute('data-drag-scroll-enabled', 'true');
+
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            slider.addEventListener('mousedown', (e) => {
+                isDown = true;
+                slider.classList.add('active-dragging');
+                startX = e.pageX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+                // Prevent default browser drag behavior on images/links inside the carousel
+                e.preventDefault();
+            });
+
+            slider.addEventListener('mouseleave', () => {
+                isDown = false;
+                slider.classList.remove('active-dragging');
+            });
+
+            slider.addEventListener('mouseup', () => {
+                isDown = false;
+                slider.classList.remove('active-dragging');
+            });
+
+            slider.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - slider.offsetLeft;
+                const walk = (x - startX) * 2; // Multiplier increases scroll speed
+                slider.scrollLeft = scrollLeft - walk;
+            });
+        });
+    }
+
     function createCarousel(category, items) {
         const profile = getCurrentProfile();
         if (!profile) return '';
@@ -1043,13 +1086,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const details = itemDetails[catalogItem.id];
                 return details && Array.isArray(details.carousel_ids) && details.carousel_ids.includes(carouselConfig.id);
             });
-    
+        
             if (items.length === 0) return '';
             return createCarousel({ title: carouselConfig.title }, items);
         }).join('');
         
         carouselsHTML += dynamicCarouselsHTML;
         document.getElementById('carousels-container').innerHTML = carouselsHTML;
+        enableDragScroll(); // Add drag functionality to the new carousels
     }
     
     function renderGenericPage(viewId, title, type) {
@@ -1235,6 +1279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateMyListButton(itemId, 'detail-mylist-button');
         setupCommentsSection(itemId);
+        enableDragScroll(); // Add drag functionality to the cast carousel
 
         if (lastScrollPosition > 0) {
             const detailContainer = document.getElementById('detail-scroll-container');
@@ -2303,7 +2348,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // CORREÇÃO: Força a navegação para trás ao sair da tela cheia no celular com o botão "Voltar" do sistema
         const onPlayerView = !document.getElementById('player-view').classList.contains('hidden') ||
-                             !document.getElementById('iframe-player-view').classList.contains('hidden');
+                               !document.getElementById('iframe-player-view').classList.contains('hidden');
     
         if (!isPlayerModeActive && onPlayerView && window.location.hash.includes('player')) {
             history.back();
@@ -2665,4 +2710,3 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
-
