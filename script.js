@@ -913,6 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         videoPlayer.currentTime = 0; // Reset first
+        videoPlayer.hasBeenMarkedAsWatched = false; // Reset the flag for auto-removal
         if (progress) {
             videoPlayer.currentTime = progress.currentTime;
         }
@@ -980,9 +981,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let isDown = false;
             let startX;
             let scrollLeft;
+            let isDragging = false; // Flag to distinguish click from drag
 
             slider.addEventListener('mousedown', (e) => {
                 isDown = true;
+                isDragging = false; // Reset on new mousedown
                 slider.classList.add('active-dragging');
                 startX = e.pageX - slider.offsetLeft;
                 scrollLeft = slider.scrollLeft;
@@ -995,36 +998,107 @@ document.addEventListener('DOMContentLoaded', () => {
                 slider.classList.remove('active-dragging');
             });
 
-            slider.addEventListener('mouseup', () => {
+            slider.addEventListener('mouseup', (e) => {
                 isDown = false;
                 slider.classList.remove('active-dragging');
+                
+                // If it was a drag, prevent the click event on the children
+                if(isDragging) {
+                    const children = slider.querySelectorAll('a, [data-action]');
+                    children.forEach(child => {
+                        child.addEventListener('click', preventDefaultOnClick, { once: true });
+                    });
+                }
             });
 
             slider.addEventListener('mousemove', (e) => {
                 if (!isDown) return;
+                isDragging = true; // Set dragging flag on first move
                 e.preventDefault();
                 const x = e.pageX - slider.offsetLeft;
                 const walk = (x - startX) * 2; // Multiplier increases scroll speed
                 slider.scrollLeft = scrollLeft - walk;
             });
+
+            const preventDefaultOnClick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
         });
     }
+    
+    // ===============================================
+    // ================== NEW FUNCTION ===============
+    // ===============================================
+    async function removeFromContinueWatching(itemId) {
+        const profile = getCurrentProfile();
+        if (!profile || !profile.watchProgress) return;
+    
+        // Find all keys related to this series or movie
+        const keysToDelete = Object.keys(profile.watchProgress).filter(key => {
+            // key is either the itemId itself (movie) or starts with itemId_ (series)
+            return key === itemId || key.startsWith(`${itemId}_s`);
+        });
+    
+        if (keysToDelete.length > 0) {
+            keysToDelete.forEach(key => {
+                delete profile.watchProgress[key];
+            });
+    
+            await saveProfiles();
+            renderCarousels(); // Re-render to show the change
+            showToast("Removido de 'Continuar a Assistir'");
+        }
+    }
+    
+    async function clearWatchProgress(itemId) {
+        const profile = getCurrentProfile();
+        if (!profile || !profile.watchProgress) return;
+    
+        // Find all keys related to this series or movie
+        const keysToDelete = Object.keys(profile.watchProgress).filter(key => 
+            key === itemId || key.startsWith(`${itemId}_s`)
+        );
+    
+        if (keysToDelete.length > 0) {
+            console.log(`Limpando progresso para o item ${itemId}`);
+            keysToDelete.forEach(key => {
+                delete profile.watchProgress[key];
+            });
+            // Stop saving progress for this session as it's finished
+            if(progressSaveInterval) clearInterval(progressSaveInterval);
+            await saveProfiles();
+        }
+    }
+
 
     function createCarousel(category, items) {
         const profile = getCurrentProfile();
         if (!profile) return '';
         
+        const isContinueWatching = category.title === 'Continuar a Assistir';
+
         const itemsHTML = items.map(item => {
             const progress = item.progressData || (item.type === 'movie' ? profile.watchProgress[item.id] : null);
             let progressPercent = 0;
             if (progress) {
                 progressPercent = (progress.currentTime / progress.duration) * 100;
             }
-            const action = category.title === 'Continuar a Assistir' ? 'continuePlayback' : 'showView';
+            const action = isContinueWatching ? 'continuePlayback' : 'showView';
+
+            const removeButtonHTML = isContinueWatching ? `
+                <button data-action="removeFromContinueWatching" data-item-id="${item.id}" class="absolute top-1 right-1 bg-black/70 rounded-full h-6 w-6 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-600 hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            ` : '';
+
             return `
-            <div class="flex-shrink-0 w-40 md:w-48 group cursor-pointer" data-action="${action}" data-view-name="detail" data-item-id="${item.id}">
-                <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
-                    <img src="${item.poster}" alt="${item.title}" class="poster-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
+            <div class="flex-shrink-0 w-40 md:w-48 group" data-action="${action}" data-view-name="detail" data-item-id="${item.id}">
+                <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500 cursor-pointer">
+                    ${removeButtonHTML}
+                    <img src="${item.poster}" alt="${item.title}" class="pointer-events-none poster-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                         <h3 class="font-bold text-white truncate">${item.title}</h3>
@@ -2297,9 +2371,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     videoPlayer.addEventListener('timeupdate', () => { 
-        if (videoPlayer.duration) { 
-            progressBar.style.width = `${(videoPlayer.currentTime / videoPlayer.duration) * 100}%`; 
+        if (videoPlayer.duration && videoPlayer.currentTime > 0) { 
+            const progressPercent = videoPlayer.currentTime / videoPlayer.duration;
+            progressBar.style.width = `${progressPercent * 100}%`; 
             document.getElementById('current-time').textContent = formatTime(videoPlayer.currentTime); 
+
+            // --- NEW LOGIC FOR AUTO-REMOVAL ---
+            // Use a flag to ensure we only try to remove it once per session
+            if (progressPercent >= 0.95 && !videoPlayer.hasBeenMarkedAsWatched) {
+                const item = itemDetails[currentPlayingItemId];
+                if (item) {
+                    let isFinished = false;
+                    if (item.type === 'movie') {
+                        isFinished = true;
+                    } else if (item.type === 'series') {
+                        if (findNextEpisode() === null) {
+                            isFinished = true;
+                        }
+                    }
+
+                    if (isFinished) {
+                        console.log(`Conteúdo finalizado: ${item.title}. Removendo de 'Continuar a Assistir'.`);
+                        clearWatchProgress(currentPlayingItemId);
+                        videoPlayer.hasBeenMarkedAsWatched = true; // Set flag
+                    }
+                }
+            }
         }
         if (currentEpisodeData && currentEpisodeData.intro && currentEpisodeData.intro.end > 0) {
             const { start, end } = currentEpisodeData.intro;
@@ -2528,7 +2625,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido', 'removeFromContinueWatching'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -2536,6 +2633,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let params = {};
             
         switch (action) {
+            case 'removeFromContinueWatching':
+                e.stopPropagation(); // Impede que o clique acione a navegação para a página de detalhes
+                await removeFromContinueWatching(itemId);
+                break;
             case 'showNotifications':
                 notificationsPanel.classList.remove('hidden');
                 setTimeout(() => notificationsPanel.classList.remove('translate-x-full'), 10);
@@ -2710,3 +2811,4 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
