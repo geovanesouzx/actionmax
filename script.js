@@ -934,8 +934,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { /* Ignora URLs inválidas */ }
         
-        const isMobile = window.innerWidth < 768;
-        if (isMobile && !document.fullscreenElement) {
+        // MODIFIED: Auto-fullscreen on play for all devices, not just mobile
+        if (!document.fullscreenElement) {
             videoPlayer.addEventListener('play', enterPlayerMode, { once: true });
         }
 
@@ -972,28 +972,25 @@ document.addEventListener('DOMContentLoaded', () => {
         errorDisplay.classList.remove('hidden');
     }
 
-    // =========== NEW FUNCTION FOR DRAG-TO-SCROLL ===========
     function enableDragScroll() {
         const sliders = document.querySelectorAll('.custom-scrollbar');
         if (!sliders.length) return;
 
         sliders.forEach(slider => {
-            // Avoid re-attaching listeners if already enabled
             if (slider.hasAttribute('data-drag-scroll-enabled')) return;
             slider.setAttribute('data-drag-scroll-enabled', 'true');
 
             let isDown = false;
             let startX;
             let scrollLeft;
-            let isDragging = false; // Flag to distinguish click from drag
+            let isDragging = false; 
 
             slider.addEventListener('mousedown', (e) => {
                 isDown = true;
-                isDragging = false; // Reset on new mousedown
+                isDragging = false; 
                 slider.classList.add('active-dragging');
                 startX = e.pageX - slider.offsetLeft;
                 scrollLeft = slider.scrollLeft;
-                // Prevent default browser drag behavior on images/links inside the carousel
                 e.preventDefault();
             });
 
@@ -1006,7 +1003,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 isDown = false;
                 slider.classList.remove('active-dragging');
                 
-                // If it was a drag, prevent the click event on the children
                 if(isDragging) {
                     const children = slider.querySelectorAll('a, [data-action]');
                     children.forEach(child => {
@@ -1017,10 +1013,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             slider.addEventListener('mousemove', (e) => {
                 if (!isDown) return;
-                isDragging = true; // Set dragging flag on first move
+                isDragging = true;
                 e.preventDefault();
                 const x = e.pageX - slider.offsetLeft;
-                const walk = (x - startX) * 2; // Multiplier increases scroll speed
+                const walk = (x - startX) * 2; 
                 slider.scrollLeft = scrollLeft - walk;
             });
 
@@ -1031,16 +1027,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // ===============================================
-    // ================== NEW FUNCTION ===============
-    // ===============================================
     async function removeFromContinueWatching(itemId) {
         const profile = getCurrentProfile();
         if (!profile || !profile.watchProgress) return;
     
-        // Find all keys related to this series or movie
         const keysToDelete = Object.keys(profile.watchProgress).filter(key => {
-            // key is either the itemId itself (movie) or starts with itemId_ (series)
             return key === itemId || key.startsWith(`${itemId}_s`);
         });
     
@@ -1050,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     
             await saveProfiles();
-            renderCarousels(); // Re-render to show the change
+            renderCarousels(); 
             showToast("Removido de 'Continuar a Assistir'");
         }
     }
@@ -1059,7 +1050,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const profile = getCurrentProfile();
         if (!profile || !profile.watchProgress) return;
     
-        // Find all keys related to this series or movie
         const keysToDelete = Object.keys(profile.watchProgress).filter(key => 
             key === itemId || key.startsWith(`${itemId}_s`)
         );
@@ -1069,7 +1059,6 @@ document.addEventListener('DOMContentLoaded', () => {
             keysToDelete.forEach(key => {
                 delete profile.watchProgress[key];
             });
-            // Stop saving progress for this session as it's finished
             if(progressSaveInterval) clearInterval(progressSaveInterval);
             await saveProfiles();
         }
@@ -2381,7 +2370,10 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.addEventListener('timeupdate', () => { 
         if (videoPlayer.duration && videoPlayer.currentTime > 0) { 
             const progressPercent = videoPlayer.currentTime / videoPlayer.duration;
-            progressBar.style.width = `${progressPercent * 100}%`; 
+            // Only update progress bar if the user is NOT actively seeking
+            if (!isSeeking) {
+                progressBar.style.width = `${progressPercent * 100}%`; 
+            }
             document.getElementById('current-time').textContent = formatTime(videoPlayer.currentTime); 
 
             // --- NEW LOGIC FOR AUTO-REMOVAL ---
@@ -2470,10 +2462,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    progressBarContainer.addEventListener('click', (e) => {
+    // MODIFIED: Added draggable progress bar functionality
+    let isSeeking = false;
+
+    const handleSeek = (e) => {
+        if (!videoPlayer.duration) return;
         const rect = progressBarContainer.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
+        let pos = (e.clientX - rect.left) / rect.width;
+        pos = Math.max(0, Math.min(1, pos)); // Clamp position between 0 and 1
         videoPlayer.currentTime = pos * videoPlayer.duration;
+        progressBar.style.width = `${pos * 100}%`;
+    };
+
+    progressBarContainer.addEventListener('mousedown', (e) => {
+        isSeeking = true;
+        videoPlayer.pause(); // Pause while seeking for a smoother experience
+        handleSeek(e);
+
+        const onMouseMove = (moveEvent) => {
+            if (isSeeking) {
+                handleSeek(moveEvent);
+            }
+        };
+
+        const onMouseUp = () => {
+            if (isSeeking) {
+                isSeeking = false;
+                videoPlayer.play().catch(e => console.error("Erro de autoplay após busca:", e));
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     });
 
     skipIntroBtn.addEventListener('click', () => {
