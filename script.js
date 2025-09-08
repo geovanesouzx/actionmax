@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPlayerModeActive = false;
     let commentsToShow = 5;
     let tmdbSearchTimeout = null;
+    let lastVolume = 1;
 
     let currentPlayingItemId = null;
     let currentEpisodeData = null;
@@ -606,6 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 userRatings: {},
                 soundEnabled: true,
                 pushEnabled: ('Notification' in window) && Notification.permission === 'granted',
+                lastViewedSeason: {},
             });
         }
 
@@ -695,24 +697,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // **BUG FIX**: Check if we are transitioning from a player view to another player view
         const isTransitioningPlayer = !document.getElementById('player-view').classList.contains('hidden') && viewName === 'player';
 
         if (!isTransitioningPlayer) {
-             if (isPlayerModeActive) {
+             if (isPlayerModeActive || document.fullscreenElement) {
                 await exitPlayerMode();
             }
+            // Only stop playback completely if we are not transitioning episodes
+            clearInterval(progressSaveInterval);
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+            videoPlayer.src = ''; 
+            iframePlayer.src = '';
         }
-       
-        // Stop current playback regardless
-        clearInterval(progressSaveInterval);
+
         hideNextEpisodeOverlay();
-        if (hlsInstance) {
-            hlsInstance.destroy();
-            hlsInstance = null;
-        }
-        videoPlayer.src = ''; 
-        iframePlayer.src = '';
         
         // Reset player-specific UI only if we are NOT just changing episodes
         if (!isTransitioningPlayer) {
@@ -728,8 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allViews.forEach(id => {
             const el = document.getElementById(id);
             if(el && !['profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'].includes(id)) {
-                 // If we are transitioning between episodes, don't hide the player view
-                if (isTransitioningPlayer && id === 'player-view') {
+                 if (isTransitioningPlayer && id === 'player-view') {
                     // Do nothing, leave it visible for the new content
                 } else {
                     el.classList.add('hidden');
@@ -831,6 +831,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Core App Logic & Player ---
+    // Helper to generate a unique key for each episode's progress
+    function getEpisodeProgressKey(itemId, seasonKey, epIndex) {
+        return `${itemId}_s${seasonKey}_e${epIndex}`;
+    }
 
     function getRatingColorClass(rating) {
         if (!rating) return '';
@@ -865,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ratingClass = getRatingColorClass(heroDetails.rating);
 
         heroContainer.innerHTML = `
-            <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg">${heroDetails.title}</h2>
+            <h2 class="text-3xl md:text-6xl font-bold drop-shadow-lg cursor-pointer hover:text-gray-300 transition-colors" data-action="showView" data-view-name="detail" data-item-id="${heroDetails.id}">${heroDetails.title}</h2>
             <div class="flex items-center justify-center md:justify-start space-x-4 my-3 md:my-4 text-xs md:text-sm">
                 <span class="font-semibold">${heroDetails.year}</span>
                 <span class="rating-badge ${ratingClass}">${heroDetails.rating}</span>
@@ -887,14 +891,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initPlayer(url, itemId) {
         const profile = getCurrentProfile();
-        const progress = profile.watchProgress[itemId];
-        
-        if (progress) {
-             if (!currentEpisodeData || (currentEpisodeData.seasonKey === progress.season && currentEpisodeData.epIndex === progress.epIndex)) {
-                 videoPlayer.currentTime = progress.currentTime;
-             }
+        let progress = null;
+
+        if (currentEpisodeData) { // It's a series episode
+            const { seasonKey, epIndex } = currentEpisodeData;
+            const episodeKey = getEpisodeProgressKey(itemId, seasonKey, epIndex);
+            progress = profile.watchProgress[episodeKey];
+        } else { // It's a movie
+            progress = profile.watchProgress[itemId];
         }
         
+        videoPlayer.currentTime = 0; // Reset first
+        if (progress) {
+            videoPlayer.currentTime = progress.currentTime;
+        }
+        
+        if (progressSaveInterval) clearInterval(progressSaveInterval);
         progressSaveInterval = setInterval(saveProgress, 5000);
 
         let finalUrl = url;
@@ -913,6 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (finalUrl.includes('.m3u8')) {
             if (Hls.isSupported()) {
+                if (hlsInstance) hlsInstance.destroy();
                 const hlsConfig = { startLevel: -1, capLevelToPlayerSize: true, maxBufferSize: 120, maxBufferLength: 30 };
                 hlsInstance = new Hls(hlsConfig);
                 hlsInstance.loadSource(finalUrl);
@@ -935,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlayer.play().catch(e => console.error("Erro de autoplay:", e));
         }
         showControlsAndResetTimer();
+        updateEpisodeNavButtons();
     }
 
     function showPlayerError(message) {
@@ -947,7 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!profile) return '';
         
         const itemsHTML = items.map(item => {
-            const progress = profile.watchProgress[item.id];
+            const progress = item.progressData || (item.type === 'movie' ? profile.watchProgress[item.id] : null);
             let progressPercent = 0;
             if (progress) {
                 progressPercent = (progress.currentTime / progress.duration) * 100;
@@ -990,19 +1004,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredCatalogForProfile = getFilteredCatalog();
         
         // 1. Continue Watching Carousel
-        const continueWatchingItems = Object.keys(profile.watchProgress)
-            .map(id => {
-                const progress = profile.watchProgress[id];
-                if (progress.duration > 0 && (progress.currentTime / progress.duration) > 0.95) {
-                    return null;
-                }
-                return filteredCatalogForProfile.find(item => item.id == id);
+        const continueWatchingItems = Object.values(profile.watchProgress || {})
+            .filter(progress => progress.duration > 0 && (progress.currentTime / progress.duration) < 0.95)
+            .sort((a, b) => b.lastUpdated - a.lastUpdated)
+            .map(progress => {
+                const itemId = progress.isSeries ? progress.itemId : Object.keys(profile.watchProgress).find(key => profile.watchProgress[key] === progress);
+                const catalogItem = filteredCatalogForProfile.find(item => item.id === itemId);
+                if (!catalogItem) return null;
+                return { ...catalogItem, progressData: progress };
             })
             .filter(Boolean);
+            
+        const uniqueContinueWatching = continueWatchingItems.reduce((acc, current) => {
+            if (!acc.find(item => item.id === current.id)) {
+                acc.push(current);
+            }
+            return acc;
+        }, []);
 
-
-        if (continueWatchingItems.length > 0) {
-            carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, continueWatchingItems);
+        if (uniqueContinueWatching.length > 0) {
+            carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, uniqueContinueWatching);
         }
 
         // 2. Dynamic Carousels from Firestore
@@ -1036,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let bottomContent = '';
         if (item.type === 'series' && item.seasons) {
             const seasons = Object.keys(item.seasons);
-            const seasonTabs = seasons.map(s => `<button class="season-tab border-b-2 border-transparent text-gray-400 py-2 px-4 transition" data-season="${s}" data-itemid="${itemId}">${item.seasons[s].title}</button>`).join('');
+            const seasonTabs = seasons.map(s => `<button class="season-tab border-b-2 border-transparent text-gray-400 py-2 px-4 transition" data-season="${s}" data-item-id="${itemId}">${item.seasons[s].title}</button>`).join('');
             bottomContent = `<div class="mt-8"><div class="border-b border-gray-700">${seasonTabs}</div><div id="episodes-list" class="mt-4"></div></div>`;
         }
 
@@ -1145,44 +1166,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderStarRating(itemId);
         if (item.type === 'series' && item.seasons) {
+            const profile = getCurrentProfile();
+            const lastSeason = profile?.lastViewedSeason?.[itemId];
+            const targetSeasonTab = lastSeason ? document.querySelector(`.season-tab[data-season='${lastSeason}']`) : null;
+            
             document.querySelectorAll('.season-tab').forEach(tab => tab.addEventListener('click', handleSeasonTabClick));
-            document.querySelector('.season-tab').click();
+            
+            if (targetSeasonTab) {
+                targetSeasonTab.click();
+            } else {
+                document.querySelector('.season-tab')?.click();
+            }
         }
         updateMyListButton(itemId, 'detail-mylist-button');
         setupCommentsSection(itemId);
     }
 
-    function handleSeasonTabClick(event) {
+    async function handleSeasonTabClick(event) {
         document.querySelectorAll('.season-tab').forEach(t => t.classList.remove('season-tab-active'));
         event.target.classList.add('season-tab-active');
         
         const itemId = event.target.dataset.itemid;
         const seasonKey = event.target.dataset.season;
         const item = itemDetails[itemId];
-        const episodes = item.seasons[seasonKey].episodes;
         const episodesListEl = document.getElementById('episodes-list');
         const profile = getCurrentProfile();
-
+    
+        if (!item || !item.seasons || !item.seasons[seasonKey]) {
+            episodesListEl.innerHTML = '<p class="text-gray-400">Dados da temporada não encontrados.</p>';
+            return;
+        }
+    
+        const seasonData = item.seasons[seasonKey];
+        const episodes = seasonData.episodes;
+    
+        if (!episodes || !Array.isArray(episodes) || episodes.length === 0) {
+            episodesListEl.innerHTML = '<p class="text-gray-400">Nenhum episódio encontrado para esta temporada.</p>';
+            return;
+        }
+    
+        if (profile) {
+            if (!profile.lastViewedSeason) profile.lastViewedSeason = {};
+            profile.lastViewedSeason[itemId] = seasonKey;
+            await saveProfiles();
+        }
+    
         episodesListEl.classList.remove('view-transition');
         void episodesListEl.offsetWidth; 
         episodesListEl.classList.add('view-transition');
-
+    
         episodesListEl.innerHTML = episodes.map((ep, index) => {
-            const seriesProgress = profile.watchProgress[itemId];
+            const episodeKey = getEpisodeProgressKey(itemId, seasonKey, index);
+            const epProgress = profile.watchProgress[episodeKey];
             let epProgressHtml = '';
-            if (seriesProgress && seriesProgress.season === seasonKey && seriesProgress.epIndex === index) {
-                const percent = (seriesProgress.currentTime / seriesProgress.duration) * 100;
+            if (epProgress) {
+                const percent = (epProgress.currentTime / epProgress.duration) * 100;
                 if (percent > 5 && percent < 95) {
                     epProgressHtml = `<div class="absolute bottom-0 left-0 h-1 bg-indigo-500 rounded-bl-lg" style="width: ${percent}%"></div>`;
                 }
             }
-
+    
             return `
-            <div class="relative p-4 bg-gray-800/50 rounded-lg mb-2 flex items-center justify-between cursor-pointer hover:bg-gray-700/70" data-action="showView" data-view-name="player" data-item-id="${itemId}" data-season="${seasonKey}" data-ep-index="${index}">
-                <p>${ep.title || `Episódio ${index + 1}`}</p>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+            <div class="relative p-4 bg-gray-800/50 rounded-lg mb-2 flex items-center gap-4 cursor-pointer hover:bg-gray-700/70" data-action="showView" data-view-name="player" data-item-id="${itemId}" data-season="${seasonKey}" data-ep-index="${index}">
+                <div class="flex-1 min-w-0">
+                    <p class="text-white truncate font-medium">${ep.title || `Episódio ${index + 1}`}</p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="flex-shrink-0 w-6 h-6 text-gray-400 group-hover:text-white transition-colors"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
                 ${epProgressHtml}
-            </div>`
+            </div>`;
         }).join('');
     }
     
@@ -1506,19 +1557,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupPlaybackSettings() {
         const skipTimeInput = document.getElementById('skip-time-input');
         const profile = getCurrentProfile();
-        
+        if (!profile) return;
         skipTimeInput.value = profile.skipTime || 10;
-
-        skipTimeInput.addEventListener('change', async (e) => {
-            let value = parseInt(e.target.value, 10);
-            if (isNaN(value) || value < 5) value = 5;
-            if (value > 30) value = 30;
-            
-            profile.skipTime = value;
-            e.target.value = value;
-            await saveProfiles();
-            showToast(`Tempo de pulo definido para ${value} segundos.`);
-        });
     }
 
     function setupNotificationsSettings() {
@@ -1544,7 +1584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pushBtn.disabled = false;
             }
         }
-
+        
         soundToggle.checked = profile.soundEnabled ?? true;
         updatePushUI();
 
@@ -1562,12 +1602,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await saveProfiles();
                 updatePushUI();
             }
-        });
-
-        soundToggle.addEventListener('change', async () => {
-            profile.soundEnabled = soundToggle.checked;
-            await saveProfiles();
-            showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
         });
     }
     
@@ -1641,29 +1675,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function playContent(itemId) {
         const item = itemDetails[itemId];
+        const profile = getCurrentProfile();
         if (item.type === 'movie') {
             await showView('player', { itemId });
         } else if (item.type === 'series' && item.seasons) {
-            await showView('player', { itemId, season: '1', epIndex: 0 });
+            const lastProgress = Object.values(profile.watchProgress || {})
+                .filter(p => p.isSeries && p.itemId === itemId)
+                .sort((a, b) => b.lastUpdated - a.lastUpdated)[0];
+            
+            if (lastProgress) {
+                 await showView('player', { itemId, season: lastProgress.season, epIndex: lastProgress.epIndex });
+            } else {
+                await showView('player', { itemId, season: '1', epIndex: 0 });
+            }
         }
     }
     
     async function saveProgress() {
         const profile = getCurrentProfile();
-        if (profile && currentPlayingItemId && videoPlayer.duration > 0 && !videoPlayer.paused) {
-              let progressData = {
-                  currentTime: videoPlayer.currentTime,
-                  duration: videoPlayer.duration,
-                  lastUpdated: Date.now()
-              };
-            if (currentEpisodeData) {
-                progressData.isSeries = true;
-                progressData.season = currentEpisodeData.seasonKey;
-                progressData.epIndex = currentEpisodeData.epIndex;
-            }
-            profile.watchProgress[currentPlayingItemId] = progressData;
-            await saveProfiles();
+        if (!profile || !currentPlayingItemId || !videoPlayer.duration || videoPlayer.paused) return;
+    
+        let progressKey = currentPlayingItemId;
+        let progressData = {
+            currentTime: videoPlayer.currentTime,
+            duration: videoPlayer.duration,
+            lastUpdated: Date.now()
+        };
+    
+        if (currentEpisodeData) {
+            const { seasonKey, epIndex } = currentEpisodeData;
+            progressKey = getEpisodeProgressKey(currentPlayingItemId, seasonKey, epIndex);
+            progressData.isSeries = true;
+            progressData.itemId = currentPlayingItemId;
+            progressData.season = seasonKey;
+            progressData.epIndex = epIndex;
         }
+        
+        if (!profile.watchProgress) profile.watchProgress = {};
+        profile.watchProgress[progressKey] = progressData;
+        await saveProfiles();
     }
 
     async function toggleMyList(itemId) {
@@ -1679,7 +1729,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await saveProfiles();
     
-        // **BUG FIX**: Update both possible buttons to keep UI consistent
         updateMyListButton(itemId, 'detail-mylist-button');
         const heroItem = Object.values(itemDetails).find(item => item.isHero);
         if (heroItem && heroItem.id === itemId) {
@@ -1925,6 +1974,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const playPauseBtn = document.getElementById('play-pause-btn');
     const rewindBtn = document.getElementById('rewind-btn');
     const forwardBtn = document.getElementById('forward-btn');
+    const prevEpisodeBtn = document.getElementById('prev-episode-btn');
+    const nextEpisodeBtn = document.getElementById('next-episode-btn');
     const volumeBtn = document.getElementById('volume-btn');
     const volumeSlider = document.getElementById('volume-slider');
     const progressBar = document.getElementById('progress-bar');
@@ -1947,6 +1998,8 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeMute: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6.375a1.125 1.125 0 0 1 1.125-1.125h3.375c.621 0 1.125.504 1.125 1.125v3.375c0 .621-.504 1.125-1.125 1.125H9.75a1.125 1.125 0 0 1-1.125-1.125V9.75Z" /></svg>`,
         forward: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" /></svg>`,
         rewind: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15l-6-6m0 0l6-6m-6 6h12a6 6 0 010 12h-3" /></svg>`,
+        nextEpisode: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062A1.125 1.125 0 013 16.81V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z" /></svg>`,
+        prevEpisode: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" /></svg>`,
         fullscreen: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>`,
         exitFullscreen: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25" /></svg>`,
     };
@@ -1956,6 +2009,9 @@ document.addEventListener('DOMContentLoaded', () => {
     forwardBtn.innerHTML = icons.forward;
     volumeBtn.innerHTML = icons.volumeHigh;
     fullscreenBtn.innerHTML = icons.fullscreen;
+    prevEpisodeBtn.innerHTML = icons.prevEpisode;
+    nextEpisodeBtn.innerHTML = icons.nextEpisode;
+
 
     function formatTime(seconds) {
         if (isNaN(seconds)) return '00:00';
@@ -1982,25 +2038,20 @@ document.addEventListener('DOMContentLoaded', () => {
         videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
     }
 
-    function updateVolume(newVolume, updateSlider = true) {
-        videoPlayer.muted = false;
-        if (newVolume <= 0) {
-            videoPlayer.volume = 0;
+    function updateVolumeUI() {
+        if (videoPlayer.muted || videoPlayer.volume === 0) {
             volumeBtn.innerHTML = icons.volumeMute;
+            volumeSlider.value = 0;
         } else {
-            videoPlayer.volume = newVolume;
             volumeBtn.innerHTML = icons.volumeHigh;
+            volumeSlider.value = videoPlayer.volume;
         }
-        if(updateSlider) volumeSlider.value = videoPlayer.volume;
     }
 
     function toggleMute() {
         videoPlayer.muted = !videoPlayer.muted;
-        if (videoPlayer.muted) {
-            volumeBtn.innerHTML = icons.volumeMute;
-            volumeSlider.value = 0;
-        } else {
-            updateVolume(videoPlayer.volume || 1);
+        if (!videoPlayer.muted && videoPlayer.volume === 0) {
+            videoPlayer.volume = lastVolume;
         }
     }
 
@@ -2022,6 +2073,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
     
+    function findPreviousEpisode() {
+        if (!currentPlayingItemId || !currentEpisodeData) return null;
+        const series = itemDetails[currentPlayingItemId];
+        if (!series || !series.seasons) return null;
+    
+        let currentSeasonKey = currentEpisodeData.seasonKey;
+        let currentEpIndex = currentEpisodeData.epIndex;
+    
+        if (currentEpIndex > 0) {
+            // Previous episode in the same season
+            return { itemId: currentPlayingItemId, season: currentSeasonKey, epIndex: currentEpIndex - 1 };
+        } else {
+            // Last episode of the previous season
+            const seasonKeys = Object.keys(series.seasons).sort((a,b) => a - b);
+            const currentSeasonIndex = seasonKeys.indexOf(currentSeasonKey);
+            if (currentSeasonIndex > 0) {
+                const prevSeasonKey = seasonKeys[currentSeasonIndex - 1];
+                const prevSeasonEpisodes = series.seasons[prevSeasonKey].episodes;
+                return { itemId: currentPlayingItemId, season: prevSeasonKey, epIndex: prevSeasonEpisodes.length - 1 };
+            }
+        }
+        return null; // No previous episode
+    }
+
+    function updateEpisodeNavButtons() {
+        if (currentEpisodeData) {
+            const nextEp = findNextEpisode();
+            const prevEp = findPreviousEpisode();
+            
+            nextEpisodeBtn.classList.toggle('hidden', !nextEp);
+            prevEpisodeBtn.classList.toggle('hidden', !prevEp);
+    
+            nextEpisodeBtn.dataset.nextData = nextEp ? JSON.stringify(nextEp) : '';
+            prevEpisodeBtn.dataset.prevData = prevEp ? JSON.stringify(prevEp) : '';
+    
+        } else {
+            nextEpisodeBtn.classList.add('hidden');
+            prevEpisodeBtn.classList.add('hidden');
+        }
+    }
+
     function findNextEpisode() {
         if (!currentPlayingItemId || !currentEpisodeData) return null;
         const series = itemDetails[currentPlayingItemId];
@@ -2075,12 +2167,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function playNextEpisode() {
         if (nextEpisodeData) {
-            await showView('player', nextEpisodeData);
+            const wasFullscreen = !!document.fullscreenElement;
+            await showView('player', nextEpisodeData, false);
+            if (wasFullscreen) {
+                videoPlayer.addEventListener('loadedmetadata', enterPlayerMode, { once: true });
+            }
         }
         hideNextEpisodeOverlay();
     }
 
     playNextBtn.addEventListener('click', playNextEpisode);
+
+    videoPlayer.addEventListener('ended', () => {
+        if (nextEpisodeData) {
+            playNextEpisode();
+        }
+    });
 
     videoPlayer.addEventListener('timeupdate', () => { 
         if (videoPlayer.duration) { 
@@ -2106,6 +2208,8 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.addEventListener('loadedmetadata', () => { document.getElementById('duration').textContent = formatTime(videoPlayer.duration); });
     videoPlayer.addEventListener('play', () => { playPauseBtn.innerHTML = icons.pause; showControlsAndResetTimer(); });
     videoPlayer.addEventListener('pause', () => { playPauseBtn.innerHTML = icons.play; clearTimeout(controlsTimeout); playerControls.classList.remove('opacity-0'); });
+    videoPlayer.addEventListener('volumechange', updateVolumeUI);
+
 
     playerContainer.addEventListener('mousemove', showControlsAndResetTimer);
     playerContainer.addEventListener('touchstart', showControlsAndResetTimer, { passive: true });
@@ -2114,6 +2218,14 @@ document.addEventListener('DOMContentLoaded', () => {
     rewindBtn.addEventListener('click', () => skip(-1));
     forwardBtn.addEventListener('click', () => skip(1));
     fullscreenBtn.addEventListener('click', toggleFullscreen);
+    nextEpisodeBtn.addEventListener('click', () => {
+        const data = JSON.parse(nextEpisodeBtn.dataset.nextData);
+        if(data) showView('player', data, false);
+    });
+    prevEpisodeBtn.addEventListener('click', () => {
+        const data = JSON.parse(prevEpisodeBtn.dataset.prevData);
+        if(data) showView('player', data, false);
+    });
     
     document.addEventListener('fullscreenchange', () => {
          fullscreenBtn.innerHTML = document.fullscreenElement ? icons.exitFullscreen : icons.fullscreen;
@@ -2124,7 +2236,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     volumeBtn.addEventListener('click', toggleMute);
-    volumeSlider.addEventListener('input', (e) => updateVolume(parseFloat(e.target.value), false));
+    volumeSlider.addEventListener('input', (e) => {
+        const newVolume = parseFloat(e.target.value);
+        videoPlayer.volume = newVolume;
+        videoPlayer.muted = newVolume === 0;
+        if (newVolume > 0) {
+            lastVolume = newVolume;
+        }
+    });
 
     progressBarContainer.addEventListener('click', (e) => {
         const rect = progressBarContainer.getBoundingClientRect();
@@ -2170,8 +2289,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'arrowleft': skip(-1); break;
             case 'f': toggleFullscreen(); break;
             case 'm': toggleMute(); break;
-            case 'arrowup': updateVolume(Math.min(1, videoPlayer.volume + 0.1)); break;
-            case 'arrowdown': updateVolume(Math.max(0, videoPlayer.volume - 0.1)); break;
+            case 'arrowup': videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1); break;
+            case 'arrowdown': videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1); break;
         }
     });
 
@@ -2188,9 +2307,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleLogout(); 
             return;
         };
-        if (isPlayerModeActive || document.fullscreenElement) {
-            await exitPlayerMode();
-        }
         const state = event.state || { viewName: 'home', params: {} };
         await showView(state.viewName, state.params, false);
     });
@@ -2292,7 +2408,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
-        // Actions that shouldn't prevent default browser behavior
         const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
@@ -2347,10 +2462,25 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'playContent': await playContent(itemId); break;
             case 'continuePlayback': {
                 const profile = getCurrentProfile();
-                const progress = profile.watchProgress[itemId];
-                if (progress && progress.isSeries) await showView('player', { itemId: itemId, season: progress.season, epIndex: progress.epIndex });
-                else if (progress) await showView('player', { itemId: itemId });
-                else await showView('detail', { itemId: itemId });
+                const allProgressForThisSeries = Object.values(profile.watchProgress || {})
+                    .filter(p => p.isSeries && p.itemId === itemId);
+
+                let progressToResume = null;
+                if (allProgressForThisSeries.length > 0) {
+                    progressToResume = allProgressForThisSeries.reduce((latest, current) => 
+                        (current.lastUpdated > latest.lastUpdated) ? current : latest
+                    );
+                } else {
+                    progressToResume = profile.watchProgress[itemId];
+                }
+                
+                if (progressToResume && progressToResume.isSeries) {
+                    await showView('player', { itemId: itemId, season: progressToResume.season, epIndex: progressToResume.epIndex });
+                } else if (progressToResume) {
+                    await showView('player', { itemId: itemId });
+                } else {
+                    await showView('detail', { itemId: itemId });
+                }
                 break;
             }
             case 'toggleMyList': await toggleMyList(itemId); break;
@@ -2372,7 +2502,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             case 'show-more-comments': {
-                commentsToShow += 5; // Show 5 more comments
+                commentsToShow += 5;
                 const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
                 if(currentItemId) {
                     const commentsQuery = query(collection(db, `content/${currentItemId}/comments`), orderBy('timestamp', 'desc'));
@@ -2430,4 +2560,27 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.remove('show');
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
+    
+    // One-time listeners for profile settings
+    document.getElementById('skip-time-input').addEventListener('change', async (e) => {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+        let value = parseInt(e.target.value, 10);
+        if (isNaN(value) || value < 5) value = 5;
+        if (value > 30) value = 30;
+        
+        profile.skipTime = value;
+        e.target.value = value;
+        await saveProfiles();
+        showToast(`Tempo de pulo definido para ${value} segundos.`);
+    });
+    
+    document.getElementById('enable-sound-toggle').addEventListener('change', async (e) => {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+        profile.soundEnabled = e.target.checked;
+        await saveProfiles();
+        showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
+    });
 });
+
