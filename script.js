@@ -738,7 +738,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        window.scrollTo(0, 0);
+        // Only scroll to top if we are not coming back from the player to the detail view
+        if (viewName !== 'detail') {
+             window.scrollTo(0, 0);
+        }
 
         const appContainer = document.getElementById('app-container');
         appContainer.classList.add('pb-24', 'md:pb-0');
@@ -1058,8 +1061,27 @@ document.addEventListener('DOMContentLoaded', () => {
         let bottomContent = '';
         if (item.type === 'series' && item.seasons) {
             const seasons = Object.keys(item.seasons);
-            const seasonTabs = seasons.map(s => `<button class="season-tab border-b-2 border-transparent text-gray-400 py-2 px-4 transition" data-season="${s}" data-item-id="${itemId}">${item.seasons[s].title}</button>`).join('');
-            bottomContent = `<div class="mt-8"><div class="border-b border-gray-700">${seasonTabs}</div><div id="episodes-list" class="mt-4"></div></div>`;
+            const seasonOptions = seasons.map(s => 
+                `<a href="#" class="season-option block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white" role="menuitem" data-season="${s}" data-item-id="${itemId}">${item.seasons[s].title}</a>`
+            ).join('');
+
+            bottomContent = `
+                <div class="mt-8">
+                    <div class="relative inline-block text-left" id="season-selector-container">
+                        <button id="season-selector-btn" type="button" class="inline-flex items-center justify-between w-full rounded-md border border-gray-700 shadow-sm px-4 py-3 bg-gray-800/50 text-lg font-medium text-white hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 transition">
+                            <span id="selected-season-title"></span>
+                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="season-options" class="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-20">
+                            <div class="py-1" role="menu" aria-orientation="vertical">
+                                ${seasonOptions}
+                            </div>
+                        </div>
+                    </div>
+                    <div id="episodes-list" class="mt-4"></div>
+                </div>`;
         }
 
         let castSectionHTML = '';
@@ -1164,19 +1186,41 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-
         renderStarRating(itemId);
         if (item.type === 'series' && item.seasons) {
+            const seasonSelectorBtn = document.getElementById('season-selector-btn');
+            const seasonOptions = document.getElementById('season-options');
+
+            seasonSelectorBtn.addEventListener('click', () => {
+                seasonOptions.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (event) => {
+                const container = document.getElementById('season-selector-container');
+                if (container && !container.contains(event.target)) {
+                    seasonOptions.classList.add('hidden');
+                }
+            });
+
+            document.querySelectorAll('.season-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    handleSeasonTabClick(e);
+                    seasonOptions.classList.add('hidden');
+                });
+            });
+
             const profile = getCurrentProfile();
             const lastSeason = profile?.lastViewedSeason?.[itemId];
-            const targetSeasonTab = lastSeason ? document.querySelector(`.season-tab[data-season='${lastSeason}']`) : null;
+            const firstSeasonOption = document.querySelector('.season-option');
             
-            document.querySelectorAll('.season-tab').forEach(tab => tab.addEventListener('click', handleSeasonTabClick));
+            let targetSeasonOption = lastSeason ? document.querySelector(`.season-option[data-season='${lastSeason}']`) : null;
+            if (!targetSeasonOption) {
+                targetSeasonOption = firstSeasonOption;
+            }
             
-            if (targetSeasonTab) {
-                targetSeasonTab.click();
-            } else {
-                document.querySelector('.season-tab')?.click();
+            if (targetSeasonOption) {
+                targetSeasonOption.click();
             }
         }
         updateMyListButton(itemId, 'detail-mylist-button');
@@ -1185,7 +1229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastScrollPosition > 0) {
             const detailContainer = document.getElementById('detail-scroll-container');
             if (detailContainer) {
-                // Use a timeout to ensure the DOM has painted before we try to scroll
                 setTimeout(() => {
                     detailContainer.scrollTop = lastScrollPosition;
                     lastScrollPosition = 0; // Reset after use
@@ -1194,9 +1237,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function handleSeasonTabClick(event) {
-        document.querySelectorAll('.season-tab').forEach(t => t.classList.remove('season-tab-active'));
-        event.target.classList.add('season-tab-active');
+    function handleSeasonTabClick(event) {
+        const selectedSeasonTitleEl = document.getElementById('selected-season-title');
+        if (selectedSeasonTitleEl) {
+            selectedSeasonTitleEl.textContent = event.target.textContent;
+        }
         
         const itemId = event.target.dataset.itemId; 
         const seasonKey = event.target.dataset.season;
@@ -1220,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (profile) {
             if (!profile.lastViewedSeason) profile.lastViewedSeason = {};
             profile.lastViewedSeason[itemId] = seasonKey;
-            await saveProfiles();
+            saveProfiles();
         }
     
         episodesListEl.classList.remove('view-transition');
