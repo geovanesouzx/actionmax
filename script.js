@@ -52,7 +52,7 @@ const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Style for synopsis truncation
+    // Style for synopsis truncation and animations
     const style = document.createElement('style');
     style.textContent = `
         .synopsis-text {
@@ -63,6 +63,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         .synopsis-truncated {
             -webkit-line-clamp: 3; /* Truncate to 3 lines */
+        }
+        /* Animation for season selector arrow */
+        #season-selector-btn > svg {
+            transition: transform 0.2s ease-in-out;
+        }
+        #season-selector-btn.open > svg {
+            transform: rotate(180deg);
         }
     `;
     document.head.appendChild(style);
@@ -1193,12 +1200,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             seasonSelectorBtn.addEventListener('click', () => {
                 seasonOptions.classList.toggle('hidden');
+                seasonSelectorBtn.classList.toggle('open', !seasonOptions.classList.contains('hidden'));
             });
 
             document.addEventListener('click', (event) => {
                 const container = document.getElementById('season-selector-container');
                 if (container && !container.contains(event.target)) {
                     seasonOptions.classList.add('hidden');
+                    seasonSelectorBtn.classList.remove('open');
                 }
             });
 
@@ -1207,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     handleSeasonTabClick(e);
                     seasonOptions.classList.add('hidden');
+                    seasonSelectorBtn.classList.remove('open');
                 });
             });
 
