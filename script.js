@@ -52,35 +52,6 @@ const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Adiciona o HTML do popup de preview ao corpo do documento
-    const previewPopupHTML = `
-        <div id="preview-popup" class="hidden fixed z-[100] w-80 rounded-lg shadow-2xl bg-gray-900 transition-all duration-300 ease-in-out" style="transform-origin: center center;">
-            <div class="relative w-full aspect-video rounded-t-lg overflow-hidden cursor-pointer" data-action="showView" data-view-name="detail">
-                <video id="preview-video" class="w-full h-full object-cover" muted playsinline></video>
-                <div id="preview-video-loader" class="absolute inset-0 bg-black/70 flex items-center justify-center">
-                    <div class="spinner !w-8 !h-8 !border-2"></div>
-                </div>
-                <div class="absolute bottom-0 left-0 w-full h-1/4 bg-gradient-to-t from-gray-900 to-transparent"></div>
-            </div>
-            <div class="p-3 space-y-3">
-                 <div class="flex items-center justify-between">
-                    <h3 id="preview-title" class="font-bold text-base text-white truncate"></h3>
-                 </div>
-                 <div class="flex items-center space-x-2">
-                    <button id="preview-play-btn" data-action="playContent" class="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-white text-black rounded-full hover:bg-gray-300 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
-                    </button>
-                    <button id="preview-mylist-btn" data-action="toggleMyList" class="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-black/40 border-2 border-gray-500 text-white rounded-full hover:border-white transition"></button>
-                    <button id="preview-detail-btn" data-action="showView" data-view-name="detail" class="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-black/40 border-2 border-gray-500 text-white rounded-full hover:border-white transition ml-auto">
-                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
-                    </button>
-                 </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', previewPopupHTML);
-
-
     // Style for synopsis truncation and animations
     const style = document.createElement('style');
     style.textContent = `
@@ -99,14 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         #season-selector-btn.open > svg {
             transform: rotate(180deg);
-        }
-        #preview-popup.popup-enter {
-            opacity: 1;
-            transform: scale(1);
-        }
-         #preview-popup.popup-exit {
-            opacity: 0;
-            transform: scale(0.95);
         }
     `;
     document.head.appendChild(style);
@@ -140,14 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let notificationShakeInterval = null;
     let lastUnreadCount = -1; // -1 indicates the first run
 
-    // --- Preview Popup State ---
-    let previewPopupTimeout = null;
-    let hidePreviewPopupTimeout = null;
-    let previewClipTimeout = null;
-    const isTouchDevice = ('ontouchstart' in window);
-    const PREVIEW_DELAY = 500;
-    let currentPreviewItemId = null;
-
     let unsubscribeContent = null;
     let unsubscribeCarousels = null;
     let unsubscribeNotifications = null;
@@ -155,150 +110,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribePedidos = null; // Listener para pedidos
 
     const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'pedidos-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
-    
-    // --- DOM Elements ---
     const mainHeader = document.getElementById('main-header');
     const videoPlayer = document.getElementById('video-player');
     const iframePlayer = document.getElementById('iframe-player');
     const errorDisplay = document.getElementById('player-error-display');
     const notificationsPanel = document.getElementById('notifications-panel');
     const notificationsList = document.getElementById('notifications-list');
-    const appContainer = document.getElementById('app-container');
-    
-    // Preview Popup Elements
-    const previewPopup = document.getElementById('preview-popup');
-    const previewVideo = document.getElementById('preview-video');
-    const previewVideoLoader = document.getElementById('preview-video-loader');
-    const previewTitle = document.getElementById('preview-title');
-    const previewPlayBtn = document.getElementById('preview-play-btn');
-    const previewMylistBtn = document.getElementById('preview-mylist-btn');
-    const previewDetailBtn = document.getElementById('preview-detail-btn');
-    const previewDetailContainer = previewPopup.querySelector('.cursor-pointer');
-
     let hlsInstance;
-    
-    // --- Preview Popup Functions ---
-
-    function calculatePopupPosition(targetEl) {
-        const rect = targetEl.getBoundingClientRect();
-        const popupWidth = 320; // w-80 from TailwindCSS
-        const popupHeight = previewPopup.offsetHeight || 280; // Approximate height if not rendered
-        const gap = 16;
-    
-        // Tenta posicionar acima e centralizado
-        let top = rect.top + window.scrollY - popupHeight - gap;
-        let left = rect.left + window.scrollX + (rect.width / 2) - (popupWidth / 2);
-    
-        // Ajusta se estiver fora da tela verticalmente
-        if (top < window.scrollY) {
-            top = rect.bottom + window.scrollY + gap;
-        }
-    
-        // Ajusta se estiver fora da tela horizontalmente
-        if (left < window.scrollX + gap) {
-            left = window.scrollX + gap;
-        } else if (left + popupWidth > document.documentElement.clientWidth - gap) {
-            left = document.documentElement.clientWidth - popupWidth - gap;
-        }
-    
-        return { top, left };
-    }
-
-    function hidePreviewPopup(immediate = false) {
-        clearTimeout(previewPopupTimeout);
-        clearTimeout(hidePreviewPopupTimeout);
-        clearTimeout(previewClipTimeout);
-    
-        if (immediate) {
-            previewPopup.classList.add('hidden');
-            previewPopup.classList.remove('popup-enter', 'popup-exit');
-        } else {
-            previewPopup.classList.add('popup-exit');
-            previewPopup.classList.remove('popup-enter');
-            setTimeout(() => {
-                // Só esconde se outro popup não estiver prestes a aparecer
-                if (!previewPopup.classList.contains('popup-enter')) {
-                    previewPopup.classList.add('hidden');
-                }
-            }, 300); // Duração da transição CSS
-        }
-    
-        previewVideo.pause();
-        previewVideo.removeAttribute('src');
-        previewVideo.load(); // Libera recursos
-        currentPreviewItemId = null;
-    }
-
-    async function showPreviewPopup(itemId, targetEl) {
-        if (!itemDetails[itemId]) return;
-    
-        clearTimeout(previewPopupTimeout);
-        clearTimeout(hidePreviewPopupTimeout);
-        currentPreviewItemId = itemId;
-    
-        const item = itemDetails[itemId];
-    
-        // Configura o conteúdo do popup
-        previewTitle.textContent = item.title;
-        previewPlayBtn.dataset.itemId = itemId;
-        previewMylistBtn.dataset.itemId = itemId;
-        previewDetailBtn.dataset.itemId = itemId;
-        previewDetailContainer.dataset.itemId = itemId;
-
-        updateMyListButton(itemId, 'preview-mylist-btn');
-    
-        // Calcula a posição
-        const { top, left } = calculatePopupPosition(targetEl);
-        previewPopup.style.top = `${top}px`;
-        previewPopup.style.left = `${left}px`;
-    
-        // Mostra o popup com animação
-        previewPopup.classList.remove('hidden', 'popup-exit');
-        previewPopup.classList.add('popup-enter');
-    
-        // Encontra uma URL de vídeo para o preview
-        let videoUrl = item.url;
-        if (item.type === 'series' && item.seasons) {
-            const firstSeasonKey = Object.keys(item.seasons).sort((a, b) => a - b)[0];
-            const firstEpisode = item.seasons[firstSeasonKey]?.episodes[0];
-            videoUrl = firstEpisode?.url || null;
-        }
-    
-        if (videoUrl) {
-            previewVideoLoader.style.display = 'flex';
-            previewVideo.style.display = 'none';
-            previewVideo.src = videoUrl;
-    
-            const onLoadedMetadata = () => {
-                previewVideo.removeEventListener('loadedmetadata', onLoadedMetadata);
-                
-                const duration = previewVideo.duration;
-                if (!isFinite(duration) || duration < 31) {
-                     previewVideoLoader.style.display = 'none';
-                     return; // Não é possível extrair um clipe aleatório
-                }
-                
-                previewVideoLoader.style.display = 'none';
-                previewVideo.style.display = 'block';
-
-                const maxStartTime = duration - 31;
-                const startTime = Math.floor(Math.random() * maxStartTime);
-                
-                previewVideo.currentTime = startTime;
-                previewVideo.play().catch(e => console.log("Autoplay do preview bloqueado."));
-    
-                clearTimeout(previewClipTimeout);
-                previewClipTimeout = setTimeout(() => {
-                    previewVideo.pause();
-                }, 30000); // O clipe dura 30 segundos
-            };
-    
-            previewVideo.addEventListener('loadedmetadata', onLoadedMetadata);
-        } else {
-             previewVideoLoader.style.display = 'none';
-        }
-    }
-
 
     // --- Firestore Data Fetching ---
     function detachRealtimeListeners() {
@@ -932,6 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
              window.scrollTo(0, 0);
         }
 
+        const appContainer = document.getElementById('app-container');
         appContainer.classList.add('pb-24', 'md:pb-0');
         
         document.querySelectorAll('#main-nav .nav-link, #mobile-nav .mobile-nav-link').forEach(link => {
@@ -1977,9 +1796,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await saveProfiles();
     
-        // Update all visible My List buttons for this item
         updateMyListButton(itemId, 'detail-mylist-button');
-        updateMyListButton(itemId, 'preview-mylist-btn');
         const heroItem = Object.values(itemDetails).find(item => item.isHero);
         if (heroItem && heroItem.id === itemId) {
             updateMyListButton(itemId, 'hero-mylist-button');
@@ -1988,16 +1805,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMyListButton(itemId, elementId) {
         const button = document.getElementById(elementId);
-        if (!button || button.dataset.itemId !== itemId) return;
+        if (!button) return;
         const profile = getCurrentProfile();
         if(!profile) return;
         const isInList = profile.myList.includes(String(itemId));
         if (isInList) {
-            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" /></svg>`;
-            button.setAttribute('aria-label', 'Remover da Minha Lista');
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" /></svg><span>Na Minha Lista</span>`;
         } else {
-            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>`;
-            button.setAttribute('aria-label', 'Adicionar à Minha Lista');
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg><span>A Minha Lista</span>`;
         }
     }
     
@@ -2488,7 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // CORREÇÃO: Força a navegação para trás ao sair da tela cheia no celular com o botão "Voltar" do sistema
         const onPlayerView = !document.getElementById('player-view').classList.contains('hidden') ||
-                               !document.getElementById('iframe-player-view').classList.contains('hidden');
+                             !document.getElementById('iframe-player-view').classList.contains('hidden');
     
         if (!isPlayerModeActive && onPlayerView && window.location.hash.includes('player')) {
             history.back();
@@ -2653,38 +2468,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Initial App Load & Event Delegation ---
-
-    // Hover/Click listeners for preview popup
-    if (!isTouchDevice) {
-        appContainer.addEventListener('mouseover', (e) => {
-            const card = e.target.closest('.group.cursor-pointer[data-item-id]');
-            if (card && card.dataset.action !== 'selectProfile') {
-                clearTimeout(hidePreviewPopupTimeout);
-                if (currentPreviewItemId === card.dataset.itemId) return;
-                
-                clearTimeout(previewPopupTimeout);
-                previewPopupTimeout = setTimeout(() => {
-                    showPreviewPopup(card.dataset.itemId, card);
-                }, PREVIEW_DELAY);
-            }
-        });
-
-        appContainer.addEventListener('mouseout', (e) => {
-            const card = e.target.closest('.group.cursor-pointer[data-item-id]');
-            if (card) {
-                clearTimeout(previewPopupTimeout);
-                hidePreviewPopupTimeout = setTimeout(() => {
-                    hidePreviewPopup();
-                }, 300);
-            }
-        });
-
-        previewPopup.addEventListener('mouseover', () => clearTimeout(hidePreviewPopupTimeout));
-        previewPopup.addEventListener('mouseout', () => {
-            hidePreviewPopupTimeout = setTimeout(() => hidePreviewPopup(), 300);
-        });
-    }
-
     document.getElementById('manage-profiles-btn').addEventListener('click', showManageProfilesView);
     document.getElementById('done-managing-btn').addEventListener('click', () => showProfileSelectionView(true));
     document.getElementById('save-profile-btn').addEventListener('click', handleSaveProfile);
@@ -2696,28 +2479,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.body.addEventListener('click', async (e) => {
         const actionTarget = e.target.closest('[data-action]');
-        
-        // Mobile preview popup logic
-        if (isTouchDevice && actionTarget && actionTarget.dataset.action === 'showView' && !actionTarget.closest('#preview-popup')) {
-             const itemId = actionTarget.dataset.itemId;
-             if (currentPreviewItemId === itemId) return; // Allow click to fall through to popup
-             
-             e.preventDefault();
-             e.stopPropagation();
-
-             if (currentPreviewItemId && currentPreviewItemId !== itemId) {
-                hidePreviewPopup(true); // immediate hide
-             }
-             
-             showPreviewPopup(itemId, actionTarget);
-             return;
-        }
-
         if (!actionTarget) return;
 
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -2773,7 +2539,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (genre) params.genre = genre;
                 if (season) params.season = season;
                 if (epIndex) params.epIndex = epIndex;
-                hidePreviewPopup(true);
                 await showView(viewName, params);
                 break;
             case 'playContent': await playContent(itemId); break;
@@ -2832,6 +2597,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             case 'handleTMDBSelect': await handleTMDBSelect(tmdbId, mediaType); break;
             case 'voteForRequest': await voteForRequest(requestId); break;
+            case 'close-pedido-modal':
+            case 'cancel-pedido':
+                closePedidoModal();
+                break;
+            case 'confirm-pedido':
+                await createRequest(actionTarget.dataset.tmdbId, actionTarget.dataset.mediaType);
+                break;
         }
     });
 
@@ -2893,3 +2665,4 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
