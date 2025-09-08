@@ -1191,26 +1191,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = itemDetails[itemId];
         const episodesListEl = document.getElementById('episodes-list');
         const profile = getCurrentProfile();
-
-        // FIX: Check if season data and episodes array exist
-        const seasonData = item.seasons[seasonKey];
-        const episodes = seasonData ? seasonData.episodes : [];
-        if (!episodes || !Array.isArray(episodes)) {
-            console.error("Episodes data is not an array for season:", seasonKey);
-            episodesListEl.innerHTML = '<p class="text-gray-400">Episódios não disponíveis.</p>';
+    
+        if (!item || !item.seasons || !item.seasons[seasonKey]) {
+            episodesListEl.innerHTML = '<p class="text-gray-400">Dados da temporada não encontrados.</p>';
             return;
         }
-
+    
+        const seasonData = item.seasons[seasonKey];
+        const episodes = seasonData.episodes;
+    
+        if (!episodes || !Array.isArray(episodes) || episodes.length === 0) {
+            episodesListEl.innerHTML = '<p class="text-gray-400">Nenhum episódio encontrado para esta temporada.</p>';
+            return;
+        }
+    
         if (profile) {
             if (!profile.lastViewedSeason) profile.lastViewedSeason = {};
             profile.lastViewedSeason[itemId] = seasonKey;
             await saveProfiles();
         }
-
+    
         episodesListEl.classList.remove('view-transition');
         void episodesListEl.offsetWidth; 
         episodesListEl.classList.add('view-transition');
-
+    
         episodesListEl.innerHTML = episodes.map((ep, index) => {
             const episodeKey = getEpisodeProgressKey(itemId, seasonKey, index);
             const epProgress = profile.watchProgress[episodeKey];
@@ -1221,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     epProgressHtml = `<div class="absolute bottom-0 left-0 h-1 bg-indigo-500 rounded-bl-lg" style="width: ${percent}%"></div>`;
                 }
             }
-
+    
             return `
             <div class="relative p-4 bg-gray-800/50 rounded-lg mb-2 flex items-center gap-4 cursor-pointer hover:bg-gray-700/70" data-action="showView" data-view-name="player" data-item-id="${itemId}" data-season="${seasonKey}" data-ep-index="${index}">
                 <div class="flex-1 min-w-0">
@@ -2078,8 +2082,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentEpIndex = currentEpisodeData.epIndex;
     
         if (currentEpIndex > 0) {
+            // Previous episode in the same season
             return { itemId: currentPlayingItemId, season: currentSeasonKey, epIndex: currentEpIndex - 1 };
         } else {
+            // Last episode of the previous season
             const seasonKeys = Object.keys(series.seasons).sort((a,b) => a - b);
             const currentSeasonIndex = seasonKeys.indexOf(currentSeasonKey);
             if (currentSeasonIndex > 0) {
