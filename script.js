@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPlayerModeActive = false;
     let commentsToShow = 5;
     let tmdbSearchTimeout = null;
-    let lastVolume = 1;
 
     let currentPlayingItemId = null;
     let currentEpisodeData = null;
@@ -948,7 +947,6 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlayer.play().catch(e => console.error("Erro de autoplay:", e));
         }
         showControlsAndResetTimer();
-        updateEpisodeNavButtons();
     }
 
     function showPlayerError(message) {
@@ -1189,32 +1187,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemId = event.target.dataset.itemid;
         const seasonKey = event.target.dataset.season;
         const item = itemDetails[itemId];
+        const episodes = item.seasons[seasonKey].episodes;
         const episodesListEl = document.getElementById('episodes-list');
         const profile = getCurrentProfile();
-    
-        if (!item || !item.seasons || !item.seasons[seasonKey]) {
-            episodesListEl.innerHTML = '<p class="text-gray-400">Dados da temporada não encontrados.</p>';
-            return;
-        }
-    
-        const seasonData = item.seasons[seasonKey];
-        const episodes = seasonData.episodes;
-    
-        if (!episodes || !Array.isArray(episodes) || episodes.length === 0) {
-            episodesListEl.innerHTML = '<p class="text-gray-400">Nenhum episódio encontrado para esta temporada.</p>';
-            return;
-        }
-    
+
         if (profile) {
             if (!profile.lastViewedSeason) profile.lastViewedSeason = {};
             profile.lastViewedSeason[itemId] = seasonKey;
             await saveProfiles();
         }
-    
+
         episodesListEl.classList.remove('view-transition');
         void episodesListEl.offsetWidth; 
         episodesListEl.classList.add('view-transition');
-    
+
         episodesListEl.innerHTML = episodes.map((ep, index) => {
             const episodeKey = getEpisodeProgressKey(itemId, seasonKey, index);
             const epProgress = profile.watchProgress[episodeKey];
@@ -1225,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     epProgressHtml = `<div class="absolute bottom-0 left-0 h-1 bg-indigo-500 rounded-bl-lg" style="width: ${percent}%"></div>`;
                 }
             }
-    
+
             return `
             <div class="relative p-4 bg-gray-800/50 rounded-lg mb-2 flex items-center gap-4 cursor-pointer hover:bg-gray-700/70" data-action="showView" data-view-name="player" data-item-id="${itemId}" data-season="${seasonKey}" data-ep-index="${index}">
                 <div class="flex-1 min-w-0">
@@ -1675,19 +1661,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function playContent(itemId) {
         const item = itemDetails[itemId];
-        const profile = getCurrentProfile();
         if (item.type === 'movie') {
             await showView('player', { itemId });
         } else if (item.type === 'series' && item.seasons) {
-            const lastProgress = Object.values(profile.watchProgress || {})
-                .filter(p => p.isSeries && p.itemId === itemId)
-                .sort((a, b) => b.lastUpdated - a.lastUpdated)[0];
-            
-            if (lastProgress) {
-                 await showView('player', { itemId, season: lastProgress.season, epIndex: lastProgress.epIndex });
-            } else {
-                await showView('player', { itemId, season: '1', epIndex: 0 });
-            }
+            await showView('player', { itemId, season: '1', epIndex: 0 });
         }
     }
     
@@ -1974,8 +1951,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const playPauseBtn = document.getElementById('play-pause-btn');
     const rewindBtn = document.getElementById('rewind-btn');
     const forwardBtn = document.getElementById('forward-btn');
-    const prevEpisodeBtn = document.getElementById('prev-episode-btn');
-    const nextEpisodeBtn = document.getElementById('next-episode-btn');
     const volumeBtn = document.getElementById('volume-btn');
     const volumeSlider = document.getElementById('volume-slider');
     const progressBar = document.getElementById('progress-bar');
@@ -1998,8 +1973,6 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeMute: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6.375a1.125 1.125 0 0 1 1.125-1.125h3.375c.621 0 1.125.504 1.125 1.125v3.375c0 .621-.504 1.125-1.125 1.125H9.75a1.125 1.125 0 0 1-1.125-1.125V9.75Z" /></svg>`,
         forward: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" /></svg>`,
         rewind: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15l-6-6m0 0l6-6m-6 6h12a6 6 0 010 12h-3" /></svg>`,
-        nextEpisode: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062A1.125 1.125 0 013 16.81V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z" /></svg>`,
-        prevEpisode: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7"><path stroke-linecap="round" stroke-linejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" /></svg>`,
         fullscreen: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>`,
         exitFullscreen: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25" /></svg>`,
     };
@@ -2009,9 +1982,6 @@ document.addEventListener('DOMContentLoaded', () => {
     forwardBtn.innerHTML = icons.forward;
     volumeBtn.innerHTML = icons.volumeHigh;
     fullscreenBtn.innerHTML = icons.fullscreen;
-    prevEpisodeBtn.innerHTML = icons.prevEpisode;
-    nextEpisodeBtn.innerHTML = icons.nextEpisode;
-
 
     function formatTime(seconds) {
         if (isNaN(seconds)) return '00:00';
@@ -2038,20 +2008,25 @@ document.addEventListener('DOMContentLoaded', () => {
         videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
     }
 
-    function updateVolumeUI() {
-        if (videoPlayer.muted || videoPlayer.volume === 0) {
+    function updateVolume(newVolume, updateSlider = true) {
+        videoPlayer.muted = false;
+        if (newVolume <= 0) {
+            videoPlayer.volume = 0;
             volumeBtn.innerHTML = icons.volumeMute;
-            volumeSlider.value = 0;
         } else {
+            videoPlayer.volume = newVolume;
             volumeBtn.innerHTML = icons.volumeHigh;
-            volumeSlider.value = videoPlayer.volume;
         }
+        if(updateSlider) volumeSlider.value = videoPlayer.volume;
     }
 
     function toggleMute() {
         videoPlayer.muted = !videoPlayer.muted;
-        if (!videoPlayer.muted && videoPlayer.volume === 0) {
-            videoPlayer.volume = lastVolume;
+        if (videoPlayer.muted) {
+            volumeBtn.innerHTML = icons.volumeMute;
+            volumeSlider.value = 0;
+        } else {
+            updateVolume(videoPlayer.volume || 1);
         }
     }
 
@@ -2073,47 +2048,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
     
-    function findPreviousEpisode() {
-        if (!currentPlayingItemId || !currentEpisodeData) return null;
-        const series = itemDetails[currentPlayingItemId];
-        if (!series || !series.seasons) return null;
-    
-        let currentSeasonKey = currentEpisodeData.seasonKey;
-        let currentEpIndex = currentEpisodeData.epIndex;
-    
-        if (currentEpIndex > 0) {
-            // Previous episode in the same season
-            return { itemId: currentPlayingItemId, season: currentSeasonKey, epIndex: currentEpIndex - 1 };
-        } else {
-            // Last episode of the previous season
-            const seasonKeys = Object.keys(series.seasons).sort((a,b) => a - b);
-            const currentSeasonIndex = seasonKeys.indexOf(currentSeasonKey);
-            if (currentSeasonIndex > 0) {
-                const prevSeasonKey = seasonKeys[currentSeasonIndex - 1];
-                const prevSeasonEpisodes = series.seasons[prevSeasonKey].episodes;
-                return { itemId: currentPlayingItemId, season: prevSeasonKey, epIndex: prevSeasonEpisodes.length - 1 };
-            }
-        }
-        return null; // No previous episode
-    }
-
-    function updateEpisodeNavButtons() {
-        if (currentEpisodeData) {
-            const nextEp = findNextEpisode();
-            const prevEp = findPreviousEpisode();
-            
-            nextEpisodeBtn.classList.toggle('hidden', !nextEp);
-            prevEpisodeBtn.classList.toggle('hidden', !prevEp);
-    
-            nextEpisodeBtn.dataset.nextData = nextEp ? JSON.stringify(nextEp) : '';
-            prevEpisodeBtn.dataset.prevData = prevEp ? JSON.stringify(prevEp) : '';
-    
-        } else {
-            nextEpisodeBtn.classList.add('hidden');
-            prevEpisodeBtn.classList.add('hidden');
-        }
-    }
-
     function findNextEpisode() {
         if (!currentPlayingItemId || !currentEpisodeData) return null;
         const series = itemDetails[currentPlayingItemId];
@@ -2167,11 +2101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function playNextEpisode() {
         if (nextEpisodeData) {
-            const wasFullscreen = !!document.fullscreenElement;
-            await showView('player', nextEpisodeData, false);
-            if (wasFullscreen) {
-                videoPlayer.addEventListener('loadedmetadata', enterPlayerMode, { once: true });
-            }
+            await showView('player', nextEpisodeData, false); // Do not push history state
         }
         hideNextEpisodeOverlay();
     }
@@ -2208,8 +2138,6 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.addEventListener('loadedmetadata', () => { document.getElementById('duration').textContent = formatTime(videoPlayer.duration); });
     videoPlayer.addEventListener('play', () => { playPauseBtn.innerHTML = icons.pause; showControlsAndResetTimer(); });
     videoPlayer.addEventListener('pause', () => { playPauseBtn.innerHTML = icons.play; clearTimeout(controlsTimeout); playerControls.classList.remove('opacity-0'); });
-    videoPlayer.addEventListener('volumechange', updateVolumeUI);
-
 
     playerContainer.addEventListener('mousemove', showControlsAndResetTimer);
     playerContainer.addEventListener('touchstart', showControlsAndResetTimer, { passive: true });
@@ -2218,14 +2146,6 @@ document.addEventListener('DOMContentLoaded', () => {
     rewindBtn.addEventListener('click', () => skip(-1));
     forwardBtn.addEventListener('click', () => skip(1));
     fullscreenBtn.addEventListener('click', toggleFullscreen);
-    nextEpisodeBtn.addEventListener('click', () => {
-        const data = JSON.parse(nextEpisodeBtn.dataset.nextData);
-        if(data) showView('player', data, false);
-    });
-    prevEpisodeBtn.addEventListener('click', () => {
-        const data = JSON.parse(prevEpisodeBtn.dataset.prevData);
-        if(data) showView('player', data, false);
-    });
     
     document.addEventListener('fullscreenchange', () => {
          fullscreenBtn.innerHTML = document.fullscreenElement ? icons.exitFullscreen : icons.fullscreen;
@@ -2236,14 +2156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     volumeBtn.addEventListener('click', toggleMute);
-    volumeSlider.addEventListener('input', (e) => {
-        const newVolume = parseFloat(e.target.value);
-        videoPlayer.volume = newVolume;
-        videoPlayer.muted = newVolume === 0;
-        if (newVolume > 0) {
-            lastVolume = newVolume;
-        }
-    });
+    volumeSlider.addEventListener('input', (e) => updateVolume(parseFloat(e.target.value), false));
 
     progressBarContainer.addEventListener('click', (e) => {
         const rect = progressBarContainer.getBoundingClientRect();
@@ -2289,8 +2202,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'arrowleft': skip(-1); break;
             case 'f': toggleFullscreen(); break;
             case 'm': toggleMute(); break;
-            case 'arrowup': videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1); break;
-            case 'arrowdown': videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1); break;
+            case 'arrowup': updateVolume(Math.min(1, videoPlayer.volume + 0.1)); break;
+            case 'arrowdown': updateVolume(Math.max(0, videoPlayer.volume - 0.1)); break;
         }
     });
 
