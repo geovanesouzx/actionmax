@@ -778,18 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
             targetView.classList.add('view-transition');
         }
         
-        mainHeader.style.position = (viewName === 'home') ? 'fixed' : 'absolute';
-        
-        if (viewName === 'home') {
-            if (window.scrollY <= 50) {
-                mainHeader.classList.remove('bg-black/80', 'backdrop-blur-sm');
-            } else {
-                mainHeader.classList.add('bg-black/80', 'backdrop-blur-sm');
-            }
-        } else {
-            mainHeader.classList.add('bg-black/80', 'backdrop-blur-sm');
-        }
-
+        updateHeaderStyle();
 
         const genre = (typeof params === 'object') ? params.genre : null;
         let url = `#${viewName}`;
@@ -857,6 +846,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (r.includes('16')) return 'rating-16';
         if (r.includes('18')) return 'rating-18';
         return 'bg-gray-600'; // Default
+    }
+
+    function updateHeaderStyle() {
+        if (!currentProfileId) return;
+        
+        const isHome = document.getElementById('home-view') && !document.getElementById('home-view').classList.contains('hidden');
+        
+        mainHeader.style.position = isHome ? 'fixed' : 'absolute';
+        
+        const shouldBeOpaque = window.scrollY > 50 || !isHome;
+
+        mainHeader.classList.toggle('bg-black/80', shouldBeOpaque);
+        mainHeader.classList.toggle('backdrop-blur-sm', shouldBeOpaque);
     }
 
     async function renderHeroSection() {
@@ -2541,13 +2543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('scroll', () => { 
-        if(currentProfileId) {
-            const isHome = !document.getElementById('home-view').classList.contains('hidden');
-            mainHeader.classList.toggle('bg-black/80', window.scrollY > 50 || !isHome);
-            mainHeader.classList.toggle('backdrop-blur-sm', window.scrollY > 50 || !isHome);
-        }
-    });
+    window.addEventListener('scroll', updateHeaderStyle);
 
     window.addEventListener('popstate', async (event) => { 
         if (!auth.currentUser) {
