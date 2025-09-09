@@ -1067,31 +1067,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createBannerCarousel(category, items) {
-        const carouselHTML = createCarousel({ title: '' }, items); // Create the inner carousel without a title
+        // Get the inner carousel HTML first, without a title
+        const carouselHTML = createCarousel({ title: '' }, items);
 
-        const superTitleHTML = category.super_title
-            ? `<p class="text-sm md:text-base font-bold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${category.super_title}</p>`
+        // Default settings from banner_settings object
+        const settings = category.banner_settings || {};
+        const superTitle = settings.super_title || '';
+        const logoUrl = settings.logo_url || '';
+        const bgDesktopUrl = settings.bg_desktop_url || '';
+        const bgMobileUrl = settings.bg_mobile_url || bgDesktopUrl; // Fallback to desktop bg
+        const seeMoreLink = settings.see_more_link || '';
+        const font = settings.font || 'Poppins';
+        const bgAlign = settings.bg_align || 'center';
+        const textPosY = settings.text_pos_y || 0;
+        const textPosX = settings.text_pos_x || 0;
+        const logoPosY = settings.logo_pos_y || 0;
+        const logoPosX = settings.logo_pos_x || 0;
+
+        // Generate inline styles based on settings
+        const backgroundStyle = `
+            --bg-desktop: url('${bgDesktopUrl}'); 
+            --bg-mobile: url('${bgMobileUrl}'); 
+            background-position: ${bgAlign};
+        `;
+        const infoStyle = `font-family: '${font}', sans-serif;`;
+        const superTitleStyle = `transform: translate(${textPosX}px, ${textPosY}px);`;
+        const logoStyle = `transform: translate(${logoPosX}px, ${logoPosY}px);`;
+
+        const superTitleHTML = superTitle
+            ? `<p class="text-2xl md:text-4xl font-bold uppercase tracking-wider text-gray-300 mb-2 md:mb-4 banner-super-title" style="${superTitleStyle}">${superTitle}</p>`
             : '';
 
-        const logoOrTitleHTML = category.logo_url
-            ? `<img src="${category.logo_url}" alt="${category.title} logo" class="h-10 md:h-16 mb-3 md:mb-4 banner-logo">`
-            : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4">${category.title}</h2>`;
+        const logoOrTitleHTML = logoUrl
+            ? `<img src="${logoUrl}" alt="${category.title} logo" class="h-10 md:h-16 mb-3 md:mb-4 banner-logo" style="${logoStyle}">`
+            : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4" style="${logoStyle}">${category.title}</h2>`;
 
-        const seeMoreBtnHTML = category.see_more_link
-            ? `<a href="${category.see_more_link}" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>`
+        const seeMoreBtnHTML = seeMoreLink
+            ? `<a href="${seeMoreLink}" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>`
             : '';
-
-        const desktopBg = category.background_url || '';
-        const mobileBg = category.background_mobile_url || desktopBg;
         
-        // Using CSS variables for cleaner responsive images
-        const styleAttribute = `style="--bg-desktop: url('${desktopBg}'); --bg-mobile: url('${mobileBg}');"`;
-        
+        // Assemble the final HTML for the banner carousel
         return `
-        <div class="carousel-banner-section">
-            <div class="banner-background" ${styleAttribute}>
-                <div class="banner-gradient"></div>
-            </div>
+        <div class="carousel-banner-section" style="${infoStyle}">
+            <div class="banner-background" style="${backgroundStyle}"></div>
+            <div class="banner-gradient"></div>
             <div class="banner-content">
                 <div class="banner-info">
                     ${superTitleHTML}
@@ -1102,63 +1121,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
         `;
-    }
-
-    function createCarousel(category, items) {
-        const profile = getCurrentProfile();
-        if (!profile) return '';
-        
-        if (category.type === 'banner') {
-            return createBannerCarousel(category, items);
-        }
-
-        const isContinueWatching = category.title === 'Continuar a Assistir';
-
-        const itemsHTML = items.map(item => {
-            const progress = item.progressData || (item.type === 'movie' ? profile.watchProgress[item.id] : null);
-            let progressPercent = 0;
-            if (progress) {
-                progressPercent = (progress.currentTime / progress.duration) * 100;
-            }
-            const action = isContinueWatching ? 'continuePlayback' : 'showView';
-
-            const removeButtonHTML = isContinueWatching ? `
-                <button data-action="removeFromContinueWatching" data-item-id="${item.id}" class="absolute top-1 right-1 bg-black/70 rounded-full h-6 w-6 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all z-10 hover:bg-red-600 hover:scale-110">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            ` : '';
-
-            return `
-            <div class="flex-shrink-0 w-40 md:w-48 group" data-action="${action}" data-view-name="detail" data-item-id="${item.id}">
-                <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500 cursor-pointer">
-                    ${removeButtonHTML}
-                    <img src="${item.poster}" alt="${item.title}" class="pointer-events-none poster-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                        <h3 class="font-bold text-white truncate">${item.title}</h3>
-                    </div>
-                    ${progressPercent > 5 && progressPercent < 95 ? `<div class="absolute bottom-0 left-0 h-1 bg-indigo-500" style="width: ${progressPercent}%"></div>` : ''}
-                </div>
-            </div>`
-        }).join('');
-        return `<div><h2 class="text-xl md:text-2xl font-bold mb-4">${category.title}</h2><div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">${itemsHTML}</div></div>`;
-    }
-    
-    function renderItemsGrid(items, containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        container.innerHTML = items.map(item => `
-            <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
-                <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
-                    <img src="${item.poster}" alt="${item.title}" class="poster-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                        <h3 class="font-bold text-white truncate">${item.title}</h3>
-                    </div>
-                </div>
-            </div>`).join('');
     }
 
     function renderCarousels() {
@@ -1198,7 +1160,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         
             if (items.length === 0) return '';
-            return createCarousel(carouselConfig, items);
+            
+            // LOGIC CHANGE: Check carousel type and call the appropriate render function
+            if (carouselConfig.type === 'banner') {
+                return createBannerCarousel(carouselConfig, items);
+            } else {
+                return createCarousel({ title: carouselConfig.title }, items);
+            }
         }).join('');
         
         carouselsHTML += dynamicCarouselsHTML;
@@ -2441,6 +2409,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
+        // FIX: Renamed 'intro' to 'intro_times' to avoid syntax errors
         if (currentEpisodeData && currentEpisodeData.intro_times && currentEpisodeData.intro_times.end > 0) {
             const { start, end } = currentEpisodeData.intro_times;
             const showButton = videoPlayer.currentTime > start && videoPlayer.currentTime < end;
@@ -2542,6 +2511,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     skipIntroBtn.addEventListener('click', () => {
+        // FIX: Renamed 'intro' to 'intro_times'
         if (currentEpisodeData && currentEpisodeData.intro_times) {
             videoPlayer.currentTime = currentEpisodeData.intro_times.end;
             skipIntroBtn.classList.add('hidden');
@@ -2878,5 +2848,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
 
 
