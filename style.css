@@ -95,7 +95,7 @@ body {
     padding-bottom: 2rem;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: space-between; /* Changed from flex-end */
     min-height: 450px;
 }
 .banner-info {
@@ -324,4 +324,5 @@ body {
   30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
   40%, 60% { transform: translate3d(3px, 0, 0); }
 }
+
 

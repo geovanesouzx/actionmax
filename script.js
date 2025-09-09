@@ -1070,7 +1070,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const carouselHTML = createCarousel({ title: '' }, items); // Create the inner carousel without a title
 
         const superTitleHTML = category.super_title
-            ? `<p class="text-sm md:text-base font-semibold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${category.super_title}</p>`
+            ? `<p class="text-sm md:text-base font-bold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${category.super_title}</p>`
             : '';
 
         const logoOrTitleHTML = category.logo_url
@@ -2878,4 +2878,5 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
 
