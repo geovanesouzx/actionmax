@@ -259,19 +259,52 @@ body {
 }
 
 .banner-info {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
     margin-bottom: 1rem;
 }
 
-@media (min-width: 768px) {
-    .banner-info {
-        padding-left: 2.5rem;
-        padding-right: 2.5rem;
+.banner-content .custom-scrollbar {
+    padding-left: 2.5rem !important; /* Override inline style */
+    padding-right: 2.5rem !important;
+}
+
+/* Mobile adjustments for Banner Carousel */
+@media (max-width: 767px) {
+    .carousel-banner-section {
+        aspect-ratio: 4 / 3; /* Taller aspect ratio for mobile */
+        max-height: 60vh; /* Limit height on mobile */
     }
+
+    .banner-gradient {
+         background: linear-gradient(to top, #0c0c0c 0%, rgba(12, 12, 12, 0.9) 25%, transparent 70%); /* Stronger gradient from bottom */
+    }
+    
+    .banner-info {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
     .banner-content .custom-scrollbar {
-        padding-left: 2.5rem !important; /* Override inline style */
-        padding-right: 2.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* Overriding Tailwind classes from JS */
+    .banner-logo {
+        height: 2.5rem !important; /* h-10 */
+        margin-bottom: 0.75rem !important; /* mb-3 */
+    }
+
+    .banner-info h2 { /* Targeting the title when it's an h2 */
+        font-size: 1.875rem !important; /* text-3xl */
+        margin-bottom: 0.75rem !important; /* mb-3 */
+    }
+
+    .banner-seemore-btn {
+        padding: 0.5rem 1rem !important; /* py-2 px-4 */
+        font-size: 0.875rem !important; /* text-sm */
     }
 }
 
