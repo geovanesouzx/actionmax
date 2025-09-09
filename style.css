@@ -219,9 +219,7 @@ body {
 /* NEW: Banner Carousel Styles */
 .carousel-banner-section {
     position: relative;
-    width: auto; /* Let margins define the width relative to the padded container */
-    margin-left: -2.5rem; /* For desktop, counteracts md:px-10 */
-    margin-right: -2.5rem;
+    width: 100%;
     aspect-ratio: 16 / 9;
     max-height: 70vh;
     display: flex;
@@ -232,7 +230,7 @@ body {
     position: absolute;
     inset: 0;
     z-index: 0;
-    /* border-radius removed for full-width effect */
+    border-radius: 0.5rem;
     overflow: hidden;
 }
 
@@ -276,8 +274,6 @@ body {
     .carousel-banner-section {
         min-height: 50vh; /* Taller aspect ratio for mobile */
         max-height: 60vh; /* Limit height on mobile */
-        margin-left: -1rem; /* For mobile, counteracts px-4 */
-        margin-right: -1rem;
     }
 
     .banner-gradient {
