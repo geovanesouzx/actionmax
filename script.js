@@ -540,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="relative text-center group cursor-pointer" data-action="showEditProfileView" data-item-id="${profile.id}">
                 <img src="${profile.avatar}" alt="${profile.name}" class="w-24 h-24 md:w-36 md:h-36 rounded-md object-cover">
                  <div class="absolute inset-0 bg-black/60 rounded-md flex items-center justify-center">
-                      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
                  </div>
                 <p class="mt-2 text-gray-400 font-medium">${profile.name}</p>
             </div>
@@ -1067,44 +1067,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createBannerCarousel(category, items) {
-        const carouselHTML = createCarousel({ title: '' }, items, true); // Create inner carousel, pass flag
+        const carouselHTML = createCarousel({ title: '' }, items, true); // Create inner carousel
 
-        // Destructure banner_settings with defaults from Firestore
         const settings = category.banner_settings || {};
+        const { super_title, logo_url, see_more_link } = settings;
+
+        // --- NEW LOGIC FOR DESKTOP/MOBILE SETTINGS ---
+        // Backward compatibility: if desktop/mobile objects don't exist, use root settings
+        const desktopSettings = settings.desktop || settings;
+        const mobileSettings = settings.mobile || desktopSettings; // Fallback to desktop if mobile is not set
+
+        const isMobile = window.innerWidth < 768;
+        const deviceSettings = isMobile ? mobileSettings : desktopSettings;
+        
+        // Destructure settings for the current device's style properties
         const {
-            super_title,
-            logo_url,
-            see_more_link,
-            bg_desktop_url,
-            bg_mobile_url,
             font = 'Poppins',
-            text_size = 100, // as percentage
-            logo_size = 100, // as percentage
+            text_size = 100,
+            logo_size = 100,
             bg_align = 'center',
             text_pos_x = 0,
             text_pos_y = 0,
             logo_pos_x = 0,
             logo_pos_y = 0
-        } = settings;
+        } = deviceSettings;
 
-        // Build style strings to be applied inline
+        // Determine the correct background URL, handling old and new formats
+        const desktopBg = desktopSettings.bg_url || desktopSettings.bg_desktop_url || '';
+        const mobileBg = mobileSettings.bg_url || mobileSettings.bg_mobile_url || desktopBg; // Fallback to desktop bg
+        
+        // Build style strings for the CSS variables
         const backgroundStyle = `
-            --bg-desktop: url('${bg_desktop_url || ''}'); 
-            --bg-mobile: url('${bg_mobile_url || bg_desktop_url || ''}'); 
+            --bg-desktop: url('${desktopBg}'); 
+            --bg-mobile: url('${mobileBg}'); 
             --bg-align: ${bg_align};
         `.trim().replace(/\s+/g, ' ');
 
-        // The info wrapper contains both text and logo wrappers for overall text block positioning
+        // Build inline styles based on the current device
         const infoWrapperStyle = `transform: translate(${text_pos_x}px, ${text_pos_y}px);`.trim();
-        
-        // This positions the logo relative to the info wrapper
         const logoWrapperStyle = `transform: translate(${logo_pos_x}px, ${logo_pos_y}px);`.trim();
-        
-        // Use default rem sizes and scale them by the percentage
-        // Super title: default 1.5rem (text-2xl on md)
         const superTitleStyle = `font-family: '${font}', sans-serif; font-size: ${1.5 * (text_size / 100)}rem;`.trim();
-        
-        // Logo: default 4rem (h-16 on md)
         const logoStyle = `height: ${4 * (logo_size / 100)}rem;`.trim();
 
         const superTitleHTML = super_title
@@ -1342,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="detail-scroll-container" class="custom-scrollbar">
                 <div class="relative z-10 container mx-auto px-4 md:px-10 pt-24 pb-12">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
-                         <div class="md:col-span-1 flex justify-center"><img src="${catalog.find(c => c.id == itemId)?.poster || 'https://placehold.co/400x600/a0aec0/000000?text=' + item.title.split(' ')[0]}" alt="${item.title}" class="rounded-lg shadow-2xl w-48 md:w-full md:max-w-xs mx-auto"></div>
+                        <div class="md:col-span-1 flex justify-center"><img src="${catalog.find(c => c.id == itemId)?.poster || 'https://placehold.co/400x600/a0aec0/000000?text=' + item.title.split(' ')[0]}" alt="${item.title}" class="rounded-lg shadow-2xl w-48 md:w-full md:max-w-xs mx-auto"></div>
                         <div class="md:col-span-3 text-white text-center md:text-left">
                             <h2 class="text-4xl md:text-6xl font-bold">${item.title}</h2>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 my-4 text-sm text-gray-300">
@@ -2522,7 +2524,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // CORREÇÃO: Força a navegação para trás ao sair da tela cheia no celular com o botão "Voltar" do sistema
         const onPlayerView = !document.getElementById('player-view').classList.contains('hidden') ||
-                             !document.getElementById('iframe-player-view').classList.contains('hidden');
+                               !document.getElementById('iframe-player-view').classList.contains('hidden');
     
         if (!isPlayerModeActive && onPlayerView && window.location.hash.includes('player')) {
             history.back();
