@@ -84,13 +84,13 @@ body {
 .banner-gradient {
     position: absolute;
     inset: 0;
-    /* UPDATED: Stronger top and bottom fade to eliminate hard edges */
+    /* UPDATED: Even stronger top and bottom fade */
     background: linear-gradient(to bottom, 
         #0c0c0c 0%, 
-        rgba(12, 12, 12, 0.9) 10%, 
-        transparent 30%, 
-        transparent 70%, 
-        rgba(12, 12, 12, 0.9) 90%, 
+        #0c0c0c 5%, 
+        transparent 35%, 
+        transparent 65%, 
+        #0c0c0c 95%, 
         #0c0c0c 100%
     );
     z-index: 2;
@@ -98,29 +98,30 @@ body {
 .banner-content {
     position: relative;
     z-index: 3;
-    /* UPDATED: Reduced top padding to move content up */
-    padding-top: 4rem; 
+    /* UPDATED: Increased top padding to move content up */
+    padding-top: 6rem; 
     padding-bottom: 2rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 450px;
+    /* UPDATED: Increased min-height for more vertical space */
+    min-height: 550px;
 }
 .banner-info {
-    /* UPDATED: Increased horizontal padding */
-    padding-left: 5vw;
-    padding-right: 5vw;
+    /* UPDATED: Increased horizontal padding with a minimum value */
+    padding-left: max(4rem, 5vw);
+    padding-right: max(4rem, 5vw);
 }
 .banner-content .custom-scrollbar {
-    /* UPDATED: Increased horizontal padding */
-    padding-left: 5vw;
-    padding-right: 5vw;
+    /* UPDATED: Increased horizontal padding with a minimum value */
+    padding-left: max(4rem, 5vw);
+    padding-right: max(4rem, 5vw);
 }
 
 .banner-super-title {
     text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-    /* UPDATED: Made text larger */
-    font-size: 1.25rem; /* text-xl */
+    /* UPDATED: Made text even larger */
+    font-size: 1.5rem; /* text-2xl */
 }
 
 .banner-logo {
@@ -299,9 +300,9 @@ body {
     }
 
     .banner-content {
-        min-height: 380px;
+        min-height: 420px;
         /* UPDATED: Reduced top padding */
-        padding-top: 3rem;
+        padding-top: 4rem;
         padding-bottom: 1rem;
     }
 
@@ -313,7 +314,7 @@ body {
 
     .banner-super-title {
         /* UPDATED: Increased font size for mobile */
-        font-size: 1rem; /* text-base */
+        font-size: 1.125rem; /* text-lg */
     }
 
     .banner-content .custom-scrollbar {
@@ -340,4 +341,5 @@ body {
   30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
   40%, 60% { transform: translate3d(3px, 0, 0); }
 }
+
 
