@@ -540,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="relative text-center group cursor-pointer" data-action="showEditProfileView" data-item-id="${profile.id}">
                 <img src="${profile.avatar}" alt="${profile.name}" class="w-24 h-24 md:w-36 md:h-36 rounded-md object-cover">
                  <div class="absolute inset-0 bg-black/60 rounded-md flex items-center justify-center">
-                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
                  </div>
                 <p class="mt-2 text-gray-400 font-medium">${profile.name}</p>
             </div>
@@ -625,9 +625,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleDeleteProfile() {
          if (editingProfileId) {
-              profiles = profiles.filter(p => p.id !== editingProfileId);
-              await saveProfiles();
-              showManageProfilesView();
+             profiles = profiles.filter(p => p.id !== editingProfileId);
+             await saveProfiles();
+             showManageProfilesView();
          }
     }
 
@@ -1067,36 +1067,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createBannerCarousel(category, items) {
-        const carouselHTML = createCarousel({ title: '' }, items); // Create the inner carousel without a title
+        const carouselHTML = createCarousel({ title: '' }, items, true); // Create inner carousel, pass flag
 
-        const superTitleHTML = category.super_title
-            ? `<p class="text-sm md:text-base font-bold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${category.super_title}</p>`
+        // Destructure banner_settings with defaults from Firestore
+        const settings = category.banner_settings || {};
+        const {
+            super_title,
+            logo_url,
+            see_more_link,
+            bg_desktop_url,
+            bg_mobile_url,
+            font = 'Poppins',
+            text_size = 100, // as percentage
+            logo_size = 100, // as percentage
+            bg_align = 'center',
+            text_pos_x = 0,
+            text_pos_y = 0,
+            logo_pos_x = 0,
+            logo_pos_y = 0
+        } = settings;
+
+        // Build style strings to be applied inline
+        const backgroundStyle = `
+            --bg-desktop: url('${bg_desktop_url || ''}'); 
+            --bg-mobile: url('${bg_mobile_url || bg_desktop_url || ''}'); 
+            --bg-align: ${bg_align};
+        `.trim().replace(/\s+/g, ' ');
+
+        // The info wrapper contains both text and logo wrappers for overall text block positioning
+        const infoWrapperStyle = `transform: translate(${text_pos_x}px, ${text_pos_y}px);`.trim();
+        
+        // This positions the logo relative to the info wrapper
+        const logoWrapperStyle = `transform: translate(${logo_pos_x}px, ${logo_pos_y}px);`.trim();
+        
+        // Use default rem sizes and scale them by the percentage
+        // Super title: default 1.5rem (text-2xl on md)
+        const superTitleStyle = `font-family: '${font}', sans-serif; font-size: ${1.5 * (text_size / 100)}rem;`.trim();
+        
+        // Logo: default 4rem (h-16 on md)
+        const logoStyle = `height: ${4 * (logo_size / 100)}rem;`.trim();
+
+        const superTitleHTML = super_title
+            ? `<p style="${superTitleStyle}" class="text-lg md:text-2xl font-bold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${super_title}</p>`
             : '';
 
-        const logoOrTitleHTML = category.logo_url
-            ? `<img src="${category.logo_url}" alt="${category.title} logo" class="h-10 md:h-16 mb-3 md:mb-4 banner-logo">`
+        const logoOrTitleHTML = logo_url
+            ? `<div style="${logoWrapperStyle}" class="banner-logo-wrapper"><img src="${logo_url}" alt="${category.title} logo" style="${logoStyle}" class="mb-3 md:mb-4 banner-logo"></div>`
             : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4">${category.title}</h2>`;
 
-        const seeMoreBtnHTML = category.see_more_link
-            ? `<a href="${category.see_more_link}" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>`
+        const seeMoreBtnHTML = see_more_link
+            ? `<a href="${see_more_link}" target="_blank" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>`
             : '';
-
-        const desktopBg = category.background_url || '';
-        const mobileBg = category.background_mobile_url || desktopBg;
-        
-        // Using CSS variables for cleaner responsive images
-        const styleAttribute = `style="--bg-desktop: url('${desktopBg}'); --bg-mobile: url('${mobileBg}');"`;
-        
+            
         return `
         <div class="carousel-banner-section">
-            <div class="banner-background" ${styleAttribute}>
+            <div class="banner-background" style="${backgroundStyle}">
                 <div class="banner-gradient"></div>
             </div>
             <div class="banner-content">
-                <div class="banner-info">
-                    ${superTitleHTML}
-                    ${logoOrTitleHTML}
-                    ${seeMoreBtnHTML}
+                <div style="${infoWrapperStyle}" class="banner-info-wrapper">
+                    <div class="banner-info">
+                        ${superTitleHTML}
+                        ${logoOrTitleHTML}
+                        ${seeMoreBtnHTML}
+                    </div>
                 </div>
                 ${carouselHTML}
             </div>
@@ -1104,11 +1138,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    function createCarousel(category, items) {
+    function createCarousel(category, items, isInnerBanner = false) {
         const profile = getCurrentProfile();
         if (!profile) return '';
         
-        if (category.type === 'banner') {
+        if (category.type === 'banner' && !isInnerBanner) {
             return createBannerCarousel(category, items);
         }
 
@@ -2696,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
-            
+        
         let params = {};
             
         switch (action) {
@@ -2878,5 +2912,3 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
-
-
