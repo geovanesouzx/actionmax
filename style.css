@@ -17,6 +17,12 @@ body {
     font-family: 'Poppins', sans-serif;
     background-color: #0c0c0c;
 }
+
+/* FIX: Prevents horizontal scroll from full-width banners */
+#home-view {
+    overflow-x: clip;
+}
+
 .custom-scrollbar::-webkit-scrollbar { display: none; /* Esconde a barra de rolagem para uma melhor experiência de arrastar */ }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
@@ -55,6 +61,63 @@ body {
 .star-rating .star.selected {
     color: #f59e0b; /* amber-500 */
 }
+
+/* Carousel Banner */
+.carousel-banner-section {
+    position: relative;
+    width: 100vw; /* Full viewport width */
+    margin-left: 50%;
+    transform: translateX(-50%);
+}
+
+.banner-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: var(--bg-desktop); /* Default to desktop */
+    background-size: cover;
+    background-position: center center;
+    z-index: 1;
+}
+.banner-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(12, 12, 12, 1) 0%, rgba(12, 12, 12, 0.8) 20%, transparent 60%),
+                linear-gradient(to bottom, rgba(12, 12, 12, 0.6) 0%, transparent 20%);
+    z-index: 2;
+}
+.banner-content {
+    position: relative;
+    z-index: 3;
+    padding-top: 6rem;
+    padding-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 450px;
+}
+.banner-info {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+.banner-content .custom-scrollbar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.banner-super-title {
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+.banner-logo {
+    max-width: 250px;
+    object-fit: contain;
+    object-position: left;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+}
+
 
 /* Player Optimizations */
 .seek-indicator {
@@ -216,96 +279,33 @@ body {
     overflow-y: auto;
 }
 
-/* NEW: Banner Carousel Styles */
-.carousel-banner-section {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    max-height: 70vh;
-    display: flex;
-    align-items: flex-end; /* Align content to the bottom */
-}
-
-.banner-background {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    border-radius: 0.5rem;
-    overflow: hidden;
-}
-
-.banner-background img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-}
-
-.banner-gradient {
-    position: absolute;
-    inset: 0;
-    background: 
-        linear-gradient(to top, #0c0c0c 0%, rgba(12, 12, 12, 0.8) 15%, transparent 50%), 
-        linear-gradient(to bottom, #0c0c0c 0%, rgba(12, 12, 12, 0.8) 15%, transparent 50%);
-}
-
-.banner-content {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    padding: 1rem 0 0 0; /* Add padding at the top */
-    display: flex;
-    flex-direction: column;
-}
-
-.banner-info {
-    padding-left: 2.5rem;
-    padding-right: 2.5rem;
-    margin-bottom: 1rem;
-}
-
-.banner-content .custom-scrollbar {
-    padding-left: 2.5rem !important; /* Override inline style */
-    padding-right: 2.5rem !important;
-}
-
-/* Mobile adjustments for Banner Carousel */
+/* Mobile adjustments */
 @media (max-width: 767px) {
-    .carousel-banner-section {
-        min-height: 50vh; /* Taller aspect ratio for mobile */
-        max-height: 60vh; /* Limit height on mobile */
+    /* Banner Carousels on Mobile */
+    .carousel-banner-section .banner-background {
+        background-image: var(--bg-mobile); /* Switch to mobile image */
     }
 
-    .banner-gradient {
-         background: linear-gradient(to top, #0c0c0c 0%, rgba(12, 12, 12, 0.9) 25%, transparent 70%); /* Stronger gradient from bottom */
+    .banner-content {
+        min-height: 380px;
+        padding-top: 4rem;
+        padding-bottom: 1rem;
     }
-    
+
     .banner-info {
         padding-left: 1rem;
         padding-right: 1rem;
-        margin-bottom: 0.5rem;
     }
-    
+
+    .banner-super-title {
+        font-size: 0.75rem; /* text-xs */
+    }
+
     .banner-content .custom-scrollbar {
         padding-left: 1rem !important;
         padding-right: 1rem !important;
     }
 
-    /* Overriding Tailwind classes from JS */
-    .banner-logo {
-        height: 2.5rem !important; /* h-10 */
-        margin-bottom: 0.75rem !important; /* mb-3 */
-    }
-
-    .banner-info h2 { /* Targeting the title when it's an h2 */
-        font-size: 1.875rem !important; /* text-3xl */
-        margin-bottom: 0.75rem !important; /* mb-3 */
-    }
-
-    .banner-seemore-btn {
-        padding: 0.5rem 1rem !important; /* py-2 px-4 */
-        font-size: 0.875rem !important; /* text-sm */
-    }
 }
 
 

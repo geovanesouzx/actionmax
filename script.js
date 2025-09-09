@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
              case 'detail-view':
                  const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
                  if(currentItemId) {
-                     renderStarRating(currentItemId);
+                      renderStarRating(currentItemId);
                  }
                  break;
         }
@@ -540,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="relative text-center group cursor-pointer" data-action="showEditProfileView" data-item-id="${profile.id}">
                 <img src="${profile.avatar}" alt="${profile.name}" class="w-24 h-24 md:w-36 md:h-36 rounded-md object-cover">
                  <div class="absolute inset-0 bg-black/60 rounded-md flex items-center justify-center">
-                      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
                  </div>
                 <p class="mt-2 text-gray-400 font-medium">${profile.name}</p>
             </div>
@@ -625,10 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleDeleteProfile() {
          if (editingProfileId) {
-             profiles = profiles.filter(p => p.id !== editingProfileId);
-             await saveProfiles();
-             showManageProfilesView();
-        }
+              profiles = profiles.filter(p => p.id !== editingProfileId);
+              await saveProfiles();
+              showManageProfilesView();
+         }
     }
 
     function renderAvatarGridForEdit(currentAvatar) {
@@ -709,8 +709,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isTransitioningPlayer) {
              if (isPlayerModeActive || document.fullscreenElement) {
-                await exitPlayerMode();
-            }
+                 await exitPlayerMode();
+             }
             // Only stop playback completely if we are not transitioning episodes
             clearInterval(progressSaveInterval);
             if (hlsInstance) {
@@ -738,10 +738,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.getElementById(id);
             if(el && !['profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'].includes(id)) {
                  if (isTransitioningPlayer && id === 'player-view') {
-                    // Do nothing, leave it visible for the new content
-                } else {
-                    el.classList.add('hidden');
-                }
+                     // Do nothing, leave it visible for the new content
+                 } else {
+                     el.classList.add('hidden');
+                 }
             }
         });
 
@@ -1066,11 +1066,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function createBannerCarousel(category, items) {
+        const carouselHTML = createCarousel({ title: '' }, items); // Create the inner carousel without a title
+
+        const superTitleHTML = category.super_title
+            ? `<p class="text-sm md:text-base font-semibold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${category.super_title}</p>`
+            : '';
+
+        const logoOrTitleHTML = category.logo_url
+            ? `<img src="${category.logo_url}" alt="${category.title} logo" class="h-10 md:h-16 mb-3 md:mb-4 banner-logo">`
+            : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4">${category.title}</h2>`;
+
+        const seeMoreBtnHTML = category.see_more_link
+            ? `<a href="${category.see_more_link}" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>`
+            : '';
+
+        const desktopBg = category.background_url || '';
+        const mobileBg = category.background_mobile_url || desktopBg;
+        
+        // Using CSS variables for cleaner responsive images
+        const styleAttribute = `style="--bg-desktop: url('${desktopBg}'); --bg-mobile: url('${mobileBg}');"`;
+        
+        return `
+        <div class="carousel-banner-section">
+            <div class="banner-background" ${styleAttribute}>
+                <div class="banner-gradient"></div>
+            </div>
+            <div class="banner-content">
+                <div class="banner-info">
+                    ${superTitleHTML}
+                    ${logoOrTitleHTML}
+                    ${seeMoreBtnHTML}
+                </div>
+                ${carouselHTML}
+            </div>
+        </div>
+        `;
+    }
 
     function createCarousel(category, items) {
         const profile = getCurrentProfile();
         if (!profile) return '';
         
+        if (category.type === 'banner') {
+            return createBannerCarousel(category, items);
+        }
+
         const isContinueWatching = category.title === 'Continuar a Assistir';
 
         const itemsHTML = items.map(item => {
@@ -1102,30 +1143,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>`
         }).join('');
-
-        // NEW: Check for banner type
-        if (category.carouselType === 'banner' && category.backgroundImageUrl) {
-            const logoHTML = category.logoImageUrl ? `<img src="${category.logoImageUrl}" alt="${category.title} logo" class="banner-logo h-12 md:h-20 w-auto mb-4">` : `<h2 class="text-3xl md:text-5xl font-bold text-white mb-4">${category.title}</h2>`;
-            const seeMoreButtonHTML = category.seeMoreUrl ? `<a href="${category.seeMoreUrl}" class="banner-seemore-btn bg-white/90 text-black font-bold py-2 px-6 rounded-lg hover:bg-white transition-transform hover:scale-105">Ver Mais</a>` : '';
-
-            return `
-                <section class="carousel-banner-section">
-                    <div class="banner-background">
-                        <img src="${category.backgroundImageUrl}" alt="${category.title} background" class="w-full h-full object-cover">
-                        <div class="banner-gradient"></div>
-                    </div>
-                    <div class="banner-content">
-                        <div class="banner-info">
-                            ${logoHTML}
-                            ${seeMoreButtonHTML}
-                        </div>
-                        <div class="flex space-x-4 overflow-x-auto custom-scrollbar pb-4 -mx-4 px-4">${itemsHTML}</div>
-                    </div>
-                </section>
-            `;
-        }
-
-        // Default carousel rendering
         return `<div><h2 class="text-xl md:text-2xl font-bold mb-4">${category.title}</h2><div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">${itemsHTML}</div></div>`;
     }
     
@@ -1170,7 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, []);
 
         if (uniqueContinueWatching.length > 0) {
-            carouselsHTML += createCarousel({ title: 'Continuar a Assistir', carouselType: 'default' }, uniqueContinueWatching);
+            carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, uniqueContinueWatching);
         }
 
         // 2. Dynamic Carousels from Firestore
@@ -1181,7 +1198,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         
             if (items.length === 0) return '';
-            // Pass the entire config object to createCarousel
             return createCarousel(carouselConfig, items);
         }).join('');
         
@@ -2425,8 +2441,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        if (currentEpisodeData && currentEpisodeData.intro && currentEpisodeData.intro.end > 0) {
-            const { start, end } = currentEpisodeData.intro;
+        if (currentEpisodeData && currentEpisodeData.intro_times && currentEpisodeData.intro_times.end > 0) {
+            const { start, end } = currentEpisodeData.intro_times;
             const showButton = videoPlayer.currentTime > start && videoPlayer.currentTime < end;
             skipIntroBtn.classList.toggle('hidden', !showButton);
         } else {
@@ -2526,8 +2542,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     skipIntroBtn.addEventListener('click', () => {
-        if (currentEpisodeData && currentEpisodeData.intro) {
-            videoPlayer.currentTime = currentEpisodeData.intro.end;
+        if (currentEpisodeData && currentEpisodeData.intro_times) {
+            videoPlayer.currentTime = currentEpisodeData.intro_times.end;
             skipIntroBtn.classList.add('hidden');
         }
     });
@@ -2862,3 +2878,4 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
