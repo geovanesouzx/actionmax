@@ -272,7 +272,7 @@ body {
 /* Mobile adjustments for Banner Carousel */
 @media (max-width: 767px) {
     .carousel-banner-section {
-        aspect-ratio: 4 / 3; /* Taller aspect ratio for mobile */
+        min-height: 50vh; /* Taller aspect ratio for mobile */
         max-height: 60vh; /* Limit height on mobile */
     }
 
