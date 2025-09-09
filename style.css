@@ -222,8 +222,6 @@ body {
     width: 100%;
     aspect-ratio: 16 / 9;
     max-height: 70vh;
-    border-radius: 0.5rem;
-    overflow: hidden;
     display: flex;
     align-items: flex-end; /* Align content to the bottom */
 }
@@ -232,6 +230,8 @@ body {
     position: absolute;
     inset: 0;
     z-index: 0;
+    border-radius: 0.5rem;
+    overflow: hidden;
 }
 
 .banner-background img {
