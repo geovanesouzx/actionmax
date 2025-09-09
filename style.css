@@ -84,31 +84,43 @@ body {
 .banner-gradient {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(12, 12, 12, 1) 0%, rgba(12, 12, 12, 0.8) 20%, transparent 60%),
-                linear-gradient(to bottom, rgba(12, 12, 12, 0.6) 0%, transparent 20%);
+    /* UPDATED: Stronger top and bottom fade to eliminate hard edges */
+    background: linear-gradient(to bottom, 
+        #0c0c0c 0%, 
+        rgba(12, 12, 12, 0.9) 10%, 
+        transparent 30%, 
+        transparent 70%, 
+        rgba(12, 12, 12, 0.9) 90%, 
+        #0c0c0c 100%
+    );
     z-index: 2;
 }
 .banner-content {
     position: relative;
     z-index: 3;
-    padding-top: 6rem;
+    /* UPDATED: Reduced top padding to move content up */
+    padding-top: 4rem; 
     padding-bottom: 2rem;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Changed from flex-end */
+    justify-content: space-between;
     min-height: 450px;
 }
 .banner-info {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    /* UPDATED: Increased horizontal padding */
+    padding-left: 5vw;
+    padding-right: 5vw;
 }
 .banner-content .custom-scrollbar {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    /* UPDATED: Increased horizontal padding */
+    padding-left: 5vw;
+    padding-right: 5vw;
 }
 
 .banner-super-title {
     text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    /* UPDATED: Made text larger */
+    font-size: 1.25rem; /* text-xl */
 }
 
 .banner-logo {
@@ -288,22 +300,26 @@ body {
 
     .banner-content {
         min-height: 380px;
-        padding-top: 4rem;
+        /* UPDATED: Reduced top padding */
+        padding-top: 3rem;
         padding-bottom: 1rem;
     }
 
     .banner-info {
-        padding-left: 1rem;
-        padding-right: 1rem;
+        /* UPDATED: Padding is now consistent with desktop (5vw) */
+        padding-left: 5vw;
+        padding-right: 5vw;
     }
 
     .banner-super-title {
-        font-size: 0.75rem; /* text-xs */
+        /* UPDATED: Increased font size for mobile */
+        font-size: 1rem; /* text-base */
     }
 
     .banner-content .custom-scrollbar {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        /* UPDATED: Padding is now consistent with desktop (5vw) and removed !important */
+        padding-left: 5vw;
+        padding-right: 5vw;
     }
 
 }
@@ -324,5 +340,4 @@ body {
   30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
   40%, 60% { transform: translate3d(3px, 0, 0); }
 }
-
 
