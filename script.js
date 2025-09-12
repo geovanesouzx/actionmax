@@ -240,8 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Re-render only list-based views to avoid being disruptive.
         switch (currentViewId) {
             case 'home-view':
-                renderHeroSection();
+                // CORREÇÃO: Ordem de chamada invertida para a lógica do hero funcionar
                 renderCarousels();
+                renderHeroSection();
                 break;
             case 'movies-view':
                 renderGenericPage('movies-view', 'Filmes', 'movie');
@@ -790,8 +791,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (viewName === 'home') {
-            await renderHeroSection();
+            // CORREÇÃO: Ordem de chamada invertida para a lógica do hero funcionar
             renderCarousels();
+            await renderHeroSection();
         } else if (viewName === 'detail' && itemId) {
             await renderDetailPage(itemId);
         } else if (viewName === 'player' && itemId) {
@@ -862,9 +864,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function renderHeroSection() {
+        const homeView = document.getElementById('home-view');
+        // CORREÇÃO: Se um hero banner estiver ativo, esta função não deve ser executada.
+        if (homeView && homeView.classList.contains('has-hero-banner')) {
+            const oldHero = document.getElementById('hero-section');
+            if(oldHero) oldHero.style.display = 'none'; // Garante que o hero antigo esteja escondido
+            return;
+        }
+
         const heroContainer = document.getElementById('hero-content-container');
         const heroBackdrop = document.getElementById('hero-backdrop');
         if (!heroContainer || !heroBackdrop) return;
+        
+        const oldHero = document.getElementById('hero-section');
+        if(oldHero) oldHero.style.display = 'flex'; // Garante que o hero antigo seja visível
 
         let heroItem = Object.values(itemDetails).find(item => item.isHero) || catalog[0];
         
@@ -2930,3 +2943,4 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
