@@ -262,11 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
              case 'detail-view':
-                 const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
-                 if(currentItemId) {
-                      renderStarRating(currentItemId);
-                 }
-                 break;
+                  const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                  if(currentItemId) {
+                       renderStarRating(currentItemId);
+                  }
+                  break;
         }
     }
 
@@ -1066,86 +1066,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function createBannerCarousel(category, items) {
-        const carouselHTML = createCarousel({ title: '' }, items, true); // Create inner carousel
+    // --- REFACTORED CAROUSEL & BANNER LOGIC ---
 
+    function createBannerCarousel(category, items, isHeroBanner = false) {
+        const bannerContainerClass = isHeroBanner ? 'hero-banner' : 'carousel-banner-section';
+        const gradientDivClass = isHeroBanner ? 'hero-banner-gradient' : 'standard-banner-gradient';
+        
+        // Build the inner carousel of items directly
+        const itemsHTML = items.map(item => {
+            return `
+            <div class="flex-shrink-0 w-40 md:w-48 group" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
+                <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500 cursor-pointer">
+                    <img src="${item.poster}" alt="${item.title}" class="pointer-events-none poster-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                        <h3 class="font-bold text-white truncate">${item.title}</h3>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+        const innerCarouselHTML = `<div><div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">${itemsHTML}</div></div>`;
+
+        // Get banner settings
         const settings = category.banner_settings || {};
         const { super_title, logo_url, see_more_link } = settings;
 
-        // --- NEW LOGIC FOR DESKTOP/MOBILE SETTINGS ---
-        // Backward compatibility: if desktop/mobile objects don't exist, use root settings
         const desktopSettings = settings.desktop || settings;
-        const mobileSettings = settings.mobile || desktopSettings; // Fallback to desktop if mobile is not set
-
+        const mobileSettings = settings.mobile || desktopSettings;
         const isMobile = window.innerWidth < 768;
         const deviceSettings = isMobile ? mobileSettings : desktopSettings;
         
-        // Destructure settings for the current device's style properties
-        const {
-            font = 'Poppins',
-            text_size = 100,
-            logo_size = 100,
-            bg_align = 'center',
-            text_pos_x = 0,
-            text_pos_y = 0,
-            logo_pos_x = 0,
-            logo_pos_y = 0
-        } = deviceSettings;
-
-        // Determine the correct background URL, handling old and new formats
-        const desktopBg = desktopSettings.bg_url || desktopSettings.bg_desktop_url || '';
-        const mobileBg = mobileSettings.bg_url || mobileSettings.bg_mobile_url || desktopBg; // Fallback to desktop bg
+        const { font = 'Poppins', text_size = 100, logo_size = 100, bg_align = 'center', text_pos_x = 0, text_pos_y = 0, logo_pos_x = 0, logo_pos_y = 0 } = deviceSettings;
         
-        // Build style strings for the CSS variables
+        const desktopBg = desktopSettings.bg_url || desktopSettings.bg_desktop_url || '';
+        const mobileBg = mobileSettings.bg_url || mobileSettings.bg_mobile_url || desktopBg;
+        
         const backgroundStyle = `
             --bg-desktop: url('${desktopBg}'); 
             --bg-mobile: url('${mobileBg}'); 
             --bg-align: ${bg_align};
         `.trim().replace(/\s+/g, ' ');
 
-        // Build inline styles based on the current device
-        const infoWrapperStyle = `transform: translate(${text_pos_x}px, ${text_pos_y}px);`.trim();
-        const logoWrapperStyle = `transform: translate(${logo_pos_x}px, ${logo_pos_y}px);`.trim();
-        const superTitleStyle = `font-family: '${font}', sans-serif; font-size: ${1.5 * (text_size / 100)}rem;`.trim();
-        const logoStyle = `height: ${4 * (logo_size / 100)}rem;`.trim();
+        const infoWrapperStyle = `transform: translate(${text_pos_x}px, ${text_pos_y}px);`;
+        const logoWrapperStyle = `transform: translate(${logo_pos_x}px, ${logo_pos_y}px);`;
+        const superTitleStyle = `font-family: '${font}', sans-serif; font-size: ${1.5 * (text_size / 100)}rem;`;
+        const logoStyle = `height: ${4 * (logo_size / 100)}rem;`;
 
-        const superTitleHTML = super_title
-            ? `<p style="${superTitleStyle}" class="text-lg md:text-2xl font-bold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${super_title}</p>`
-            : '';
-
-        const logoOrTitleHTML = logo_url
-            ? `<div style="${logoWrapperStyle}" class="banner-logo-wrapper"><img src="${logo_url}" alt="${category.title} logo" style="${logoStyle}" class="mb-3 md:mb-4 banner-logo"></div>`
-            : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4">${category.title}</h2>`;
-
-        const seeMoreBtnHTML = see_more_link
-            ? `<a href="${see_more_link}" target="_blank" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>`
-            : '';
-            
+        const superTitleHTML = super_title ? `<p style="${superTitleStyle}" class="text-lg md:text-2xl font-bold uppercase tracking-wider text-gray-300 mb-1 md:mb-2 banner-super-title">${super_title}</p>` : '';
+        const logoOrTitleHTML = logo_url ? `<div style="${logoWrapperStyle}" class="banner-logo-wrapper"><img src="${logo_url}" alt="${category.title} logo" style="${logoStyle}" class="mb-3 md:mb-4 banner-logo"></div>` : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4">${category.title}</h2>`;
+        const seeMoreBtnHTML = see_more_link ? `<a href="${see_more_link}" target="_blank" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>` : '';
+        
+        // Build the final banner HTML
         return `
-        <div class="carousel-banner-section">
-            <div class="banner-background" style="${backgroundStyle}">
-                <div class="banner-gradient"></div>
-            </div>
-            <div class="banner-content">
-                <div style="${infoWrapperStyle}" class="banner-info-wrapper">
-                    <div class="banner-info">
-                        ${superTitleHTML}
-                        ${logoOrTitleHTML}
-                        ${seeMoreBtnHTML}
-                    </div>
+            <div class="${bannerContainerClass}">
+                <div class="banner-background" style="${backgroundStyle}">
+                    <div class="banner-gradient ${gradientDivClass}"></div>
                 </div>
-                ${carouselHTML}
+                <div class="banner-content">
+                    <div style="${infoWrapperStyle}" class="banner-info-wrapper">
+                        <div class="banner-info">
+                            ${superTitleHTML}
+                            ${logoOrTitleHTML}
+                            ${seeMoreBtnHTML}
+                        </div>
+                    </div>
+                    ${innerCarouselHTML}
+                </div>
             </div>
-        </div>
         `;
     }
 
-    function createCarousel(category, items, isInnerBanner = false) {
+    function createCarousel(category, items) {
         const profile = getCurrentProfile();
         if (!profile) return '';
         
-        if (category.type === 'banner' && !isInnerBanner) {
-            return createBannerCarousel(category, items);
+        // If it's a banner but not the main hero, render it as a standard banner section
+        if (category.type === 'banner') {
+            return createBannerCarousel(category, items, false);
         }
 
         const isContinueWatching = category.title === 'Continuar a Assistir';
@@ -1182,28 +1179,47 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<div><h2 class="text-xl md:text-2xl font-bold mb-4">${category.title}</h2><div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">${itemsHTML}</div></div>`;
     }
     
-    function renderItemsGrid(items, containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        container.innerHTML = items.map(item => `
-            <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
-                <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
-                    <img src="${item.poster}" alt="${item.title}" class="poster-img w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                        <h3 class="font-bold text-white truncate">${item.title}</h3>
-                    </div>
-                </div>
-            </div>`).join('');
-    }
-
     function renderCarousels() {
-        let carouselsHTML = '';
+        const homeView = document.getElementById('home-view');
+        const carouselsContainer = document.getElementById('carousels-container');
         const profile = getCurrentProfile();
-        if (!profile) return;
+        if (!homeView || !carouselsContainer || !profile) return;
+    
+        // 1. Cleanup previous state
+        homeView.classList.remove('has-hero-banner');
+        carouselsContainer.innerHTML = '';
+        const existingHeroBanner = homeView.querySelector('.hero-banner');
+        if (existingHeroBanner) {
+            existingHeroBanner.remove();
+        }
+    
         const filteredCatalogForProfile = getFilteredCatalog();
-        
-        // 1. Continue Watching Carousel
+        let carouselsToRenderInContainer = [...carousels];
+    
+        // 2. Check if the first carousel should be the main hero banner
+        if (carousels.length > 0 && carousels[0].type === 'banner') {
+            homeView.classList.add('has-hero-banner');
+            
+            const heroConfig = carousels[0];
+            const heroItems = filteredCatalogForProfile.filter(catalogItem => {
+                const details = itemDetails[catalogItem.id];
+                return details && Array.isArray(details.carousel_ids) && details.carousel_ids.includes(heroConfig.id);
+            });
+    
+            if (heroItems.length > 0) {
+                const heroHTML = createBannerCarousel(heroConfig, heroItems, true); // true = isHeroBanner
+                const heroWrapper = document.createElement('div');
+                heroWrapper.innerHTML = heroHTML;
+                // Prepend the hero banner directly to the home view, outside the regular flow
+                homeView.insertBefore(heroWrapper.firstChild, homeView.firstChild);
+            }
+            
+            // Remove the hero banner from the list that will be rendered in the container
+            carouselsToRenderInContainer.shift();
+        }
+    
+        // 3. Prepare "Continue Watching" carousel
+        let carouselsHTML = '';
         const continueWatchingItems = Object.values(profile.watchProgress || {})
             .filter(progress => progress.duration > 0 && (progress.currentTime / progress.duration) < 0.95)
             .sort((a, b) => b.lastUpdated - a.lastUpdated)
@@ -1221,25 +1237,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return acc;
         }, []);
-
+    
         if (uniqueContinueWatching.length > 0) {
             carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, uniqueContinueWatching);
         }
-
-        // 2. Dynamic Carousels from Firestore
-        const dynamicCarouselsHTML = carousels.map(carouselConfig => {
+    
+        // 4. Render the rest of the carousels
+        carouselsHTML += carouselsToRenderInContainer.map(carouselConfig => {
             const items = filteredCatalogForProfile.filter(catalogItem => {
                 const details = itemDetails[catalogItem.id];
                 return details && Array.isArray(details.carousel_ids) && details.carousel_ids.includes(carouselConfig.id);
             });
         
             if (items.length === 0) return '';
+            // createCarousel now handles if it's a standard banner or a poster carousel
             return createCarousel(carouselConfig, items);
         }).join('');
         
-        carouselsHTML += dynamicCarouselsHTML;
-        document.getElementById('carousels-container').innerHTML = carouselsHTML;
-        enableDragScroll(); // Add drag functionality to the new carousels
+        carouselsContainer.innerHTML = carouselsHTML;
+        enableDragScroll();
     }
     
     function renderGenericPage(viewId, title, type) {

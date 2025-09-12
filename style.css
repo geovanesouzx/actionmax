@@ -26,9 +26,30 @@ body {
 .custom-scrollbar::-webkit-scrollbar { display: none; /* Esconde a barra de rolagem para uma melhor experiência de arrastar */ }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
+
+/* --- GRADIENTES ATUALIZADOS E NOVOS --- */
 .hero-gradient { background: linear-gradient(to top, #0c0c0c 5%, rgba(12, 12, 12, 0.6) 25%, transparent 70%); }
 .detail-backdrop-gradient { background: linear-gradient(to right, rgba(12, 12, 12, 1) 25%, rgba(12, 12, 12, 0.7) 50%, rgba(12, 12, 12, 0.4) 75%, transparent 100%); }
 .player-controls-gradient { background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%); }
+
+/* NOVO: Gradiente para o Hero Banner em tela cheia */
+.hero-banner-gradient {
+    background: linear-gradient(90deg, rgba(12,12,12,1) 0%, rgba(12,12,12,0.9) 20%, rgba(12,12,12,0.4) 60%, transparent 100%),
+                linear-gradient(0deg, rgba(12,12,12,1) 0%, transparent 40%);
+}
+
+/* Gradiente para carrosséis banner que NÃO são o hero principal */
+.standard-banner-gradient {
+    background: linear-gradient(to bottom, 
+        #0c0c0c 0%, 
+        #0c0c0c 5%, 
+        transparent 35%, 
+        transparent 65%, 
+        #0c0c0c 95%, 
+        #0c0c0c 100%
+    );
+}
+
 .season-tab-active { border-color: #4f46e5 !important; color: #ffffff !important; }
 .profile-nav-link.active { background-color: rgba(79, 70, 229, 0.3); color: #fff; }
 .avatar-choice.selected, .avatar-option.selected {
@@ -62,13 +83,40 @@ body {
     color: #f59e0b; /* amber-500 */
 }
 
-/* Carousel Banner */
+/* --- ALTERAÇÕES PARA O HERO BANNER EM TELA CHEIA --- */
+
+/* Esconde o hero antigo quando um banner-hero está ativo */
+#home-view.has-hero-banner > #hero-section {
+    display: none;
+}
+
+/* Empurra o contêiner de carrosséis para baixo para não ficar atrás do hero-banner */
+#home-view.has-hero-banner > #carousels-container {
+    padding-top: 80vh;
+    position: relative;
+    z-index: 5;
+    /* Adiciona um gradiente para uma transição suave do banner para o conteúdo */
+    background: linear-gradient(to bottom, transparent 0%, #0c0c0c 20%);
+}
+
+/* Estilo base para todos os carrosséis do tipo banner */
 .carousel-banner-section {
     position: relative;
-    width: 100vw; /* Full viewport width */
+    width: 100vw;
     margin-left: 50%;
     transform: translateX(-50%);
-    /* This setup ensures the banner can break out of the main container's padding */
+}
+
+/* MODIFICAÇÃO: Estilos específicos para o banner que vira o hero principal */
+.hero-banner {
+    width: 100%;
+    height: 100vh;
+    position: absolute; /* Tira o elemento do fluxo normal da página */
+    top: 0;
+    left: 0;
+    transform: none;
+    margin: 0;
+    z-index: 1; /* Fica atrás do header e do conteúdo, mas visível */
 }
 
 .banner-background {
@@ -77,47 +125,53 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    /* The script.js file will set --bg-desktop, --bg-mobile, and --bg-align variables here */
-    background-image: var(--bg-desktop); /* Default to desktop image */
+    background-image: var(--bg-desktop);
     background-size: cover;
-    background-position: var(--bg-align, center center); /* Alignment is also set by script.js */
+    background-position: var(--bg-align, center center);
     z-index: 1;
 }
+
 .banner-gradient {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, 
-        #0c0c0c 0%, 
-        #0c0c0c 5%, 
-        transparent 35%, 
-        transparent 65%, 
-        #0c0c0c 95%, 
-        #0c0c0c 100%
-    );
     z-index: 2;
 }
+
 .banner-content {
     position: relative;
     z-index: 3;
-    padding-top: 6rem; 
+    padding-top: 6rem;
     padding-bottom: 2rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     min-height: 550px;
+    height: 100%; /* Faz o conteúdo ocupar a altura toda */
 }
+
+/* Ajusta o conteúdo do hero-banner para ocupar 100vh e alinhar os itens */
+.hero-banner .banner-content {
+    min-height: 100vh;
+    justify-content: flex-end; /* Alinha tudo para baixo */
+    padding-bottom: 2rem;
+}
+
 .banner-info-wrapper {
-    /* This wrapper handles the positioning from JS */
     position: relative;
     display: flex;
+    flex-grow: 1; /* Empurra o carrossel para baixo */
+    align-items: center; /* Centraliza o conteúdo (logo/texto) verticalmente */
 }
+
 .banner-info {
     padding-left: max(4rem, 5vw);
     padding-right: max(4rem, 5vw);
     display: flex;
     flex-direction: column;
-    align-items: flex-start; /* Default alignment */
+    align-items: flex-start;
+    max-width: 50%; /* Limita a largura do texto/logo */
 }
+
 .banner-content .custom-scrollbar {
     padding-left: max(4rem, 5vw);
     padding-right: max(4rem, 5vw);
@@ -125,22 +179,20 @@ body {
 
 .banner-super-title {
     text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-    /* font-size is now controlled by script.js via inline style */
 }
 
 .banner-logo-wrapper {
-    /* This wrapper handles the positioning from JS */
     position: relative;
 }
 
 .banner-logo {
     max-width: 350px;
-    /* height is now controlled by script.js via inline style */
     object-fit: contain;
     object-position: left;
     filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
 }
 
+/* --- FIM DAS ALTERAÇÕES DO HERO BANNER --- */
 
 /* Player Optimizations */
 .seek-indicator {
@@ -304,9 +356,8 @@ body {
 
 /* Mobile adjustments */
 @media (max-width: 767px) {
-    /* Banner Carousels on Mobile */
     .carousel-banner-section .banner-background {
-        background-image: var(--bg-mobile); /* Switch to mobile image defined in script.js */
+        background-image: var(--bg-mobile);
     }
 
     .banner-content {
@@ -318,11 +369,17 @@ body {
     .banner-info {
         padding-left: 5vw;
         padding-right: 5vw;
+        max-width: 80%; /* Mais espaço no mobile */
     }
 
     .banner-content .custom-scrollbar {
         padding-left: 5vw;
         padding-right: 5vw;
+    }
+
+    /* NOVO: Ajusta o espaçamento do conteúdo abaixo do hero no mobile */
+    #home-view.has-hero-banner > #carousels-container {
+        padding-top: 75vh;
     }
 }
 
