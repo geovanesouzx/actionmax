@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeComments = null; // Listener for comments
     let unsubscribePedidos = null; // Listener para pedidos
 
-    const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'pedidos-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'];
+    const allViews = ['home-view', 'detail-view', 'player-view', 'iframe-player-view', 'series-view', 'movies-view', 'genres-view', 'genre-results-view', 'profile-view', 'search-view', 'pedidos-view', 'profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view', 'coming-soon-view'];
     const mainHeader = document.getElementById('main-header');
     const videoPlayer = document.getElementById('video-player');
     const iframePlayer = document.getElementById('iframe-player');
@@ -252,6 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'genres-view':
                 renderGenresPage();
+                break;
+            case 'coming-soon-view':
+                renderComingSoonPage();
                 break;
             case 'pedidos-view':
                 // O onSnapshot já cuida disso
@@ -660,14 +663,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- View Navigation & Content Filtering ---
     function getFilteredCatalog() {
         const profile = getCurrentProfile();
+        const catalogToFilter = catalog.filter(item => !itemDetails[item.id]?.isComingSoon);
+
         if (profile && profile.isKid) {
             const allowedRatings = ['Livre', '10+', 'L', '10'];
-            return catalog.filter(item => {
+            return catalogToFilter.filter(item => {
                 const details = itemDetails[item.id];
                 return details && allowedRatings.includes(details.rating);
             });
         }
-        return catalog;
+        return catalogToFilter;
     }
     
     function showProfileSelectionView(show = true) {
@@ -791,7 +796,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (viewName === 'home') {
-            // CORREÇÃO: Ordem de chamada invertida para a lógica do hero funcionar
             renderCarousels();
             await renderHeroSection();
         } else if (viewName === 'detail' && itemId) {
@@ -823,6 +827,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderGenresPage();
         } else if (viewName === 'genre-results' && genre) {
             renderGenreResultsPage(genre);
+        } else if (viewName === 'coming-soon') {
+            renderComingSoonPage();
         } else if (viewName === 'profile') {
             setupProfilePage();
         } else if (viewName === 'search') {
@@ -833,7 +839,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Core App Logic & Player ---
-    // Helper to generate a unique key for each episode's progress
     function getEpisodeProgressKey(itemId, seasonKey, epIndex) {
         return `${itemId}_s${seasonKey}_e${epIndex}`;
     }
@@ -865,10 +870,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function renderHeroSection() {
         const homeView = document.getElementById('home-view');
-        // CORREÇÃO: Se um hero banner estiver ativo, esta função não deve ser executada.
         if (homeView && homeView.classList.contains('has-hero-banner')) {
             const oldHero = document.getElementById('hero-section');
-            if(oldHero) oldHero.style.display = 'none'; // Garante que o hero antigo esteja escondido
+            if(oldHero) oldHero.style.display = 'none';
             return;
         }
 
@@ -877,9 +881,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!heroContainer || !heroBackdrop) return;
         
         const oldHero = document.getElementById('hero-section');
-        if(oldHero) oldHero.style.display = 'flex'; // Garante que o hero antigo seja visível
+        if(oldHero) oldHero.style.display = 'flex';
 
-        let heroItem = Object.values(itemDetails).find(item => item.isHero) || catalog[0];
+        let heroItem = Object.values(itemDetails).find(item => item.isHero && !item.isComingSoon) || getFilteredCatalog()[0];
         
         if (!heroItem) {
             heroContainer.innerHTML = `<p class="text-lg">Nenhum conteúdo em destaque encontrado.</p>`;
@@ -889,7 +893,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const heroDetails = itemDetails[heroItem.id];
         if(!heroDetails) return;
 
-        // NEW: Select mobile or desktop backdrop
         const isMobile = window.innerWidth < 768;
         const backdropUrl = isMobile && heroDetails.backdrop_mobile ? heroDetails.backdrop_mobile : heroDetails.backdrop;
 
@@ -949,7 +952,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { /* Ignora URLs inválidas */ }
         
-        // MODIFIED: Auto-fullscreen on play for all devices, not just mobile
         if (!document.fullscreenElement) {
             videoPlayer.addEventListener('play', enterPlayerMode, { once: true });
         }
@@ -1079,13 +1081,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- REFACTORED CAROUSEL & BANNER LOGIC ---
-
     function createBannerCarousel(category, items, isHeroBanner = false) {
         const bannerContainerClass = isHeroBanner ? 'hero-banner' : 'carousel-banner-section';
         const gradientDivClass = isHeroBanner ? 'hero-banner-gradient' : 'standard-banner-gradient';
         
-        // Build the inner carousel of items directly
         const itemsHTML = items.map(item => {
             return `
             <div class="flex-shrink-0 w-40 md:w-48 group" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
@@ -1100,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
         const innerCarouselHTML = `<div><div class="flex space-x-4 overflow-x-auto custom-scrollbar p-4 -mx-4">${itemsHTML}</div></div>`;
 
-        // Get banner settings
         const settings = category.banner_settings || {};
         const { super_title, logo_url, see_more_link } = settings;
 
@@ -1129,7 +1127,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const logoOrTitleHTML = logo_url ? `<div style="${logoWrapperStyle}" class="banner-logo-wrapper"><img src="${logo_url}" alt="${category.title} logo" style="${logoStyle}" class="mb-3 md:mb-4 banner-logo"></div>` : `<h2 class="text-3xl md:text-5xl font-bold mb-3 md:mb-4">${category.title}</h2>`;
         const seeMoreBtnHTML = see_more_link ? `<a href="${see_more_link}" target="_blank" class="bg-white/90 text-black font-bold py-2 px-4 md:px-6 rounded-lg text-sm md:text-base hover:bg-white transition banner-seemore-btn self-start">Ver Mais</a>` : '';
         
-        // Build the final banner HTML
         return `
             <div class="${bannerContainerClass}">
                 <div class="banner-background" style="${backgroundStyle}">
@@ -1153,7 +1150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const profile = getCurrentProfile();
         if (!profile) return '';
         
-        // If it's a banner but not the main hero, render it as a standard banner section
         if (category.type === 'banner') {
             return createBannerCarousel(category, items, false);
         }
@@ -1198,7 +1194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const profile = getCurrentProfile();
         if (!homeView || !carouselsContainer || !profile) return;
     
-        // 1. Cleanup previous state
         homeView.classList.remove('has-hero-banner');
         carouselsContainer.innerHTML = '';
         const existingHeroBanner = homeView.querySelector('.hero-banner');
@@ -1209,7 +1204,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredCatalogForProfile = getFilteredCatalog();
         let carouselsToRenderInContainer = [...carousels];
     
-        // 2. Check if the first carousel should be the main hero banner
         if (carousels.length > 0 && carousels[0].type === 'banner') {
             homeView.classList.add('has-hero-banner');
             
@@ -1220,19 +1214,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     
             if (heroItems.length > 0) {
-                const heroHTML = createBannerCarousel(heroConfig, heroItems, true); // true = isHeroBanner
+                const heroHTML = createBannerCarousel(heroConfig, heroItems, true);
                 const heroWrapper = document.createElement('div');
                 heroWrapper.innerHTML = heroHTML;
-                // Prepend the hero banner directly to the home view, outside the regular flow
                 homeView.insertBefore(heroWrapper.firstChild, homeView.firstChild);
             }
             
-            // Remove the hero banner from the list that will be rendered in the container
             carouselsToRenderInContainer.shift();
         }
     
-        // 3. Prepare "Continue Watching" carousel
         let carouselsHTML = '';
+
         const continueWatchingItems = Object.values(profile.watchProgress || {})
             .filter(progress => progress.duration > 0 && (progress.currentTime / progress.duration) < 0.95)
             .sort((a, b) => b.lastUpdated - a.lastUpdated)
@@ -1254,8 +1246,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uniqueContinueWatching.length > 0) {
             carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, uniqueContinueWatching);
         }
+
+        // NOVO: Adiciona carrossel de recomendações
+        const recommendedItems = getRecommendedItems(profile);
+        if(recommendedItems.length > 0) {
+            carouselsHTML += createCarousel({ title: 'Recomendado para Você' }, recommendedItems);
+        }
     
-        // 4. Render the rest of the carousels
         carouselsHTML += carouselsToRenderInContainer.map(carouselConfig => {
             const items = filteredCatalogForProfile.filter(catalogItem => {
                 const details = itemDetails[catalogItem.id];
@@ -1263,53 +1260,121 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         
             if (items.length === 0) return '';
-            // createCarousel now handles if it's a standard banner or a poster carousel
             return createCarousel(carouselConfig, items);
         }).join('');
         
         carouselsContainer.innerHTML = carouselsHTML;
         enableDragScroll();
     }
-
-    // NOVA FUNÇÃO ADICIONADA
-    function renderItemsGrid(items, containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`Container with id ${containerId} not found.`);
-            return;
-        }
-
-        if (items.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-center text-gray-400">Nenhum item encontrado.</p>';
-            return;
-        }
-
-        const itemsHTML = items.map(item => {
-            const itemDetail = itemDetails[item.id];
-            if (!itemDetail) return ''; // Skip if details are missing
-
-            return `
-                <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
-                    <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
-                        <img src="${item.poster}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                            <h3 class="font-bold text-white truncate">${item.title}</h3>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = itemsHTML;
-    }
     
+    // ATUALIZADO: Adiciona filtros e ordenação
     function renderGenericPage(viewId, title, type) {
         const container = document.getElementById(viewId);
         const filteredCatalogForProfile = getFilteredCatalog();
-        const filteredItems = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.type === type);
-        container.innerHTML = `<h2 class="text-3xl font-bold mb-8">${title}</h2><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="${type}-grid-container"></div>`;
-        renderItemsGrid(filteredItems, `${type}-grid-container`);
+        let items = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.type === type);
+
+        const render = () => {
+            const sortOrder = container.querySelector('.sort-order-select')?.value || 'title-asc';
+            switch(sortOrder) {
+                case 'title-asc': items.sort((a, b) => a.title.localeCompare(b.title)); break;
+                case 'title-desc': items.sort((a, b) => b.title.localeCompare(a.title)); break;
+                case 'year-desc': items.sort((a, b) => (itemDetails[b.id]?.year || 0) - (itemDetails[a.id]?.year || 0)); break;
+                case 'year-asc': items.sort((a, b) => (itemDetails[a.id]?.year || 0) - (itemDetails[b.id]?.year || 0)); break;
+            }
+            renderItemsGrid(items, `${type}-grid-container`);
+        };
+
+        container.innerHTML = `
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                 <h2 class="text-3xl font-bold">${title}</h2>
+                 <div class="flex items-center gap-2">
+                     <label for="sort-order-${type}" class="text-sm font-medium text-gray-400">Ordenar por:</label>
+                     <select id="sort-order-${type}" class="sort-order-select bg-gray-800 border border-gray-700 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                         <option value="title-asc">Título (A-Z)</option>
+                         <option value="title-desc">Título (Z-A)</option>
+                         <option value="year-desc">Ano (Mais Recente)</option>
+                         <option value="year-asc">Ano (Mais Antigo)</option>
+                     </select>
+                 </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="${type}-grid-container"></div>`;
+
+        container.querySelector('.sort-order-select').addEventListener('change', render);
+        render();
+    }
+
+    // NOVA FUNÇÃO: Renderiza página "Em Breve"
+    function renderComingSoonPage() {
+        const container = document.getElementById('coming-soon-view');
+        const comingSoonItems = catalog.filter(item => itemDetails[item.id]?.isComingSoon);
+        container.innerHTML = `<h2 class="text-3xl font-bold mb-8">Em Breve</h2><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="coming-soon-grid-container"></div>`;
+        renderItemsGrid(comingSoonItems, 'coming-soon-grid-container');
+    }
+
+    // NOVA FUNÇÃO: Renderiza conteúdo relacionado na página de detalhes
+    function renderRelatedContent(currentItem) {
+        const container = document.getElementById('related-content-container');
+        if (!container || !currentItem.genres || currentItem.genres.length === 0) return;
+
+        const relatedItems = getFilteredCatalog()
+            .filter(item => {
+                if (item.id === currentItem.id) return false;
+                const details = itemDetails[item.id];
+                return details.genres && details.genres.some(genre => currentItem.genres.includes(genre));
+            })
+            .sort(() => 0.5 - Math.random()) // Shuffle
+            .slice(0, 6);
+
+        if (relatedItems.length > 0) {
+            container.innerHTML = createCarousel({ title: 'Títulos Semelhantes' }, relatedItems);
+            enableDragScroll();
+        }
+    }
+
+    // NOVA FUNÇÃO: Lógica de recomendação
+    function getRecommendedItems(profile) {
+        const genreScores = {};
+        const seenItems = new Set(Object.keys(profile.watchProgress || {}));
+        profile.myList.forEach(id => seenItems.add(id));
+
+        // Pontua gêneros da "Minha Lista"
+        profile.myList.forEach(itemId => {
+            const details = itemDetails[itemId];
+            if (details && details.genres) {
+                details.genres.forEach(genre => {
+                    genreScores[genre] = (genreScores[genre] || 0) + 1;
+                });
+            }
+        });
+
+        // Pontua gêneros de itens bem avaliados
+        Object.entries(profile.userRatings || {}).forEach(([itemId, rating]) => {
+            if (rating >= 4) {
+                 const details = itemDetails[itemId];
+                 if (details && details.genres) {
+                    details.genres.forEach(genre => {
+                        genreScores[genre] = (genreScores[genre] || 0) + 2; // Maior peso para avaliações
+                    });
+                }
+            }
+        });
+        
+        const topGenres = Object.entries(genreScores)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(entry => entry[0]);
+
+        if (topGenres.length === 0) return [];
+
+        const recommendations = getFilteredCatalog()
+            .filter(item => {
+                const details = itemDetails[item.id];
+                return !seenItems.has(item.id) && details.genres && details.genres.some(g => topGenres.includes(g));
+            })
+            .sort(() => 0.5 - Math.random()) // Shuffle
+            .slice(0, 10);
+
+        return recommendations;
     }
 
     async function renderDetailPage(itemId) {
@@ -1394,7 +1459,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ratingClass = getRatingColorClass(item.rating);
 
-        // NEW: Select mobile or desktop backdrop
         const isMobile = window.innerWidth < 768;
         const backdropUrl = isMobile && item.backdrop_mobile ? item.backdrop_mobile : item.backdrop;
 
@@ -1436,6 +1500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     ${castSectionHTML}
                     ${bottomContent}
+                    <div id="related-content-container" class="mt-10 pt-8 border-t border-gray-800"></div>
                     ${commentsSectionHTML}
                 </div>
             </div>`;
@@ -1490,15 +1555,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         updateMyListButton(itemId, 'detail-mylist-button');
+        renderRelatedContent(item); // NOVO
         setupCommentsSection(itemId);
-        enableDragScroll(); // Add drag functionality to the cast carousel
-
+        enableDragScroll();
         if (lastScrollPosition > 0) {
             const detailContainer = document.getElementById('detail-scroll-container');
             if (detailContainer) {
                 setTimeout(() => {
                     detailContainer.scrollTop = lastScrollPosition;
-                    lastScrollPosition = 0; // Reset after use
+                    lastScrollPosition = 0;
                 }, 100); 
             }
         }
@@ -1722,7 +1787,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Use a transaction for likes and deletes to ensure atomicity
         try {
             await runTransaction(db, async (transaction) => {
                 const commentDoc = await transaction.get(commentRef);
@@ -2082,6 +2146,38 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.classList.remove('show');
         }, 3000);
     }
+    
+    function renderItemsGrid(items, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Container with id ${containerId} not found.`);
+            return;
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="col-span-full text-center text-gray-400">Nenhum item encontrado.</p>';
+            return;
+        }
+
+        const itemsHTML = items.map(item => {
+            const itemDetail = itemDetails[item.id];
+            if (!itemDetail) return ''; // Skip if details are missing
+
+            return `
+                <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
+                    <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
+                        <img src="${item.poster}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                            <h3 class="font-bold text-white truncate">${item.title}</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = itemsHTML;
+    }
 
     // ===============================================
     // =========== PEDIDOS / REQUESTS V1 =============
@@ -2256,7 +2352,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 requesters: [profile.id],
                 status: 'pending',
                 requestedAt: serverTimestamp(),
-                // Store all data for the admin panel
                 fullData: data
             };
 
@@ -2406,10 +2501,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentEpIndex = currentEpisodeData.epIndex;
     
         if (currentEpIndex > 0) {
-            // Previous episode in the same season
             return { itemId: currentPlayingItemId, season: currentSeasonKey, epIndex: currentEpIndex - 1 };
         } else {
-            // Last episode of the previous season
             const seasonKeys = Object.keys(series.seasons).sort((a,b) => a - b);
             const currentSeasonIndex = seasonKeys.indexOf(currentSeasonKey);
             if (currentSeasonIndex > 0) {
@@ -2511,14 +2604,11 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.addEventListener('timeupdate', () => { 
         if (videoPlayer.duration && videoPlayer.currentTime > 0) { 
             const progressPercent = videoPlayer.currentTime / videoPlayer.duration;
-            // Only update progress bar if the user is NOT actively seeking
             if (!isSeeking) {
                 progressBar.style.width = `${progressPercent * 100}%`; 
             }
             document.getElementById('current-time').textContent = formatTime(videoPlayer.currentTime); 
 
-            // --- NEW LOGIC FOR AUTO-REMOVAL ---
-            // Use a flag to ensure we only try to remove it once per session
             if (progressPercent >= 0.95 && !videoPlayer.hasBeenMarkedAsWatched) {
                 const item = itemDetails[currentPlayingItemId];
                 if (item) {
@@ -2534,7 +2624,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (isFinished) {
                         console.log(`Conteúdo finalizado: ${item.title}. Removendo de 'Continuar a Assistir'.`);
                         clearWatchProgress(currentPlayingItemId);
-                        videoPlayer.hasBeenMarkedAsWatched = true; // Set flag
+                        videoPlayer.hasBeenMarkedAsWatched = true;
                     }
                 }
             }
@@ -2584,7 +2674,6 @@ document.addEventListener('DOMContentLoaded', () => {
             screen.orientation.unlock();
         }
     
-        // CORREÇÃO: Força a navegação para trás ao sair da tela cheia no celular com o botão "Voltar" do sistema
         const onPlayerView = !document.getElementById('player-view').classList.contains('hidden') ||
                                !document.getElementById('iframe-player-view').classList.contains('hidden');
     
@@ -2603,21 +2692,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // MODIFIED: Added draggable progress bar functionality
     let isSeeking = false;
 
     const handleSeek = (e) => {
         if (!videoPlayer.duration) return;
         const rect = progressBarContainer.getBoundingClientRect();
         let pos = (e.clientX - rect.left) / rect.width;
-        pos = Math.max(0, Math.min(1, pos)); // Clamp position between 0 and 1
+        pos = Math.max(0, Math.min(1, pos));
         videoPlayer.currentTime = pos * videoPlayer.duration;
         progressBar.style.width = `${pos * 100}%`;
     };
 
     progressBarContainer.addEventListener('mousedown', (e) => {
         isSeeking = true;
-        videoPlayer.pause(); // Pause while seeking for a smoother experience
+        videoPlayer.pause();
         handleSeek(e);
 
         const onMouseMove = (moveEvent) => {
@@ -2737,7 +2825,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Erro crítico durante a inicialização:", error);
             showToast("Erro crítico ao carregar dados. Tente novamente.");
         } finally {
-            // This will always run, ensuring the loading screen is hidden.
             loadingScreen.classList.add('opacity-0');
             setTimeout(() => {
                 loadingScreen.classList.add('hidden');
@@ -2746,7 +2833,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Event listeners for auth forms
     document.getElementById('login-btn').addEventListener('click', () => {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -2799,7 +2885,7 @@ document.addEventListener('DOMContentLoaded', () => {
              
         switch (action) {
             case 'removeFromContinueWatching':
-                e.stopPropagation(); // Impede que o clique acione a navegação para a página de detalhes
+                e.stopPropagation();
                 await removeFromContinueWatching(itemId);
                 break;
             case 'showNotifications':
@@ -2954,7 +3040,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
     
-    // One-time listeners for profile settings
     document.getElementById('skip-time-input').addEventListener('change', async (e) => {
         const profile = getCurrentProfile();
         if (!profile) return;

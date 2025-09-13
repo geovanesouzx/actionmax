@@ -132,6 +132,7 @@
                 <a href="#series" data-action="showView" data-view-name="series" class="nav-link hover:text-white transition">Séries</a>
                 <a href="#movies" data-action="showView" data-view-name="movies" class="nav-link hover:text-white transition">Filmes</a>
                 <a href="#genres" data-action="showView" data-view-name="genres" class="nav-link hover:text-white transition">Gêneros</a>
+                <a href="#coming-soon" data-action="showView" data-view-name="coming-soon" class="nav-link hover:text-white transition">Em Breve</a>
                 <a href="#pedidos" data-action="showView" data-view-name="pedidos" class="nav-link hover:text-white transition">Pedidos</a>
             </nav>
         </div>
@@ -155,16 +156,16 @@
                 </div>
                 <!-- Hero content will be dynamically inserted here -->
                 <div id="hero-content-container" class="relative z-10 p-6 md:p-10 lg:p-16 w-full md:w-1/2 text-center md:text-left">
-                          <!-- Placeholder while loading -->
-                          <div class="space-y-4 animate-pulse">
-                              <div class="h-12 bg-gray-700 rounded w-3/4"></div>
-                              <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-                              <div class="h-20 bg-gray-700 rounded w-full"></div>
-                              <div class="flex gap-4">
-                                  <div class="h-12 bg-gray-700 rounded w-36"></div>
-                                  <div class="h-12 bg-gray-700 rounded w-36"></div>
-                              </div>
-                          </div>
+                         <!-- Placeholder while loading -->
+                         <div class="space-y-4 animate-pulse">
+                             <div class="h-12 bg-gray-700 rounded w-3/4"></div>
+                             <div class="h-4 bg-gray-700 rounded w-1/2"></div>
+                             <div class="h-20 bg-gray-700 rounded w-full"></div>
+                             <div class="flex gap-4">
+                                 <div class="h-12 bg-gray-700 rounded w-36"></div>
+                                 <div class="h-12 bg-gray-700 rounded w-36"></div>
+                             </div>
+                         </div>
                 </div>
             </section>
             <div id="carousels-container" class="px-4 md:px-10 py-8 space-y-10"></div>
@@ -226,7 +227,7 @@
                             <div class="flex items-center space-x-2 volume-container">
                                 <button id="volume-btn" class="p-2"></button>
                                 <div class="volume-slider-container">
-                                   <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" class="">
+                                    <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" class="">
                                 </div>
                             </div>
                         </div>
@@ -255,6 +256,7 @@
         <div id="movies-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
         <div id="genres-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
         <div id="genre-results-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="coming-soon-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
         <div id="pedidos-view" class="hidden pt-24 px-4 md:px-10 pb-24"></div>
         
         <div id="profile-view" class="hidden pt-24 px-4 md:px-10 pb-24">
@@ -396,7 +398,7 @@
     </div>
 
     <!-- =========== Mobile Navigation =========== -->
-    <nav id="mobile-nav" class="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 p-2 grid grid-cols-5 gap-1 md:hidden z-50">
+    <nav id="mobile-nav" class="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 p-2 grid grid-cols-6 gap-1 md:hidden z-50">
         <a href="#home" data-action="showView" data-view-name="home" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             <span class="text-xs">Início</span>
@@ -415,6 +417,10 @@
             </svg>
             <span class="text-xs">Gêneros</span>
         </a>
+        <a href="#coming-soon" data-action="showView" data-view-name="coming-soon" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <span class="text-xs">Em Breve</span>
+        </a>
         <a href="#pedidos" data-action="showView" data-view-name="pedidos" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -427,4 +433,3 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
