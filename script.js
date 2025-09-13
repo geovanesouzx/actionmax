@@ -54,6 +54,21 @@ const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Dynamically create the confirmation modal and append it to the body
+    const modalHTML = `
+    <div id="request-confirm-modal" class="hidden fixed inset-0 bg-black/80 z-[250] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8 transform scale-95 transition-all duration-300">
+            <div id="request-modal-content" class="text-center">
+                <!-- Content will be injected by JS -->
+            </div>
+            <div class="flex justify-center gap-4 mt-8">
+                <button id="request-cancel-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancelar</button>
+                <button id="request-confirm-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg transition">Confirmar Pedido</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
     // Style for synopsis truncation and animations
     const style = document.createElement('style');
     style.textContent = `
@@ -72,6 +87,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         #season-selector-btn.open > svg {
             transform: rotate(180deg);
+        }
+        /* Confirmation Modal Styles */
+        #request-confirm-modal {
+            transition: opacity 0.3s ease-out;
+        }
+        #request-confirm-modal.show {
+            opacity: 1;
+        }
+        #request-confirm-modal.show > div {
+            transform: scale(1);
+            opacity: 1;
+        }
+        #request-confirm-modal > div {
+            transition: all 0.3s ease-out;
         }
     `;
     document.head.appendChild(style);
@@ -2304,9 +2333,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // CORREÇÃO: Removida a caixa de diálogo de confirmação que não funciona no ambiente.
-        // O clique do usuário agora é considerado a confirmação para criar o pedido.
-        await createRequest(tmdbId, mediaType);
+        // MODIFICAÇÃO: Chamar o modal de confirmação em vez de criar o pedido diretamente.
+        await showRequestConfirmModal(tmdbId, mediaType);
     }
 
     async function createRequest(tmdbId, mediaType) {
@@ -2333,59 +2361,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await addDoc(collection(db, "pedidos"), newRequest);
             showToast("Pedido enviado com sucesso!");
-            document.getElementById('tmdb-search-results').innerHTML = '';
-            document.getElementById('tmdb-search-input').value = '';
+        document.getElementById('tmdb-search-results').innerHTML = '';
+        document.getElementById('tmdb-search-input').value = '';
 
-        } catch (error) {
-            console.error("Erro ao criar pedido:", error);
-            showToast("Não foi possível criar o pedido.", true);
-        }
+    } catch (error) {
+        console.error("Erro ao criar pedido:", error);
+        showToast("Não foi possível criar o pedido.", true);
     }
-
-    async function voteForRequest(requestId) {
-        const profile = getCurrentProfile();
-        if (!profile) return;
-
-        const requestRef = doc(db, "pedidos", requestId);
-        try {
-            await updateDoc(requestRef, {
-                requesters: arrayUnion(profile.id)
-            });
-            showToast("Voto computado!");
-        } catch(error) {
-            console.error("Erro ao votar:", error);
-            showToast("Não foi possível registrar o seu voto.", true);
-        }
-    }
-
-    async function removeMyRequest(requestId) {
-        const profile = getCurrentProfile();
-        if (!profile) return;
-
-        const requestRef = doc(db, "pedidos", requestId);
-        try {
-            await runTransaction(db, async (transaction) => {
-                const requestDoc = await transaction.get(requestRef);
-                if (!requestDoc.exists()) return;
-
-                const requesters = requestDoc.data().requesters || [];
-                if (requesters.length <= 1) {
-                    transaction.delete(requestRef);
-                } else {
-                    transaction.update(requestRef, { requesters: arrayRemove(profile.id) });
-                }
-            });
-            showToast("Seu pedido foi removido.");
-        } catch (error) {
-            console.error("Erro ao remover o pedido:", error);
-            showToast("Não foi possível remover seu pedido.", true);
-        }
-    }
+}
 
 
     // ===============================================
     // =========== PLAYER CONTROLS & UX V2 ===========
     // ===============================================
+
+    // NOVA FUNÇÃO: Adiciona um modal de confirmação para pedidos.
+    async function showRequestConfirmModal(tmdbId, mediaType) {
+        const modal = document.getElementById('request-confirm-modal');
+        const modalContent = document.getElementById('request-modal-content');
+        
+        // Fetch minimal data to show in modal
+        modalContent.innerHTML = `<div class="spinner mx-auto"></div>`;
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.add('show');
+            modal.style.opacity = '1';
+        }, 10);
+        
+        try {
+            const url = `${TMDB_BASE_URL}/${mediaType}/${tmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const title = data.title || data.name;
+            const year = (data.release_date || data.first_air_date || '').split('-')[0];
+
+            modalContent.innerHTML = `
+                <img src="${TMDB_IMG_URL}${data.poster_path}" alt="${title}" class="w-24 mx-auto rounded-lg mb-4 shadow-lg">
+                <h2 class="text-2xl font-bold text-white mb-2">Solicitar Conteúdo</h2>
+                <p class="text-gray-400">Tem a certeza que quer pedir <span class="font-bold text-white">${title} (${year})</span>?</p>
+            `;
+
+            const confirmBtn = document.getElementById('request-confirm-btn');
+            const cancelBtn = document.getElementById('request-cancel-btn');
+
+            const handleConfirm = async () => {
+                cleanup();
+                await createRequest(tmdbId, mediaType);
+            };
+
+            const handleCancel = () => {
+                cleanup();
+            };
+
+            const cleanup = () => {
+                modal.style.opacity = '0';
+                setTimeout(() => modal.classList.add('hidden'), 300);
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+            };
+            
+            confirmBtn.addEventListener('click', handleConfirm, { once: true });
+            cancelBtn.addEventListener('click', handleCancel, { once: true });
+
+        } catch (error) {
+            showToast("Erro ao buscar detalhes do item.", true);
+            modal.style.opacity = '0';
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+    }
 
     const playerContainer = document.getElementById('player-container');
     const playerControls = document.getElementById('player-controls');
@@ -3061,4 +3104,5 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
 
