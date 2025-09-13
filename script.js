@@ -31,12 +31,12 @@ import {
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
-  authDomain: "action-max.firebaseapp.com",
-  projectId: "action-max",
-  storageBucket: "action-max.appspot.com",
-  messagingSenderId: "183609340889",
-  appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
+    apiKey: "AIzaSyDf_AyxRX9d2JuVHvk3kScSb7bH8v5Bh-k",
+    authDomain: "action-max.firebaseapp.com",
+    projectId: "action-max",
+    storageBucket: "action-max.appspot.com",
+    messagingSenderId: "183609340889",
+    appId: "1:183609340889:web:f32fc8e32d95461a1f5fc8"
 };
 
 // Initialize Firebase
@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
              const modal = document.getElementById('permission-modal');
              modal.classList.remove('hidden');
              setTimeout(() => {
-                 modal.classList.add('show');
+                  modal.classList.add('show');
              }, 10);
         }
         
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="relative text-center group cursor-pointer" data-action="showEditProfileView" data-item-id="${profile.id}">
                 <img src="${profile.avatar}" alt="${profile.name}" class="w-24 h-24 md:w-36 md:h-36 rounded-md object-cover">
                  <div class="absolute inset-0 bg-black/60 rounded-md flex items-center justify-center">
-                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
                  </div>
                 <p class="mt-2 text-gray-400 font-medium">${profile.name}</p>
             </div>
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isTransitioningPlayer) {
              if (isPlayerModeActive || document.fullscreenElement) {
-                 await exitPlayerMode();
+                  await exitPlayerMode();
              }
             // Only stop playback completely if we are not transitioning episodes
             clearInterval(progressSaveInterval);
@@ -739,9 +739,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.getElementById(id);
             if(el && !['profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'].includes(id)) {
                  if (isTransitioningPlayer && id === 'player-view') {
-                     // Do nothing, leave it visible for the new content
+                      // Do nothing, leave it visible for the new content
                  } else {
-                     el.classList.add('hidden');
+                      el.classList.add('hidden');
                  }
             }
         });
@@ -1274,7 +1274,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderGenericPage(viewId, title, type) {
         const container = document.getElementById(viewId);
         const filteredCatalogForProfile = getFilteredCatalog();
-        const filteredItems = filteredCatalogForProfile.filter(item => item.type === type);
+        // CORREÇÃO AQUI: A filtragem agora usa `itemDetails` para garantir que o tipo está correto.
+        const filteredItems = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.type === type);
         container.innerHTML = `<h2 class="text-3xl font-bold mb-8">${title}</h2><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="${type}-grid-container"></div>`;
         renderItemsGrid(filteredItems, `${type}-grid-container`);
     }
@@ -2763,7 +2764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         let params = {};
-            
+             
         switch (action) {
             case 'removeFromContinueWatching':
                 e.stopPropagation(); // Impede que o clique acione a navegação para a página de detalhes
@@ -2943,4 +2944,3 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
-
