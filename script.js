@@ -1270,11 +1270,43 @@ document.addEventListener('DOMContentLoaded', () => {
         carouselsContainer.innerHTML = carouselsHTML;
         enableDragScroll();
     }
+
+    // NOVA FUNÇÃO ADICIONADA
+    function renderItemsGrid(items, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Container with id ${containerId} not found.`);
+            return;
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="col-span-full text-center text-gray-400">Nenhum item encontrado.</p>';
+            return;
+        }
+
+        const itemsHTML = items.map(item => {
+            const itemDetail = itemDetails[item.id];
+            if (!itemDetail) return ''; // Skip if details are missing
+
+            return `
+                <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
+                    <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
+                        <img src="${item.poster}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="absolute bottom-0 left-0 p-3 w-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                            <h3 class="font-bold text-white truncate">${item.title}</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = itemsHTML;
+    }
     
     function renderGenericPage(viewId, title, type) {
         const container = document.getElementById(viewId);
         const filteredCatalogForProfile = getFilteredCatalog();
-        // CORREÇÃO AQUI: A filtragem agora usa `itemDetails` para garantir que o tipo está correto.
         const filteredItems = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.type === type);
         container.innerHTML = `<h2 class="text-3xl font-bold mb-8">${title}</h2><div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" id="${type}-grid-container"></div>`;
         renderItemsGrid(filteredItems, `${type}-grid-container`);
@@ -2944,3 +2976,4 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
+
