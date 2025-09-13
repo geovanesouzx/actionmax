@@ -1,6 +1,6 @@
 import * as state from './state.js';
-
-// Este módulo é responsável por todas as manipulações do DOM e renderização da UI.
+import { saveProfiles } from './auth.js';
+import { TMDB_IMG_URL } from './api.js';
 
 /**
  * Mostra uma notificação toast.
@@ -31,28 +31,69 @@ export function showAuthView(view) {
 }
 
 /**
- * Mostra ou esconde a vista de seleção de perfis.
+ * Mostra a vista de seleção de perfis.
  * @param {boolean} show - Se deve mostrar ou esconder a vista.
  */
 export function showProfileSelectionView(show = true) {
     const view = document.getElementById('profile-selection-view');
-    const manageView = document.getElementById('manage-profiles-view');
     if (show) {
         renderProfileSelection();
         view.classList.remove('hidden');
         view.classList.add('flex');
-        manageView.classList.remove('flex');
-        manageView.classList.add('hidden');
+        document.getElementById('manage-profiles-view').classList.add('hidden');
     } else {
         view.classList.add('hidden');
         view.classList.remove('flex');
-        // Mostra a vista de gestão de perfis
-        document.getElementById('manage-profiles-view').classList.remove('hidden');
-        document.getElementById('manage-profiles-view').classList.add('flex');
-        document.getElementById('edit-profile-view').classList.add('hidden');
-        document.getElementById('edit-profile-view').classList.remove('flex');
-
     }
+}
+
+/**
+ * Mostra a vista de gestão de perfis.
+ */
+export function showManageProfilesView() {
+    renderManageProfilesList();
+    document.getElementById('profile-selection-view').classList.add('hidden');
+    document.getElementById('edit-profile-view').classList.add('hidden');
+    const manageView = document.getElementById('manage-profiles-view');
+    manageView.classList.remove('hidden');
+    manageView.classList.add('flex');
+}
+
+/**
+ * Mostra a vista de edição de perfil.
+ * @param {string|null} profileId - O ID do perfil a ser editado, ou null para um novo perfil.
+ */
+export function showEditProfileView(profileId = null) {
+    state.setEditingProfileId(profileId);
+    const titleEl = document.getElementById('edit-profile-title');
+    const nameInput = document.getElementById('profile-name-input');
+    const deleteBtn = document.getElementById('delete-profile-btn');
+    const kidToggle = document.getElementById('kid-profile-toggle');
+    
+    state.setSelectedAvatarUrl(null);
+    nameInput.value = '';
+    kidToggle.checked = false;
+    
+    if (profileId) {
+        const profile = state.profiles.find(p => p.id === profileId);
+        if(profile) {
+            titleEl.textContent = 'Editar Perfil';
+            nameInput.value = profile.name;
+            state.setSelectedAvatarUrl(profile.avatar);
+            kidToggle.checked = profile.isKid || false;
+            deleteBtn.classList.remove('hidden');
+        }
+    } else {
+        titleEl.textContent = 'Adicionar Perfil';
+        deleteBtn.classList.add('hidden');
+    }
+    
+    renderAvatarGridForEdit(state.selectedAvatarUrl);
+    
+    document.getElementById('manage-profiles-view').classList.add('hidden');
+    const editView = document.getElementById('edit-profile-view');
+    editView.classList.remove('hidden');
+    editView.classList.add('flex');
 }
 
 /**
@@ -67,6 +108,38 @@ export function renderProfileSelection() {
         </div>
     `).join('');
 }
+
+
+/**
+ * Renderiza a grelha de avatares para edição de perfil.
+ * @param {string} currentAvatar - O URL do avatar atualmente selecionado.
+ */
+function renderAvatarGridForEdit(currentAvatar) {
+    const avatarContainer = document.getElementById('edit-avatar-grid-container');
+    avatarContainer.innerHTML = '';
+    state.avatarsFromFirestore.forEach(cat => {
+        const categoryHTML = `
+            <h3 class="text-xl font-bold text-white mb-4">${cat.category}</h3>
+            <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4">
+                ${cat.urls.map(url => `
+                    <div class="avatar-option aspect-square rounded-lg overflow-hidden cursor-pointer transform hover:scale-105 transition-transform ring-offset-2 ring-offset-black ${url === currentAvatar ? 'selected' : ''}" data-url="${url}">
+                        <img src="${url}" class="w-full h-full object-cover" loading="lazy">
+                    </div>
+                `).join('')}
+            </div>`;
+        avatarContainer.innerHTML += categoryHTML;
+    });
+
+    document.querySelectorAll('.avatar-option').forEach(el => {
+        el.addEventListener('click', (e) => {
+            document.querySelectorAll('.avatar-option').forEach(innerEl => innerEl.classList.remove('selected'));
+            const currentTarget = e.currentTarget;
+            currentTarget.classList.add('selected');
+            state.setSelectedAvatarUrl(currentTarget.dataset.url);
+        });
+    });
+}
+
 
 /**
  * Renderiza a lista de perfis para gestão.
@@ -95,6 +168,71 @@ export function renderManageProfilesList() {
     container.innerHTML = profilesHTML;
 }
 
+/**
+ * Atualiza os links de navegação para destacar o ativo.
+ * @param {string} viewName - O nome da vista ativa.
+ */
+export function updateNavLinks(viewName) {
+    document.querySelectorAll('#main-nav .nav-link, #mobile-nav .mobile-nav-link').forEach(link => {
+        const isMainNavLink = link.classList.contains('nav-link');
+        const isActive = link.dataset.viewName === viewName;
 
-// ... (restante das funções de UI como renderHeroSection, renderCarousels, renderDetailPage, etc.)
-// ... (movidas do `script.js` original para aqui)
+        link.classList.toggle('active', isActive);
+        if (isMainNavLink) {
+            link.classList.toggle('text-white', isActive);
+            link.classList.toggle('text-gray-400', !isActive);
+        }
+    });
+}
+
+/**
+ * Atualiza o estilo do cabeçalho com base na posição do scroll.
+ */
+export function updateHeaderStyle() {
+    if (!state.currentProfileId) return;
+    const mainHeader = document.getElementById('main-header');
+    const isHome = document.getElementById('home-view') && !document.getElementById('home-view').classList.contains('hidden');
+    mainHeader.style.position = isHome ? 'fixed' : 'absolute';
+    const shouldBeOpaque = window.scrollY > 50 || !isHome;
+    mainHeader.classList.toggle('bg-black/80', shouldBeOpaque);
+    mainHeader.classList.toggle('backdrop-blur-sm', shouldBeOpaque);
+}
+
+/**
+ * Renderiza a página inicial (carrosséis e secção hero).
+ */
+export async function renderHomePage() {
+    // A lógica de renderCarousels e renderHeroSection iria aqui
+    console.log("A renderizar a página inicial...");
+    // ui.renderCarousels();
+    // ui.renderHeroSection();
+}
+
+/**
+ * Atualiza a UI após a seleção de um perfil.
+ * @param {object} profile - O perfil selecionado.
+ */
+export function updateUIAfterProfileSelect(profile) {
+    document.getElementById('header-avatar').src = profile.avatar;
+    document.getElementById('profile-avatar-img').src = profile.avatar;
+    document.getElementById('profile-name').textContent = profile.name;
+    document.getElementById('profile-selection-view').classList.add('hidden');
+    document.getElementById('main-header').classList.remove('hidden');
+}
+
+/**
+ * Verifica a permissão de notificação e mostra o modal se necessário.
+ */
+export function checkNotificationPermission() {
+    if ('Notification' in window && Notification.permission === "default") {
+        const modal = document.getElementById('permission-modal');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+    }
+}
+
+
+// ... (restante das funções de UI)
+
