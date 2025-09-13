@@ -20,12 +20,14 @@ import {
     onSnapshot,
     updateDoc,
     arrayUnion,
+    arrayRemove,
     writeBatch,
     setDoc,
     addDoc,
     serverTimestamp,
     runTransaction,
-    where
+    where,
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 
@@ -1645,9 +1647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             await saveProfiles();
-            renderStarRating(itemId);
-            showToast(`Avaliado com ${newRating} estrelas!`);
-
+            // No need to call renderStarRating here, onSnapshot will handle UI update
         } catch (error) {
             console.error("Erro ao avaliar:", error);
             showToast("Não foi possível registrar a sua avaliação.", true);
@@ -2161,7 +2161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===============================================
-    // =========== PEDIDOS / REQUESTS V1 =============
+    // =========== PEDIDOS / REQUESTS ================
     // ===============================================
 
     function renderPedidosPage() {
@@ -2178,34 +2178,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="tmdb-search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-12"></div>
             
             <div class="border-t border-gray-700 pt-8">
-                 <div class="mb-6">
-                    <nav class="bg-gray-800/50 rounded-lg p-1 flex space-x-1" aria-label="Tabs">
-                        <button class="sub-tab-link active flex-1 whitespace-nowrap py-2 px-4 rounded-md font-semibold text-sm text-center" data-sub-tab="pendentes">Pendentes</button>
-                        <button class="sub-tab-link text-gray-400 hover:text-white flex-1 whitespace-nowrap py-2 px-4 rounded-md font-semibold text-sm text-center" data-sub-tab="adicionados">Adicionados</button>
-                    </nav>
-                </div>
-
-                <div id="pendentes-sub-tab" class="sub-tab-content">
-                     <h3 class="text-2xl font-bold mb-6">Pedidos em Aberto</h3>
-                     <div id="pending-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-                </div>
-
-                <div id="adicionados-sub-tab" class="sub-tab-content hidden">
-                     <h3 class="text-2xl font-bold mb-6">Pedidos Atendidos</h3>
-                     <div id="added-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-                </div>
+                <h3 class="text-2xl font-bold mb-6">Pedidos em Aberto</h3>
+                <div id="pending-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
         `;
-
-        view.querySelectorAll('.sub-tab-link').forEach(tab => {
-            tab.addEventListener('click', () => {
-                view.querySelectorAll('.sub-tab-link').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                view.querySelectorAll('.sub-tab-content').forEach(c => {
-                    c.classList.toggle('hidden', c.id !== `${tab.dataset.subTab}-sub-tab`);
-                });
-            });
-        });
 
         document.getElementById('tmdb-search-input').addEventListener('input', (e) => {
             clearTimeout(tmdbSearchTimeout);
@@ -2261,27 +2237,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupPedidosListener() {
         if (unsubscribePedidos) unsubscribePedidos();
 
-        const q = query(collection(db, "pedidos"), where("status", "in", ["pending", "added"]));
+        const q = query(collection(db, "pedidos"), where("status", "==", "pending"));
         unsubscribePedidos = onSnapshot(q, (querySnapshot) => {
-            const allRequests = [];
+            const pendingRequests = [];
             querySnapshot.forEach((doc) => {
-                allRequests.push({ id: doc.id, ...doc.data() });
+                pendingRequests.push({ id: doc.id, ...doc.data() });
             });
-            renderAllPedidos(allRequests);
+            renderUserPedidos(pendingRequests);
         }, (error) => {
             console.error("Erro ao escutar pedidos:", error);
             document.getElementById('pending-requests-container').innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`;
         });
     }
 
-    function renderAllPedidos(requests) {
-        const pending = requests.filter(r => r.status === 'pending');
-        const added = requests.filter(r => r.status === 'added');
-        renderPendingRequests(pending);
-        renderAddedRequests(added);
-    }
-
-    function renderPendingRequests(requests) {
+    function renderUserPedidos(requests) {
         const container = document.getElementById('pending-requests-container');
         const profile = getCurrentProfile();
         if (!container || !profile) return;
@@ -2294,6 +2263,13 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = requests.map(req => {
             const voteCount = req.requesters?.length || 0;
             const hasVoted = req.requesters?.includes(profile.id);
+            let actionButtonHTML = '';
+
+            if (hasVoted) {
+                 actionButtonHTML = `<button data-action="remove-my-request" data-request-id="${req.id}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Remover Pedido</button>`;
+            } else {
+                 actionButtonHTML = `<button data-action="voteForRequest" data-request-id="${req.id}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Votar</button>`;
+            }
 
             return `
                 <div class="bg-gray-800/50 p-4 rounded-lg flex gap-4">
@@ -2305,41 +2281,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="flex items-center justify-between mt-2">
                              <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
-                             <button 
-                                 class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition disabled:bg-gray-500 disabled:cursor-not-allowed" 
-                                 data-action="voteForRequest" 
-                                 data-request-id="${req.id}"
-                                 ${hasVoted ? 'disabled' : ''}>
-                                 ${hasVoted ? 'Votado' : 'Votar'}
-                             </button>
+                             ${actionButtonHTML}
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
-    }
-
-    function renderAddedRequests(requests) {
-        const container = document.getElementById('added-requests-container');
-        if (!container) return;
-
-        if (requests.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 col-span-full">Nenhum pedido atendido recentemente.</p>';
-            return;
-        }
-
-        container.innerHTML = requests.map(req => `
-            <div class="bg-gray-800/50 p-4 rounded-lg flex gap-4">
-                <img src="${req.posterUrl}" alt="${req.title}" class="w-24 h-36 object-cover rounded-md flex-shrink-0">
-                <div class="flex flex-col justify-between w-full">
-                    <div>
-                        <h4 class="font-bold text-lg">${req.title}</h4>
-                        <p class="text-sm text-gray-400">${req.year}</p>
-                    </div>
-                    <button data-action="archive-request" data-request-id="${req.id}" class="mt-2 text-sm text-gray-400 hover:text-white self-start">Remover da lista</button>
-                </div>
-            </div>
-        `).join('');
     }
 
     async function handleTMDBSelect(tmdbId, mediaType) {
@@ -2353,7 +2300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId), where("status", "!=", "archived"));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-            showToast("Este item já foi solicitado. Você pode votar nele na aba 'Pendentes'.");
+            showToast("Este item já foi solicitado. Você pode votar nele na lista de pedidos.");
             return;
         }
         
@@ -2411,14 +2358,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function archiveRequest(requestId) {
-        showToast("Removido da sua lista.");
+    async function removeMyRequest(requestId) {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
         const requestRef = doc(db, "pedidos", requestId);
         try {
-            await updateDoc(requestRef, { status: "archived" });
-        } catch(error) {
-            console.error("Erro ao arquivar pedido:", error);
-            showToast("Não foi possível remover o item da lista.", true);
+            await runTransaction(db, async (transaction) => {
+                const requestDoc = await transaction.get(requestRef);
+                if (!requestDoc.exists()) return;
+
+                const requesters = requestDoc.data().requesters || [];
+                if (requesters.length <= 1) {
+                    transaction.delete(requestRef);
+                } else {
+                    transaction.update(requestRef, { requesters: arrayRemove(profile.id) });
+                }
+            });
+            showToast("Seu pedido foi removido.");
+        } catch (error) {
+            console.error("Erro ao remover o pedido:", error);
+            showToast("Não foi possível remover seu pedido.", true);
         }
     }
 
@@ -2914,7 +2874,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido', 'removeFromContinueWatching', 'archive-request'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'removeFromContinueWatching', 'remove-my-request'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -3032,14 +2992,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             case 'handleTMDBSelect': await handleTMDBSelect(tmdbId, mediaType); break;
             case 'voteForRequest': await voteForRequest(requestId); break;
-            case 'archive-request': await archiveRequest(requestId); break;
-            case 'close-pedido-modal':
-            case 'cancel-pedido':
-                closePedidoModal();
-                break;
-            case 'confirm-pedido':
-                await createRequest(actionTarget.dataset.tmdbId, actionTarget.dataset.mediaType);
-                break;
+            case 'remove-my-request': await removeMyRequest(requestId); break;
         }
     });
 
