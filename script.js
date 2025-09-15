@@ -2243,7 +2243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             querySnapshot.forEach((doc) => {
                 pendingRequests.push({ id: doc.id, ...doc.data() });
             });
-            renderUserPedidos(pendingRequests);
+            renderUserPedidos(pendingRequests); // <--- CORREÇÃO AQUI
         }, (error) => {
             console.error("Erro ao escutar pedidos:", error);
             document.getElementById('pending-requests-container').innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`;
