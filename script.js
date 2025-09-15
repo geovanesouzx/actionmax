@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemDetailsData = {};
             contentSnapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
-                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdbId });
+                catalogData.push({ id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdb_id });
                 itemDetailsData[data.id] = data;
             });
             catalog = catalogData;
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const index = catalog.findIndex(item => item.id === data.id);
                 
                 if (change.type === "added" || change.type === "modified") {
-                    const catalogItem = { id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdbId };
+                    const catalogItem = { id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdb_id };
                     if (index > -1) {
                         catalog[index] = catalogItem;
                     } else {
@@ -225,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshUI() {
-        // Only refresh if a profile is selected and the user is not watching something
         if (!currentProfileId || isPlayerModeActive || document.fullscreenElement) {
             return;
         }
@@ -237,10 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(`Atualizando UI para a view: ${currentViewId}`);
 
-        // Re-render only list-based views to avoid being disruptive.
         switch (currentViewId) {
             case 'home-view':
-                // CORREÇÃO: Ordem de chamada invertida para a lógica do hero funcionar
                 renderCarousels();
                 renderHeroSection();
                 break;
@@ -260,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // O onSnapshot já cuida disso
                 break;
             case 'profile-view':
-                // Refresh mylist if that's the active section
                 if (document.querySelector('#profile-section-mylist:not(.hidden)')) {
                     renderMyListPage();
                 }
@@ -329,50 +325,44 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // --- Trigger Sound and Push Notification ---
         const previousUnreadCount = lastUnreadCount;
         lastUnreadCount = unreadCount;
 
         if (previousUnreadCount !== -1 && unreadCount > previousUnreadCount) {
-            const newNotification = notifications[0]; // Latest is always first
+            const newNotification = notifications[0]; 
             
-            // 1. Play Sound
             if (profile.soundEnabled) {
                 notificationSound.play().catch(error => {
                     console.warn("A reprodução do som de notificação foi bloqueada pelo navegador.", error);
                 });
             }
 
-            // 2. Show Push Notification
             if (profile.pushEnabled && 'Notification' in window && Notification.permission === 'granted') {
                 new Notification(newNotification.title, {
                     body: newNotification.message,
-                    icon: 'https://placehold.co/192x192/4f46e5/ffffff?text=A' // Placeholder icon
+                    icon: 'https://placehold.co/192x192/4f46e5/ffffff?text=A'
                 });
             }
         }
 
-
-        // Clear previous state
         clearInterval(notificationShakeInterval);
         notificationShakeInterval = null;
         notificationBtn.classList.remove('has-notifications', 'shaking');
 
         if (unreadCount > 0) {
             notificationBtn.classList.add('has-notifications');
-            // Start shaking interval
             notificationShakeInterval = setInterval(() => {
                 notificationBtn.classList.add('shaking');
                 setTimeout(() => {
                     notificationBtn.classList.remove('shaking');
-                }, 500); // Duration of the animation
-            }, 5000); // Every 5 seconds
+                }, 500);
+            }, 5000);
         }
     }
 
     function setupNotificationListener() {
         if (unsubscribeNotifications) unsubscribeNotifications();
-        lastUnreadCount = -1; // Reset for the new profile session
+        lastUnreadCount = -1;
         const notificationsQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
         unsubscribeNotifications = onSnapshot(notificationsQuery, processAndRenderNotifications, (error) => {
             console.error("Erro no listener de notificações:", error);
@@ -396,7 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             await batch.commit();
 
-             // Instant UI feedback
             const notificationBtn = document.getElementById('notification-btn');
             if (notificationBtn) {
                 notificationBtn.classList.remove('has-notifications', 'shaking');
@@ -441,7 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- Profile Management Functions (Firestore) ---
-
     async function loadProfiles(uid) {
         if (!uid) return [];
         const profileDocRef = doc(db, 'profiles', uid);
@@ -474,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     function getCurrentProfile() {
         if (!currentProfileId) return null;
         return profiles.find(p => p.id === currentProfileId);
@@ -492,10 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showProfileSelectionView(false);
         mainHeader.classList.remove('hidden');
 
-        // Setup notification listener for the selected profile
         setupNotificationListener();
 
-        // Ask for permission on profile selection if not already set
         if ('Notification' in window && Notification.permission === "default") {
              const modal = document.getElementById('permission-modal');
              modal.classList.remove('hidden');
@@ -504,11 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
              }, 10);
         }
         
-        // Unlock audio context by playing a muted sound on first user interaction
         notificationSound.muted = true;
-        notificationSound.play().catch(e => {}); // This might fail silently, but it's okay.
+        notificationSound.play().catch(e => {});
         setTimeout(() => {
-            notificationSound.muted = false; // Unmute for actual notifications
+            notificationSound.muted = false;
         }, 100);
 
         const hash = window.location.hash.slice(1);
@@ -521,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleLogout() {
-        lastUnreadCount = -1; // Reset on logout
+        lastUnreadCount = -1;
         signOut(auth).catch(error => {
             console.error("Erro ao sair:", error);
             showToast(`Erro: ${error.message}`);
@@ -701,10 +685,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function showView(viewName, params = {}, pushState = true) {
         if (unsubscribeComments) {
-            unsubscribeComments(); // Stop listening to old comments when changing view
+            unsubscribeComments();
             unsubscribeComments = null;
         }
-        commentsToShow = 5; // Reset comment limit when changing view
+        commentsToShow = 5;
 
         if (!auth.currentUser || !currentProfileId) {
             handleLogout(); 
@@ -717,7 +701,6 @@ document.addEventListener('DOMContentLoaded', () => {
              if (isPlayerModeActive || document.fullscreenElement) {
                   await exitPlayerMode();
              }
-            // Only stop playback completely if we are not transitioning episodes
             clearInterval(progressSaveInterval);
             if (hlsInstance) {
                 hlsInstance.destroy();
@@ -729,7 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hideNextEpisodeOverlay();
         
-        // Reset player-specific UI only if we are NOT just changing episodes
         if (!isTransitioningPlayer) {
             document.getElementById('progress-bar').style.width = '0%';
             document.getElementById('current-time').textContent = '00:00';
@@ -744,14 +726,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.getElementById(id);
             if(el && !['profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'].includes(id)) {
                  if (isTransitioningPlayer && id === 'player-view') {
-                      // Do nothing, leave it visible for the new content
                  } else {
                       el.classList.add('hidden');
                  }
             }
         });
 
-        // Only scroll to top if we are not coming back from the player to the detail view
         if (viewName !== 'detail') {
              window.scrollTo(0, 0);
         }
@@ -813,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentUrl = episode.url;
                 currentEpisodeData = { ...episode, seasonKey, epIndex: Number(epIndex) };
             } else {
-                contentUrl = item.url; // Use item.url for movies
+                contentUrl = item.url;
             }
             
             if (contentUrl) {
@@ -838,7 +818,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // --- Core App Logic & Player ---
     function getEpisodeProgressKey(itemId, seasonKey, epIndex) {
         return `${itemId}_s${seasonKey}_e${epIndex}`;
     }
@@ -852,18 +831,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (r.includes('14')) return 'rating-14';
         if (r.includes('16')) return 'rating-16';
         if (r.includes('18')) return 'rating-18';
-        return 'bg-gray-600'; // Default
+        return 'bg-gray-600';
     }
 
     function updateHeaderStyle() {
         if (!currentProfileId) return;
-        
         const isHome = document.getElementById('home-view') && !document.getElementById('home-view').classList.contains('hidden');
-        
         mainHeader.style.position = isHome ? 'fixed' : 'absolute';
-        
         const shouldBeOpaque = window.scrollY > 50 || !isHome;
-
         mainHeader.classList.toggle('bg-black/80', shouldBeOpaque);
         mainHeader.classList.toggle('backdrop-blur-sm', shouldBeOpaque);
     }
@@ -926,16 +901,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const profile = getCurrentProfile();
         let progress = null;
 
-        if (currentEpisodeData) { // It's a series episode
+        if (currentEpisodeData) {
             const { seasonKey, epIndex } = currentEpisodeData;
             const episodeKey = getEpisodeProgressKey(itemId, seasonKey, epIndex);
             progress = profile.watchProgress[episodeKey];
-        } else { // It's a movie
+        } else {
             progress = profile.watchProgress[itemId];
         }
         
-        videoPlayer.currentTime = 0; // Reset first
-        videoPlayer.hasBeenMarkedAsWatched = false; // Reset the flag for auto-removal
+        videoPlayer.currentTime = 0;
+        videoPlayer.hasBeenMarkedAsWatched = false;
         if (progress) {
             videoPlayer.currentTime = progress.currentTime;
         }
@@ -950,7 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const videoSrc = urlObject.searchParams.get('d');
                 if (videoSrc) finalUrl = videoSrc;
             }
-        } catch (e) { /* Ignora URLs inválidas */ }
+        } catch (e) { /* Ignore invalid URLs */ }
         
         if (!document.fullscreenElement) {
             videoPlayer.addEventListener('play', enterPlayerMode, { once: true });
@@ -963,22 +938,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 hlsInstance = new Hls(hlsConfig);
                 hlsInstance.loadSource(finalUrl);
                 hlsInstance.attachMedia(videoPlayer);
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play().catch(e => console.error("Erro de autoplay:", e)));
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play().catch(e => console.error("Autoplay error:", e)));
                 hlsInstance.on(Hls.Events.ERROR, (event, data) => {
                     if (data.fatal) {
-                        console.error('Erro fatal no HLS:', data);
-                        showPlayerError(`Não foi possível carregar este vídeo (HLS Error: ${data.type})`);
+                        console.error('Fatal HLS error:', data);
+                        showPlayerError(`Could not load this video (HLS Error: ${data.type})`);
                     }
                 });
             } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
                 videoPlayer.src = finalUrl;
                 videoPlayer.addEventListener('loadedmetadata', () => videoPlayer.play());
             } else {
-                showPlayerError("Streaming HLS não é suportado neste navegador.");
+                showPlayerError("HLS streaming is not supported on this browser.");
             }
         } else {
             videoPlayer.src = finalUrl;
-            videoPlayer.play().catch(e => console.error("Erro de autoplay:", e));
+            videoPlayer.play().catch(e => console.error("Autoplay error:", e));
         }
         showControlsAndResetTimer();
         updateEpisodeNavButtons();
@@ -1016,7 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 slider.classList.remove('active-dragging');
             });
 
-            slider.addEventListener('mouseup', (e) => {
+            slider.addEventListener('mouseup', () => {
                 isDown = false;
                 slider.classList.remove('active-dragging');
                 
@@ -1246,8 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (uniqueContinueWatching.length > 0) {
             carouselsHTML += createCarousel({ title: 'Continuar a Assistir' }, uniqueContinueWatching);
         }
-
-        // NOVO: Adiciona carrossel de recomendações
+        
         const recommendedItems = getRecommendedItems(profile);
         if(recommendedItems.length > 0) {
             carouselsHTML += createCarousel({ title: 'Recomendado para Você' }, recommendedItems);
@@ -1267,7 +1241,7 @@ document.addEventListener('DOMContentLoaded', () => {
         enableDragScroll();
     }
     
-    // ATUALIZADO: Adiciona filtros e ordenação
+    // --- GENERIC PAGES ---
     function renderGenericPage(viewId, title, type) {
         const container = document.getElementById(viewId);
         const filteredCatalogForProfile = getFilteredCatalog();
@@ -1303,7 +1277,6 @@ document.addEventListener('DOMContentLoaded', () => {
         render();
     }
 
-    // NOVA FUNÇÃO: Renderiza página "Em Breve"
     function renderComingSoonPage() {
         const container = document.getElementById('coming-soon-view');
         const comingSoonItems = catalog.filter(item => itemDetails[item.id]?.isComingSoon);
@@ -1311,7 +1284,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderItemsGrid(comingSoonItems, 'coming-soon-grid-container');
     }
 
-    // NOVA FUNÇÃO: Renderiza conteúdo relacionado na página de detalhes
     function renderRelatedContent(currentItem) {
         const container = document.getElementById('related-content-container');
         if (!container || !currentItem.genres || currentItem.genres.length === 0) return;
@@ -1323,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return details.genres && details.genres.some(genre => currentItem.genres.includes(genre));
             })
             .sort(() => 0.5 - Math.random()) // Shuffle
-            .slice(0, 6);
+            .slice(0, 12);
 
         if (relatedItems.length > 0) {
             container.innerHTML = createCarousel({ title: 'Títulos Semelhantes' }, relatedItems);
@@ -1331,13 +1303,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // NOVA FUNÇÃO: Lógica de recomendação
     function getRecommendedItems(profile) {
         const genreScores = {};
         const seenItems = new Set(Object.keys(profile.watchProgress || {}));
         profile.myList.forEach(id => seenItems.add(id));
 
-        // Pontua gêneros da "Minha Lista"
         profile.myList.forEach(itemId => {
             const details = itemDetails[itemId];
             if (details && details.genres) {
@@ -1347,13 +1317,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Pontua gêneros de itens bem avaliados
         Object.entries(profile.userRatings || {}).forEach(([itemId, rating]) => {
             if (rating >= 4) {
                  const details = itemDetails[itemId];
                  if (details && details.genres) {
                     details.genres.forEach(genre => {
-                        genreScores[genre] = (genreScores[genre] || 0) + 2; // Maior peso para avaliações
+                        genreScores[genre] = (genreScores[genre] || 0) + 2;
                     });
                 }
             }
@@ -1371,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const details = itemDetails[item.id];
                 return !seenItems.has(item.id) && details.genres && details.genres.some(g => topGenres.includes(g));
             })
-            .sort(() => 0.5 - Math.random()) // Shuffle
+            .sort(() => 0.5 - Math.random())
             .slice(0, 10);
 
         return recommendations;
@@ -1458,9 +1427,18 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const ratingClass = getRatingColorClass(item.rating);
-
         const isMobile = window.innerWidth < 768;
         const backdropUrl = isMobile && item.backdrop_mobile ? item.backdrop_mobile : item.backdrop;
+
+        const playButtonHTML = item.isComingSoon 
+            ? `<button disabled class="bg-gray-500 text-gray-300 font-bold py-3 px-8 rounded-lg flex items-center gap-2 cursor-not-allowed">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                   Em Breve
+               </button>`
+            : `<button data-action="playContent" data-item-id="${itemId}" class="bg-white text-gray-900 font-bold py-3 px-8 rounded-lg flex items-center gap-2 hover:bg-gray-300 transition">
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+                   Assistir
+               </button>`;
 
         detailView.innerHTML = `
             <div id="detail-background" style="background-image: url('${backdropUrl}');">
@@ -1484,10 +1462,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${castToggleButtonHTML}
                             </div>
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                                <button data-action="playContent" data-item-id="${itemId}" class="bg-white text-gray-900 font-bold py-3 px-8 rounded-lg flex items-center gap-2 hover:bg-gray-300 transition">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
-                                    Assistir
-                                </button>
+                                ${playButtonHTML}
                                 ${item.trailer_url ? `<button data-action="showTrailer" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-8 rounded-lg">Ver Trailer</button>` : ''}
                                 <button id="detail-mylist-button" data-action="toggleMyList" data-item-id="${itemId}" class="bg-gray-700/50 backdrop-blur-sm hover:bg-gray-600/60 text-white font-bold py-3 px-5 rounded-lg flex items-center space-x-2 transition"></button>
                             </div>
@@ -1555,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         updateMyListButton(itemId, 'detail-mylist-button');
-        renderRelatedContent(item); // NOVO
+        renderRelatedContent(item);
         setupCommentsSection(itemId);
         enableDragScroll();
         if (lastScrollPosition > 0) {
@@ -1587,9 +1562,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     
         const seasonData = item.seasons[seasonKey];
-        const episodes = seasonData.episodes;
+        const episodes = seasonData.episodes || [];
+        const isSeasonComingSoon = seasonData.isComingSoon || false;
     
-        if (!episodes || !Array.isArray(episodes) || episodes.length === 0) {
+        if (episodes.length === 0) {
             episodesListEl.innerHTML = '<p class="text-gray-400">Nenhum episódio encontrado para esta temporada.</p>';
             return;
         }
@@ -1614,13 +1590,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     epProgressHtml = `<div class="absolute bottom-0 left-0 h-1 bg-indigo-500 rounded-bl-lg" style="width: ${percent}%"></div>`;
                 }
             }
-    
+            
+            const isComingSoon = isSeasonComingSoon || ep.isComingSoon;
+            const actionAttrs = isComingSoon ? '' : `data-action="showView" data-view-name="player" data-item-id="${itemId}" data-season="${seasonKey}" data-ep-index="${index}"`;
+            const cursorClass = isComingSoon ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-700/70';
+            const playIconHTML = isComingSoon
+                ? `<span class="text-xs bg-cyan-600 px-2 py-1 rounded-full font-semibold">Em Breve</span>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="flex-shrink-0 w-6 h-6 text-gray-400 group-hover:text-white transition-colors"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>`;
+
             return `
-            <div class="relative p-4 bg-gray-800/50 rounded-lg mb-2 flex items-center gap-4 cursor-pointer hover:bg-gray-700/70" data-action="showView" data-view-name="player" data-item-id="${itemId}" data-season="${seasonKey}" data-ep-index="${index}">
+            <div class="relative p-4 bg-gray-800/50 rounded-lg mb-2 flex items-center gap-4 ${cursorClass}" ${actionAttrs}>
                 <div class="flex-1 min-w-0">
                     <p class="text-white truncate font-medium">${ep.title || `Episódio ${index + 1}`}</p>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="flex-shrink-0 w-6 h-6 text-gray-400 group-hover:text-white transition-colors"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+                ${playIconHTML}
                 ${epProgressHtml}
             </div>`;
         }).join('');
@@ -1671,7 +1654,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     function renderStarRating(itemId) {
         const container = document.getElementById('star-rating-container');
         const avgRatingEl = document.getElementById('average-rating');
@@ -1705,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (avgRating >= 3.0) avgRatingColorClass = 'rating-color-orange';
         else if (avgRating > 0) avgRatingColorClass = 'rating-color-red';
         
-        avgRatingEl.className = 'font-bold'; // Reset classes
+        avgRatingEl.className = 'font-bold';
         if(avgRatingColorClass) avgRatingEl.classList.add(avgRatingColorClass);
     }
     
@@ -2063,6 +2045,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function playContent(itemId) {
         const item = itemDetails[itemId];
+        if(item.isComingSoon) {
+            showToast("Este título será lançado em breve!");
+            return;
+        }
+
         const profile = getCurrentProfile();
         if (item.type === 'movie') {
             await showView('player', { itemId });
@@ -2149,10 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderItemsGrid(items, containerId) {
         const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`Container with id ${containerId} not found.`);
-            return;
-        }
+        if (!container) return;
 
         if (items.length === 0) {
             container.innerHTML = '<p class="col-span-full text-center text-gray-400">Nenhum item encontrado.</p>';
@@ -2160,9 +2144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const itemsHTML = items.map(item => {
-            const itemDetail = itemDetails[item.id];
-            if (!itemDetail) return ''; // Skip if details are missing
-
             return `
                 <div class="group cursor-pointer" data-action="showView" data-view-name="detail" data-item-id="${item.id}">
                     <div class="relative rounded-lg overflow-hidden aspect-[2/3] bg-gray-800 transition-all duration-300 group-hover:ring-2 group-hover:ring-indigo-500">
@@ -2197,12 +2178,34 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="tmdb-search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-12"></div>
             
             <div class="border-t border-gray-700 pt-8">
-                <h3 class="text-2xl font-bold mb-6">Pedidos em Aberto</h3>
-                <div id="pending-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <p class="text-gray-500">A carregar pedidos...</p>
+                 <div class="mb-6">
+                    <nav class="bg-gray-800/50 rounded-lg p-1 flex space-x-1" aria-label="Tabs">
+                        <button class="sub-tab-link active flex-1 whitespace-nowrap py-2 px-4 rounded-md font-semibold text-sm text-center" data-sub-tab="pendentes">Pendentes</button>
+                        <button class="sub-tab-link text-gray-400 hover:text-white flex-1 whitespace-nowrap py-2 px-4 rounded-md font-semibold text-sm text-center" data-sub-tab="adicionados">Adicionados</button>
+                    </nav>
+                </div>
+
+                <div id="pendentes-sub-tab" class="sub-tab-content">
+                     <h3 class="text-2xl font-bold mb-6">Pedidos em Aberto</h3>
+                     <div id="pending-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+
+                <div id="adicionados-sub-tab" class="sub-tab-content hidden">
+                     <h3 class="text-2xl font-bold mb-6">Pedidos Atendidos</h3>
+                     <div id="added-requests-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
                 </div>
             </div>
         `;
+
+        view.querySelectorAll('.sub-tab-link').forEach(tab => {
+            tab.addEventListener('click', () => {
+                view.querySelectorAll('.sub-tab-link').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                view.querySelectorAll('.sub-tab-content').forEach(c => {
+                    c.classList.toggle('hidden', c.id !== `${tab.dataset.subTab}-sub-tab`);
+                });
+            });
+        });
 
         document.getElementById('tmdb-search-input').addEventListener('input', (e) => {
             clearTimeout(tmdbSearchTimeout);
@@ -2218,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function searchTMDB(query) {
-        if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+        if (!TMDB_API_KEY) {
             showToast("A chave da API TMDB não foi configurada.");
             return;
         }
@@ -2258,17 +2261,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupPedidosListener() {
         if (unsubscribePedidos) unsubscribePedidos();
 
-        const q = query(collection(db, "pedidos"), where("status", "==", "pending"));
+        const q = query(collection(db, "pedidos"), where("status", "in", ["pending", "added"]));
         unsubscribePedidos = onSnapshot(q, (querySnapshot) => {
-            const pendingRequests = [];
+            const allRequests = [];
             querySnapshot.forEach((doc) => {
-                pendingRequests.push({ id: doc.id, ...doc.data() });
+                allRequests.push({ id: doc.id, ...doc.data() });
             });
-            renderPendingRequests(pendingRequests);
+            renderAllPedidos(allRequests);
         }, (error) => {
             console.error("Erro ao escutar pedidos:", error);
             document.getElementById('pending-requests-container').innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`;
         });
+    }
+
+    function renderAllPedidos(requests) {
+        const pending = requests.filter(r => r.status === 'pending');
+        const added = requests.filter(r => r.status === 'added');
+        renderPendingRequests(pending);
+        renderAddedRequests(added);
     }
 
     function renderPendingRequests(requests) {
@@ -2309,25 +2319,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
+    function renderAddedRequests(requests) {
+        const container = document.getElementById('added-requests-container');
+        if (!container) return;
+
+        if (requests.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 col-span-full">Nenhum pedido atendido recentemente.</p>';
+            return;
+        }
+
+        container.innerHTML = requests.map(req => `
+            <div class="bg-gray-800/50 p-4 rounded-lg flex gap-4">
+                <img src="${req.posterUrl}" alt="${req.title}" class="w-24 h-36 object-cover rounded-md flex-shrink-0">
+                <div class="flex flex-col justify-between w-full">
+                    <div>
+                        <h4 class="font-bold text-lg">${req.title}</h4>
+                        <p class="text-sm text-gray-400">${req.year}</p>
+                    </div>
+                    <button data-action="archive-request" data-request-id="${req.id}" class="mt-2 text-sm text-gray-400 hover:text-white self-start">Remover da lista</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
     async function handleTMDBSelect(tmdbId, mediaType) {
-        // 1. Check if it already exists in our catalog
-        const existingItem = catalog.find(item => String(item.tmdbId) === String(tmdbId));
+        const existingItem = Object.values(itemDetails).find(item => String(item.tmdb_id) === String(tmdbId));
         if (existingItem) {
-            showToast("Este item já está disponível!");
+            showToast("Este item já está disponível no catálogo!");
             await showView('detail', { itemId: existingItem.id });
             return;
         }
 
-        // 2. Check if it has already been requested
-        const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId));
+        const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId), where("status", "!=", "archived"));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-            showToast("Este item já foi solicitado. Você pode votar nele abaixo.");
+            showToast("Este item já foi solicitado. Você pode votar nele na aba 'Pendentes'.");
             return;
         }
         
-        // 3. If new, request it
         if (confirm("Gostaria de solicitar este item?")) {
            await createRequest(tmdbId, mediaType);
         }
@@ -2379,6 +2408,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(error) {
             console.error("Erro ao votar:", error);
             showToast("Não foi possível registrar o seu voto.", true);
+        }
+    }
+
+    async function archiveRequest(requestId) {
+        showToast("Removido da sua lista.");
+        const requestRef = doc(db, "pedidos", requestId);
+        try {
+            await updateDoc(requestRef, { status: "archived" });
+        } catch(error) {
+            console.error("Erro ao arquivar pedido:", error);
+            showToast("Não foi possível remover o item da lista.", true);
         }
     }
 
@@ -2511,7 +2551,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { itemId: currentPlayingItemId, season: prevSeasonKey, epIndex: prevSeasonEpisodes.length - 1 };
             }
         }
-        return null; // No previous episode
+        return null;
     }
 
     function updateEpisodeNavButtons() {
@@ -2550,7 +2590,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { itemId: currentPlayingItemId, season: nextSeasonKey, epIndex: 0 };
             }
         }
-        return null; // No next episode
+        return null;
     }
 
     function showNextEpisodeOverlay() {
@@ -2859,8 +2899,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-register-view-btn').addEventListener('click', () => showAuthView('register'));
     document.getElementById('show-login-view-btn').addEventListener('click', () => showAuthView('login'));
 
-
-    // --- Initial App Load & Event Delegation ---
     document.getElementById('manage-profiles-btn').addEventListener('click', showManageProfilesView);
     document.getElementById('done-managing-btn').addEventListener('click', () => showProfileSelectionView(true));
     document.getElementById('save-profile-btn').addEventListener('click', handleSaveProfile);
@@ -2876,7 +2914,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
-        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido', 'removeFromContinueWatching'];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'close-pedido-modal', 'cancel-pedido', 'confirm-pedido', 'removeFromContinueWatching', 'archive-request'];
         if (!nonPreventActions.includes(action)) {
              e.preventDefault();
         }
@@ -2994,6 +3032,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             case 'handleTMDBSelect': await handleTMDBSelect(tmdbId, mediaType); break;
             case 'voteForRequest': await voteForRequest(requestId); break;
+            case 'archive-request': await archiveRequest(requestId); break;
             case 'close-pedido-modal':
             case 'cancel-pedido':
                 closePedidoModal();
