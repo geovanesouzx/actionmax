@@ -54,21 +54,6 @@ const TMDB_IMG_URL = 'https://image.tmdb.org/t/p/w500';
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Dynamically create the confirmation modal and append it to the body
-    const modalHTML = `
-    <div id="request-confirm-modal" class="hidden fixed inset-0 bg-black/80 z-[250] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
-        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8 transform scale-95 transition-all duration-300">
-            <div id="request-modal-content" class="text-center">
-                <!-- Content will be injected by JS -->
-            </div>
-            <div class="flex justify-center gap-4 mt-8">
-                <button id="request-cancel-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancelar</button>
-                <button id="request-confirm-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg transition">Confirmar Pedido</button>
-            </div>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-
     // Style for synopsis truncation and animations
     const style = document.createElement('style');
     style.textContent = `
@@ -87,20 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         #season-selector-btn.open > svg {
             transform: rotate(180deg);
-        }
-        /* Confirmation Modal Styles */
-        #request-confirm-modal {
-            transition: opacity 0.3s ease-out;
-        }
-        #request-confirm-modal.show {
-            opacity: 1;
-        }
-        #request-confirm-modal.show > div {
-            transform: scale(1);
-            opacity: 1;
-        }
-        #request-confirm-modal > div {
-            transition: all 0.3s ease-out;
         }
     `;
     document.head.appendChild(style);
@@ -293,11 +264,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
              case 'detail-view':
-                 const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
-                 if(currentItemId) {
-                      renderStarRating(currentItemId);
-                 }
-                 break;
+                  const currentItemId = document.querySelector('.comment-container')?.dataset.itemId;
+                  if(currentItemId) {
+                       renderStarRating(currentItemId);
+                  }
+                  break;
         }
     }
 
@@ -516,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
              const modal = document.getElementById('permission-modal');
              modal.classList.remove('hidden');
              setTimeout(() => {
-                 modal.classList.add('show');
+                  modal.classList.add('show');
              }, 10);
         }
         
@@ -559,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="relative text-center group cursor-pointer" data-action="showEditProfileView" data-item-id="${profile.id}">
                 <img src="${profile.avatar}" alt="${profile.name}" class="w-24 h-24 md:w-36 md:h-36 rounded-md object-cover">
                  <div class="absolute inset-0 bg-black/60 rounded-md flex items-center justify-center">
-                       <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
                  </div>
                 <p class="mt-2 text-gray-400 font-medium">${profile.name}</p>
             </div>
@@ -730,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isTransitioningPlayer) {
              if (isPlayerModeActive || document.fullscreenElement) {
-                 await exitPlayerMode();
+                  await exitPlayerMode();
              }
             clearInterval(progressSaveInterval);
             if (hlsInstance) {
@@ -758,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(el && !['profile-selection-view', 'manage-profiles-view', 'edit-profile-view', 'login-view', 'register-view'].includes(id)) {
                  if (isTransitioningPlayer && id === 'player-view') {
                  } else {
-                       el.classList.add('hidden');
+                      el.classList.add('hidden');
                  }
             }
         });
@@ -2309,8 +2280,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="text-sm text-gray-400">${req.year}</p>
                         </div>
                         <div class="flex items-center justify-between mt-2">
-                            <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
-                            ${actionButtonHTML}
+                             <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
+                             ${actionButtonHTML}
                         </div>
                     </div>
                 </div>
@@ -2333,8 +2304,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // MODIFICAÇÃO: Chamar o modal de confirmação em vez de criar o pedido diretamente.
-        await showRequestConfirmModal(tmdbId, mediaType);
+        if (confirm("Gostaria de solicitar este item?")) {
+           await createRequest(tmdbId, mediaType);
+        }
     }
 
     async function createRequest(tmdbId, mediaType) {
@@ -2361,74 +2333,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await addDoc(collection(db, "pedidos"), newRequest);
             showToast("Pedido enviado com sucesso!");
-        document.getElementById('tmdb-search-results').innerHTML = '';
-        document.getElementById('tmdb-search-input').value = '';
+            document.getElementById('tmdb-search-results').innerHTML = '';
+            document.getElementById('tmdb-search-input').value = '';
 
-    } catch (error) {
-        console.error("Erro ao criar pedido:", error);
-        showToast("Não foi possível criar o pedido.", true);
+        } catch (error) {
+            console.error("Erro ao criar pedido:", error);
+            showToast("Não foi possível criar o pedido.", true);
+        }
     }
-}
+
+    async function voteForRequest(requestId) {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
+        const requestRef = doc(db, "pedidos", requestId);
+        try {
+            await updateDoc(requestRef, {
+                requesters: arrayUnion(profile.id)
+            });
+            showToast("Voto computado!");
+        } catch(error) {
+            console.error("Erro ao votar:", error);
+            showToast("Não foi possível registrar o seu voto.", true);
+        }
+    }
+
+    async function removeMyRequest(requestId) {
+        const profile = getCurrentProfile();
+        if (!profile) return;
+
+        const requestRef = doc(db, "pedidos", requestId);
+        try {
+            await runTransaction(db, async (transaction) => {
+                const requestDoc = await transaction.get(requestRef);
+                if (!requestDoc.exists()) return;
+
+                const requesters = requestDoc.data().requesters || [];
+                if (requesters.length <= 1) {
+                    transaction.delete(requestRef);
+                } else {
+                    transaction.update(requestRef, { requesters: arrayRemove(profile.id) });
+                }
+            });
+            showToast("Seu pedido foi removido.");
+        } catch (error) {
+            console.error("Erro ao remover o pedido:", error);
+            showToast("Não foi possível remover seu pedido.", true);
+        }
+    }
 
 
     // ===============================================
     // =========== PLAYER CONTROLS & UX V2 ===========
     // ===============================================
-
-    // NOVA FUNÇÃO: Adiciona um modal de confirmação para pedidos.
-    async function showRequestConfirmModal(tmdbId, mediaType) {
-        const modal = document.getElementById('request-confirm-modal');
-        const modalContent = document.getElementById('request-modal-content');
-        
-        // Fetch minimal data to show in modal
-        modalContent.innerHTML = `<div class="spinner mx-auto"></div>`;
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            modal.classList.add('show');
-            modal.style.opacity = '1';
-        }, 10);
-        
-        try {
-            const url = `${TMDB_BASE_URL}/${mediaType}/${tmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`;
-            const response = await fetch(url);
-            const data = await response.json();
-            const title = data.title || data.name;
-            const year = (data.release_date || data.first_air_date || '').split('-')[0];
-
-            modalContent.innerHTML = `
-                <img src="${TMDB_IMG_URL}${data.poster_path}" alt="${title}" class="w-24 mx-auto rounded-lg mb-4 shadow-lg">
-                <h2 class="text-2xl font-bold text-white mb-2">Solicitar Conteúdo</h2>
-                <p class="text-gray-400">Tem a certeza que quer pedir <span class="font-bold text-white">${title} (${year})</span>?</p>
-            `;
-
-            const confirmBtn = document.getElementById('request-confirm-btn');
-            const cancelBtn = document.getElementById('request-cancel-btn');
-
-            const handleConfirm = async () => {
-                cleanup();
-                await createRequest(tmdbId, mediaType);
-            };
-
-            const handleCancel = () => {
-                cleanup();
-            };
-
-            const cleanup = () => {
-                modal.style.opacity = '0';
-                setTimeout(() => modal.classList.add('hidden'), 300);
-                confirmBtn.removeEventListener('click', handleConfirm);
-                cancelBtn.removeEventListener('click', handleCancel);
-            };
-            
-            confirmBtn.addEventListener('click', handleConfirm, { once: true });
-            cancelBtn.addEventListener('click', handleCancel, { once: true });
-
-        } catch (error) {
-            showToast("Erro ao buscar detalhes do item.", true);
-            modal.style.opacity = '0';
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        }
-    }
 
     const playerContainer = document.getElementById('player-container');
     const playerControls = document.getElementById('player-controls');
@@ -2718,7 +2675,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     
         const onPlayerView = !document.getElementById('player-view').classList.contains('hidden') ||
-                                 !document.getElementById('iframe-player-view').classList.contains('hidden');
+                               !document.getElementById('iframe-player-view').classList.contains('hidden');
     
         if (!isPlayerModeActive && onPlayerView && window.location.hash.includes('player')) {
             history.back();
@@ -2917,19 +2874,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { action, viewName, itemId, genre, season, epIndex, id, contentId, linkUrl, tmdbId, mediaType, requestId } = actionTarget.dataset;
 
-        // CORREÇÃO: Centralizado o manipulador de eventos para incluir comentários e avaliações.
-        const nonPreventActions = [
-            'close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 
-            'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 
-            'like', 'delete', 'rate', 'show-more-comments', 'removeFromContinueWatching', 
-            'remove-my-request', 'add-comment'
-        ];
+        const nonPreventActions = ['close-trailer-modal', 'handleNotificationClick', 'closeNotifications', 'dismiss-notification', 'toggleCastVisibility', 'showReplyForm', 'add-reply', 'like', 'delete', 'rate', 'show-more-comments', 'removeFromContinueWatching', 'remove-my-request'];
         if (!nonPreventActions.includes(action)) {
-            e.preventDefault();
+             e.preventDefault();
         }
         
         let params = {};
-                
+             
         switch (action) {
             case 'removeFromContinueWatching':
                 e.stopPropagation();
@@ -3042,23 +2993,21 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'handleTMDBSelect': await handleTMDBSelect(tmdbId, mediaType); break;
             case 'voteForRequest': await voteForRequest(requestId); break;
             case 'remove-my-request': await removeMyRequest(requestId); break;
-            
-            // CORREÇÃO: Movido o código de manipulação de comentários e avaliações para este listener central.
-            case 'add-comment':
-            case 'add-reply':
-            case 'like':
-            case 'delete':
-            case 'showReplyForm':
-                await handleCommentAction(action, actionTarget);
-                break;
-            case 'rate':
-                await handleRating(actionTarget);
-                break;
         }
     });
 
-    // CORREÇÃO: Removido o listener de eventos duplicado e conflitante para a 'detail-view'.
-    // A lógica foi movida para o listener principal do 'document.body'.
+    document.getElementById('detail-view').addEventListener('click', async (e) => {
+        const actionTarget = e.target.closest('[data-action]');
+        if (!actionTarget) return;
+
+        const { action } = actionTarget.dataset;
+        
+        if (['add-comment', 'add-reply', 'like', 'delete', 'showReplyForm'].includes(action)) {
+            await handleCommentAction(action, actionTarget);
+        } else if (action === 'rate') {
+            await handleRating(actionTarget);
+        }
+    });
 
     document.getElementById('permission-allow-btn').addEventListener('click', async () => {
         if (!('Notification' in window)) {
@@ -3104,5 +3053,3 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Som de notificação ${profile.soundEnabled ? 'ativado' : 'desativado'}.`);
     });
 });
-
-
