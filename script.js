@@ -2234,61 +2234,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function setupPedidosListener() {
-        if (unsubscribePedidos) unsubscribePedidos();
+    function renderUserPedidos(requests) {
+    console.log(`PASSO 4: Renderizando ${requests.length} pedidos na tela.`); // Adicionado para depuração
+    const container = document.getElementById('pending-requests-container');
+    const profile = getCurrentProfile();
+    if (!container || !profile) {
+        console.error("Container ou perfil não encontrado ao tentar renderizar pedidos."); // Adicionado para depuração
+        return;
+    };
 
-        const q = query(collection(db, "pedidos"), where("status", "==", "pending"));
-        unsubscribePedidos = onSnapshot(q, (querySnapshot) => {
-            const pendingRequests = [];
-            querySnapshot.forEach((doc) => {
-                pendingRequests.push({ id: doc.id, ...doc.data() });
-            });
-            renderUserPedidos(pendingRequests); // <--- CORREÇÃO AQUI
-        }, (error) => {
-            console.error("Erro ao escutar pedidos:", error);
-            document.getElementById('pending-requests-container').innerHTML = `<p class="text-red-400">Não foi possível carregar os pedidos.</p>`;
-        });
+    if (requests.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 col-span-full">Ainda não há pedidos em aberto.</p>';
+        return;
     }
 
-    function renderUserPedidos(requests) {
-        const container = document.getElementById('pending-requests-container');
-        const profile = getCurrentProfile();
-        if (!container || !profile) return;
+    container.innerHTML = requests.map(req => {
+        const voteCount = req.requesters?.length || 0;
+        const hasVoted = req.requesters?.includes(profile.id);
+        let actionButtonHTML = '';
 
-        if (requests.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 col-span-full">Ainda não há pedidos em aberto.</p>';
-            return;
+        if (hasVoted) {
+             actionButtonHTML = `<button data-action="remove-my-request" data-request-id="${req.id}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Remover Pedido</button>`;
+        } else {
+             actionButtonHTML = `<button data-action="voteForRequest" data-request-id="${req.id}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Votar</button>`;
         }
 
-        container.innerHTML = requests.map(req => {
-            const voteCount = req.requesters?.length || 0;
-            const hasVoted = req.requesters?.includes(profile.id);
-            let actionButtonHTML = '';
-
-            if (hasVoted) {
-                 actionButtonHTML = `<button data-action="remove-my-request" data-request-id="${req.id}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Remover Pedido</button>`;
-            } else {
-                 actionButtonHTML = `<button data-action="voteForRequest" data-request-id="${req.id}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">Votar</button>`;
-            }
-
-            return `
-                <div class="bg-gray-800/50 p-4 rounded-lg flex gap-4">
-                    <img src="${req.posterUrl}" alt="${req.title}" class="w-24 h-36 object-cover rounded-md flex-shrink-0">
-                    <div class="flex flex-col justify-between w-full">
-                        <div>
-                            <h4 class="font-bold text-lg">${req.title}</h4>
-                            <p class="text-sm text-gray-400">${req.year}</p>
-                        </div>
-                        <div class="flex items-center justify-between mt-2">
-                             <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
-                             ${actionButtonHTML}
-                        </div>
+        return `
+            <div class="bg-gray-800/50 p-4 rounded-lg flex gap-4">
+                <img src="${req.posterUrl}" alt="${req.title}" class="w-24 h-36 object-cover rounded-md flex-shrink-0">
+                <div class="flex flex-col justify-between w-full">
+                    <div>
+                        <h4 class="font-bold text-lg">${req.title}</h4>
+                        <p class="text-sm text-gray-400">${req.year}</p>
+                    </div>
+                    <div class="flex items-center justify-between mt-2">
+                         <p class="text-sm font-semibold">${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}</p>
+                         ${actionButtonHTML}
                     </div>
                 </div>
-            `;
-        }).join('');
-    }
-
+            </div>
+        `;
+    }).join('');
+}
     async function handleTMDBSelect(tmdbId, mediaType) {
         const existingItem = Object.values(itemDetails).find(item => String(item.tmdb_id) === String(tmdbId));
         if (existingItem) {
