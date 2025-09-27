@@ -2289,7 +2289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    async function handleTMDBSelect(tmdbId, mediaType) {
+   async function handleTMDBSelect(tmdbId, mediaType) {
         const existingItem = Object.values(itemDetails).find(item => String(item.tmdb_id) === String(tmdbId));
         if (existingItem) {
             showToast("Este item já está disponível no catálogo!");
@@ -2297,8 +2297,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId), where("status", "!=", "archived"));
+        // CORREÇÃO APLICADA AQUI
+        // Trocamos a consulta '!=' por uma consulta '==' que é mais eficiente e não tem as mesmas limitações.
+        // Agora verificamos se já existe um pedido com o status 'pending' para este item.
+        const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId), where("status", "==", "pending"));
         const querySnapshot = await getDocs(q);
+
         if (!querySnapshot.empty) {
             showToast("Este item já foi solicitado. Você pode votar nele na lista de pedidos.");
             return;
