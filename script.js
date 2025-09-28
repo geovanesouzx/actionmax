@@ -2290,6 +2290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
    async function handleTMDBSelect(tmdbId, mediaType) {
+        // 1. Verifica se o item já existe no catálogo
         const existingItem = Object.values(itemDetails).find(item => String(item.tmdb_id) === String(tmdbId));
         if (existingItem) {
             showToast("Este item já está disponível no catálogo!");
@@ -2297,55 +2298,73 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // CORREÇÃO APLICADA AQUI
-        // Trocamos a consulta '!=' por uma consulta '==' que é mais eficiente e não tem as mesmas limitações.
-        // Agora verificamos se já existe um pedido com o status 'pending' para este item.
+        // 2. Verifica se já existe um pedido pendente
         const q = query(collection(db, "pedidos"), where("tmdbId", "==", tmdbId), where("status", "==", "pending"));
         const querySnapshot = await getDocs(q);
-
         if (!querySnapshot.empty) {
             showToast("Este item já foi solicitado. Você pode votar nele na lista de pedidos.");
             return;
         }
-        
-        if (confirm("Gostaria de solicitar este item?")) {
-           await createRequest(tmdbId, mediaType);
-        }
-    }
 
-    async function createRequest(tmdbId, mediaType) {
-        const profile = getCurrentProfile();
-        if (!profile || !TMDB_API_KEY) return;
-        
+        // --- INÍCIO DA MODIFICAÇÃO ---
+        // Em vez de 'confirm()', vamos popular e mostrar o nosso modal customizado
+
         try {
+            // 3. Busca os detalhes do item no TMDB para popular o modal
             const url = `${TMDB_BASE_URL}/${mediaType}/${tmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`;
             const response = await fetch(url);
             const data = await response.json();
-            
-            const newRequest = {
-                tmdbId: String(data.id),
-                title: data.title || data.name,
-                year: (data.release_date || data.first_air_date || '').split('-')[0],
-                posterUrl: `${TMDB_IMG_URL}${data.poster_path}`,
-                overview: data.overview,
-                mediaType: mediaType,
-                requesters: [profile.id],
-                status: 'pending',
-                requestedAt: serverTimestamp(),
-                fullData: data
+            const title = data.title || data.name;
+            const year = (data.release_date || data.first_air_date || '').split('-')[0];
+            const posterUrl = `${TMDB_IMG_URL}${data.poster_path}`;
+
+            // 4. Pega os elementos do modal e os preenche com os dados
+            const modal = document.getElementById('request-confirm-modal');
+            const modalPoster = document.getElementById('request-modal-poster');
+            const modalTitle = document.getElementById('request-modal-title');
+            const confirmBtn = document.getElementById('request-confirm-btn');
+            const cancelBtn = document.getElementById('request-cancel-btn');
+
+            modalPoster.src = posterUrl;
+            modalTitle.textContent = `${title} (${year})`;
+
+            // 5. Função para esconder o modal
+            const hideModal = () => {
+                modal.classList.add('opacity-0');
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
             };
 
-            await addDoc(collection(db, "pedidos"), newRequest);
-            showToast("Pedido enviado com sucesso!");
-            document.getElementById('tmdb-search-results').innerHTML = '';
-            document.getElementById('tmdb-search-input').value = '';
+            // 6. Mostra o modal com animação
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+
+            // 7. Adiciona os ouvintes de evento para os botões
+            // Usamos { once: true } para que os eventos sejam removidos automaticamente após o primeiro clique,
+            // evitando que o pedido seja feito múltiplas vezes.
+            confirmBtn.addEventListener('click', async () => {
+                hideModal();
+                await createRequest(tmdbId, mediaType);
+            }, { once: true });
+
+            cancelBtn.addEventListener('click', () => {
+                hideModal();
+                // Recarrega o listener do botão de confirmar para que ele funcione na próxima vez,
+                // mas sem a ação de criar o pedido.
+                confirmBtn.addEventListener('click', () => {}, { once: true });
+            }, { once: true });
 
         } catch (error) {
-            console.error("Erro ao criar pedido:", error);
-            showToast("Não foi possível criar o pedido.", true);
+            console.error("Erro ao buscar detalhes do TMDB para o modal:", error);
+            showToast("Não foi possível carregar os detalhes do item.", true);
         }
+        // --- FIM DA MODIFICAÇÃO ---
     }
-
     async function voteForRequest(requestId) {
         const profile = getCurrentProfile();
         if (!profile) return;
