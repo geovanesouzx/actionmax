@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Initial Fetch to prevent race conditions on page load
         try {
             console.log("Carregando dados iniciais...");
-            const contentSnapshot = await getDocs(collection(db, 'content'));
+            const contentSnapshot = await getDocs(query(collection(db, 'content'), orderBy("createdAt", "desc")));
             const catalogData = [];
             const itemDetailsData = {};
             contentSnapshot.forEach(doc => {
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Attach Listeners for subsequent real-time updates
         detachRealtimeListeners(); // Ensure no old listeners are running
     
-        const contentQuery = collection(db, 'content');
+        const contentQuery = query(collection(db, 'content'), orderBy("createdAt", "desc"));
         unsubscribeContent = onSnapshot(contentQuery, (snapshot) => {
             console.log("Dados de conteúdo atualizados em tempo real.");
             snapshot.docChanges().forEach((change) => {
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const index = catalog.findIndex(item => item.id === data.id);
                 
                 if (change.type === "added" || change.type === "modified") {
-                    const catalogItem = { id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdb_id };
+                    const catalogItem = { id: data.id, title: data.title, type: data.type, poster: data.poster, tmdbId: data.tmdb_id, createdAt: data.createdAt };
                     if (index > -1) {
                         catalog[index] = catalogItem;
                     } else {
@@ -210,6 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     delete itemDetails[change.doc.id];
                 }
             });
+
+            // Re-sort catalog by creation date after any change
+            catalog.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
 
             refreshUI(); 
         }, (error) => console.error("Erro no listener de conteúdo:", error));
@@ -487,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
              const modal = document.getElementById('permission-modal');
              modal.classList.remove('hidden');
              setTimeout(() => {
-                  modal.classList.add('show');
+                 modal.classList.add('show');
              }, 10);
         }
         
@@ -614,11 +618,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleDeleteProfile() {
-         if (editingProfileId) {
-             profiles = profiles.filter(p => p.id !== editingProfileId);
-             await saveProfiles();
-             showManageProfilesView();
-         }
+       if (editingProfileId) {
+           profiles = profiles.filter(p => p.id !== editingProfileId);
+           await saveProfiles();
+           showManageProfilesView();
+       }
     }
 
     function renderAvatarGridForEdit(currentAvatar) {
@@ -701,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isTransitioningPlayer) {
              if (isPlayerModeActive || document.fullscreenElement) {
-                  await exitPlayerMode();
+                 await exitPlayerMode();
              }
             clearInterval(progressSaveInterval);
             if (hlsInstance) {
@@ -1230,11 +1234,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     
         carouselsHTML += carouselsToRenderInContainer.map(carouselConfig => {
-            const items = filteredCatalogForProfile.filter(catalogItem => {
-                const details = itemDetails[catalogItem.id];
-                return details && Array.isArray(details.carousel_ids) && details.carousel_ids.includes(carouselConfig.id);
-            });
-        
+             let items = [];
+             if (carouselConfig.type === 'automatic') {
+                 switch (carouselConfig.auto_type) {
+                     case 'recently_added':
+                         items = [...filteredCatalogForProfile].sort((a, b) => (itemDetails[b.id].createdAt?.toMillis() || 0) - (itemDetails[a.id].createdAt?.toMillis() || 0)).slice(0, 15);
+                         break;
+                     case 'coming_soon':
+                         items = catalog.filter(item => itemDetails[item.id]?.isComingSoon);
+                         break;
+                     case 'hero':
+                         items = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.isHero);
+                         break;
+                     case 'by_genre':
+                         items = filteredCatalogForProfile.filter(item => itemDetails[item.id]?.genres?.includes(carouselConfig.genre));
+                         break;
+                 }
+             } else { // Standard and Banner
+                 items = filteredCatalogForProfile.filter(catalogItem => {
+                     const details = itemDetails[catalogItem.id];
+                     return details && Array.isArray(details.carousel_ids) && details.carousel_ids.includes(carouselConfig.id);
+                 });
+             }
+    
             if (items.length === 0) return '';
             return createCarousel(carouselConfig, items);
         }).join('');
@@ -1434,13 +1456,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const playButtonHTML = item.isComingSoon 
             ? `<button disabled class="bg-gray-500 text-gray-300 font-bold py-3 px-8 rounded-lg flex items-center gap-2 cursor-not-allowed">
-                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                   Em Breve
-               </button>`
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                 Em Breve
+              </button>`
             : `<button data-action="playContent" data-item-id="${itemId}" class="bg-white text-gray-900 font-bold py-3 px-8 rounded-lg flex items-center gap-2 hover:bg-gray-300 transition">
-                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
-                   Assistir
-               </button>`;
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.742 1.295 2.545 0 3.286L7.279 20.99c-1.25.717-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" /></svg>
+                 Assistir
+              </button>`;
 
         detailView.innerHTML = `
             <div id="detail-background" style="background-image: url('${backdropUrl}');">
@@ -2558,24 +2580,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showNextEpisodeOverlay() {
-         nextEpisodeData = findNextEpisode();
-         if (!nextEpisodeData) return;
+       nextEpisodeData = findNextEpisode();
+       if (!nextEpisodeData) return;
 
-         const { itemId, season, epIndex } = nextEpisodeData;
-         const nextEp = itemDetails[itemId].seasons[season].episodes[epIndex];
-         nextEpisodeTitle.textContent = nextEp.title || `Episódio ${epIndex + 1}`;
-         nextEpisodeOverlay.classList.remove('hidden');
-         nextEpisodeOverlay.classList.add('flex');
+       const { itemId, season, epIndex } = nextEpisodeData;
+       const nextEp = itemDetails[itemId].seasons[season].episodes[epIndex];
+       nextEpisodeTitle.textContent = nextEp.title || `Episódio ${epIndex + 1}`;
+       nextEpisodeOverlay.classList.remove('hidden');
+       nextEpisodeOverlay.classList.add('flex');
 
-         let countdown = 5;
-         nextEpisodeCountdown.textContent = countdown;
-         nextEpisodeInterval = setInterval(() => {
-             countdown--;
-             nextEpisodeCountdown.textContent = countdown;
-             if (countdown <= 0) {
-                 playNextEpisode();
-             }
-         }, 1000);
+       let countdown = 5;
+       nextEpisodeCountdown.textContent = countdown;
+       nextEpisodeInterval = setInterval(() => {
+           countdown--;
+           nextEpisodeCountdown.textContent = countdown;
+           if (countdown <= 0) {
+               playNextEpisode();
+           }
+       }, 1000);
     }
 
     function hideNextEpisodeOverlay() {
@@ -2786,13 +2808,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // --- Authentication Logic ---
-    const loginView = document.getElementById('login-view');
+    const loginViewAuth = document.getElementById('login-view');
     const registerView = document.getElementById('register-view');
     const loadingScreen = document.getElementById('loading-screen');
 
     function showAuthView(view) {
-        loginView.classList.toggle('hidden', view !== 'login');
-        loginView.classList.toggle('flex', view === 'login');
+        loginViewAuth.classList.toggle('hidden', view !== 'login');
+        loginViewAuth.classList.toggle('flex', view === 'login');
         registerView.classList.toggle('hidden', view !== 'register');
         registerView.classList.toggle('flex', view === 'register');
     }
@@ -2809,7 +2831,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Utilizador autenticado:", user.uid);
                 await loadDataAndAttachListeners();
                 profiles = await loadProfiles(user.uid);
-                loginView.classList.add('hidden');
+                loginViewAuth.classList.add('hidden');
                 registerView.classList.add('hidden');
                 showProfileSelectionView(true);
             } else {
@@ -2837,12 +2859,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('login-btn').addEventListener('click', () => {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        signInWithEmailAndPassword(auth, email, password)
-            .catch(error => showToast(`Erro de login: ${error.message}`));
-    });
+    const loginBtnAuth = document.querySelector('#login-view button#login-btn');
+    if (loginBtnAuth) {
+        loginBtnAuth.addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .catch(error => showToast(`Erro de login: ${error.message}`));
+        });
+    }
     
     document.getElementById('register-btn').addEventListener('click', () => {
         const email = document.getElementById('register-email').value;
@@ -2868,7 +2893,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-profile-btn').addEventListener('click', handleSaveProfile);
     document.getElementById('cancel-edit-btn').addEventListener('click', showManageProfilesView);
     document.getElementById('delete-profile-btn').addEventListener('click', handleDeleteProfile);
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    document.querySelector('#profile-view #logout-btn').addEventListener('click', handleLogout);
     
     document.getElementById('logo').addEventListener('click', async (e) => { e.preventDefault(); await showView('home'); });
 
@@ -2884,7 +2909,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         let params = {};
-             
+                 
         switch (action) {
             case 'removeFromContinueWatching':
                 e.stopPropagation();
