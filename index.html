@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActionMax</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- HLS.js for HLS playback -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <!-- PWA Manifest (Exemplo) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- External Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-gray-200">
+
+    <!-- =========== Loading Screen =========== -->
+    <div id="loading-screen" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[300] flex transition-opacity duration-500">
+        <h1 class="text-4xl md:text-5xl font-bold text-white">Action<span class="text-indigo-500">Max</span></h1>
+        <div class="spinner"></div>
+    </div>
+
+    <!-- =========== Login View =========== -->
+    <div id="login-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden p-4">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-8">Action<span class="text-indigo-500">Max</span></h1>
+            <h2 class="text-2xl font-bold text-white mb-8">Entrar</h2>
+            <div class="space-y-4">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="password" id="login-password" placeholder="Senha" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">Entrar</button>
+                <button id="google-login-btn" class="w-full bg-white text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-6 h-6">
+                    <span>Entrar com Google</span>
+                </button>
+            </div>
+            <p class="mt-6 text-gray-400">Novo por aqui? <button id="show-register-view-btn" class="font-bold text-indigo-400 hover:underline">Cadastre-se agora.</button></p>
+        </div>
+    </div>
+
+    <!-- =========== Register View =========== -->
+    <div id="register-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden p-4">
+        <div class="w-full max-w-sm text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-8">Action<span class="text-indigo-500">Max</span></h1>
+            <h2 class="text-2xl font-bold text-white mb-8">Cadastrar</h2>
+            <div class="space-y-4">
+                <input type="email" id="register-email" placeholder="Email" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="password" id="register-password" placeholder="Senha" class="w-full p-3 bg-gray-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <button id="register-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">Cadastrar</button>
+                 <button id="google-register-btn" class="w-full bg-white text-gray-800 font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-200 transition">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-6 h-6">
+                    <span>Cadastrar com Google</span>
+                </button>
+            </div>
+            <p class="mt-6 text-gray-400">Já tem uma conta? <button id="show-login-view-btn" class="font-bold text-indigo-400 hover:underline">Entre.</button></p>
+        </div>
+    </div>
+
+
+    <!-- =========== Profile Selection Screen =========== -->
+    <div id="profile-selection-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-12">Quem está a assistir?</h2>
+        <div id="profiles-list-container" class="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            <!-- Profiles will be rendered here by JS -->
+        </div>
+        <button id="manage-profiles-btn" class="mt-12 border-2 border-gray-600 text-gray-400 font-bold py-2 px-6 rounded hover:bg-gray-700 hover:text-white transition">Gerir Perfis</button>
+    </div>
+
+    <!-- =========== Manage Profiles Screen =========== -->
+    <div id="manage-profiles-view" class="fixed inset-0 bg-gray-900 flex-col items-center justify-center z-[200] hidden">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-12">Gerir Perfis</h2>
+        <div id="manage-profiles-list-container" class="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            <!-- Manageable profiles will be rendered here -->
+        </div>
+        <button id="done-managing-btn" class="mt-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded-lg transition">Concluído</button>
+    </div>
+
+    <!-- =========== Add/Edit Profile Screen (Layout Fixed for Mobile) =========== -->
+    <div id="edit-profile-view" class="fixed inset-0 bg-gray-900/95 backdrop-blur-sm flex flex-col items-center justify-center z-[210] hidden p-4">
+        <div class="w-full max-w-4xl h-full flex flex-col">
+            <div class="flex-shrink-0 text-center">
+                <h2 id="edit-profile-title" class="text-4xl md:text-5xl font-bold text-white my-4">Adicionar Perfil</h2>
+                <div class="my-4">
+                    <input type="text" id="profile-name-input" placeholder="Nome do Perfil" class="w-full max-w-sm mx-auto block p-4 bg-gray-800/50 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center">
+                </div>
+                <div class="my-4 flex justify-center">
+                    <label for="kid-profile-toggle" class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="kid-profile-toggle" class="sr-only">
+                            <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                        </div>
+                        <div class="ml-3 text-white font-medium">Perfil Infantil</div>
+                    </label>
+                </div>
+                <h3 class="text-2xl font-bold text-white mb-2">Escolha um avatar</h3>
+            </div>
+
+            <div id="edit-avatar-grid-container" class="flex-grow space-y-8 overflow-y-auto custom-scrollbar p-4">
+                <!-- Avatar grid for editing -->
+            </div>
+
+            <div class="flex-shrink-0 flex justify-center items-center gap-4 pt-4 pb-2">
+                <button id="save-profile-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-12 rounded-lg transition disabled:bg-gray-500 disabled:cursor-not-allowed">Salvar</button>
+                <button id="cancel-edit-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancelar</button>
+                <button id="delete-profile-btn" class="bg-red-800 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition hidden">Excluir Perfil</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =========== Header =========== -->
+    <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 px-4 md:px-10 transition-colors duration-300 bg-transparent hidden" id="main-header">
+        <div class="flex items-center space-x-8">
+            <h1 id="logo" class="text-2xl md:text-3xl font-bold text-white cursor-pointer">Action<span class="text-indigo-500">Max</span></h1>
+            <nav id="main-nav" class="hidden md:flex items-center space-x-8 text-base font-medium text-gray-400">
+                <a href="#home" data-action="showView" data-view-name="home" class="nav-link hover:text-white transition">Início</a>
+                <a href="#series" data-action="showView" data-view-name="series" class="nav-link hover:text-white transition">Séries</a>
+                <a href="#movies" data-action="showView" data-view-name="movies" class="nav-link hover:text-white transition">Filmes</a>
+                <a href="#genres" data-action="showView" data-view-name="genres" class="nav-link hover:text-white transition">Gêneros</a>
+                <a href="#coming-soon" data-action="showView" data-view-name="coming-soon" class="nav-link hover:text-white transition">Em Breve</a>
+                <a href="#pedidos" data-action="showView" data-view-name="pedidos" class="nav-link hover:text-white transition">Pedidos</a>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-4 text-gray-400">
+            <a href="#search" data-action="showView" data-view-name="search" class="cursor-pointer hover:text-indigo-400 transition"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 "><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg></a>
+            <button id="notification-btn" data-action="showNotifications" class="relative cursor-pointer hover:text-indigo-400 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
+            </button>
+            <a href="#profile" data-action="showView" data-view-name="profile"><img id="header-avatar" src="https://placehold.co/40x40/4f46e5/ffffff?text=U" alt="User Avatar" class="w-8 h-8 rounded-md cursor-pointer"></a>
+        </div>
+    </header>
+
+    <main id="app-container">
+        <!-- =========== Home View =========== -->
+        <div id="home-view" class="hidden">
+            <!-- Hero Section -->
+            <section id="hero-section" class="relative h-screen flex items-center text-white">
+                <div class="absolute inset-0 overflow-hidden">
+                    <img id="hero-backdrop" class="w-full h-full object-cover" src="https://placehold.co/1920x1080/0c0c0c/0c0c0c" alt="hero background">
+                    <div class="absolute inset-0 hero-gradient"></div>
+                </div>
+                <!-- Hero content will be dynamically inserted here -->
+                <div id="hero-content-container" class="relative z-10 p-6 md:p-10 lg:p-16 w-full md:w-1/2 text-center md:text-left">
+                                 <!-- Placeholder while loading -->
+                                 <div class="space-y-4 animate-pulse">
+                                     <div class="h-12 bg-gray-700 rounded w-3/4"></div>
+                                     <div class="h-4 bg-gray-700 rounded w-1/2"></div>
+                                     <div class="h-20 bg-gray-700 rounded w-full"></div>
+                                     <div class="flex gap-4">
+                                         <div class="h-12 bg-gray-700 rounded w-36"></div>
+                                         <div class="h-12 bg-gray-700 rounded w-36"></div>
+                                     </div>
+                                 </div>
+                </div>
+            </section>
+            <div id="carousels-container" class="px-4 md:px-10 py-8 space-y-10"></div>
+        </div>
+
+        <div id="detail-view" class="hidden"></div>
+        <div id="search-view" class="hidden pt-24 px-4 md:px-10 pb-12">
+            <h2 class="text-3xl font-bold mb-8">Pesquisar</h2>
+            <input type="text" id="search-input" placeholder="O que quer assistir?" class="w-full p-4 mb-8 bg-gray-800/50 rounded-lg text-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <div id="search-results-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+            <p id="search-no-results" class="hidden text-center text-gray-400 mt-8">Nenhum resultado encontrado.</p>
+        </div>
+        
+        <!-- Player View Otimizado -->
+        <div id="player-view" class="hidden fixed inset-0 bg-black z-[100] flex items-center justify-center">
+             <div class="w-full h-full relative group" id="player-container">
+                <video id="video-player" class="w-full h-full object-contain" controlslist="nodownload" playsinline></video>
+                
+                <!-- Overlay para duplo clique e controles -->
+                <div id="video-overlay" class="absolute inset-0 z-20"></div>
+
+                <!-- Indicador de avanço/retrocesso -->
+                <div id="seek-indicator" class="seek-indicator">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
+                </div>
+                
+                <!-- Overlay de Próximo Episódio -->
+                <div id="next-episode-overlay" class="hidden absolute inset-0 bg-black/80 z-40 flex-col items-end justify-center p-8 text-right">
+                    <div class="bg-black/50 p-6 rounded-lg backdrop-blur-md">
+                        <p class="text-gray-400 text-lg">A seguir</p>
+                        <h3 id="next-episode-title" class="text-3xl font-bold text-white my-2">Episode Title</h3>
+                        <p>A reproduzir em <span id="next-episode-countdown">5</span> segundos...</p>
+                        <button id="play-next-btn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">Assistir Agora</button>
+                    </div>
+                </div>
+
+                <div id="player-error-display" class="hidden absolute inset-0 flex items-center justify-center bg-black/80 z-30"><p class="text-white text-lg p-8 text-center"></p></div>
+                
+                <!-- Botão Pular Abertura (Hitbox melhorado) -->
+                <button id="skip-intro-btn" class="hidden absolute bottom-24 right-4 bg-black/70 text-white py-3 px-6 rounded-lg backdrop-blur-sm hover:bg-white hover:text-black transition-colors z-30 text-lg font-semibold">Pular Abertura</button>
+                
+                <!-- Controles do Player -->
+                <div id="player-controls" class="absolute bottom-0 left-0 right-0 p-4 pt-8 player-controls-gradient transition-opacity duration-300 z-30">
+                    <!-- Barra de Progresso -->
+                    <div id="progress-bar-container" class="w-full h-4 group/progress flex items-center cursor-pointer mb-2">
+                         <div class="w-full h-1 group-hover/progress:h-2 bg-gray-600 rounded transition-all">
+                             <div id="progress-bar" class="h-full bg-indigo-500 rounded" style="width: 0%;"></div>
+                         </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between text-white w-full">
+                        <!-- Controles da Esquerda -->
+                        <div class="flex items-center space-x-2 md:space-x-4">
+                            <button id="prev-episode-btn" class="p-2 hidden"></button>
+                            <button id="rewind-btn" class="p-2"></button>
+                            <button id="play-pause-btn" class="p-2"></button>
+                            <button id="forward-btn" class="p-2"></button>
+                            <button id="next-episode-btn" class="p-2 hidden"></button>
+                            <div class="flex items-center space-x-2 volume-container">
+                                <button id="volume-btn" class="p-2"></button>
+                                <div class="volume-slider-container">
+                                    <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" class="">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Time Display -->
+                         <div class="hidden md:flex items-center space-x-2 text-sm">
+                             <span id="current-time">00:00</span>
+                             <span>/</span>
+                             <span id="duration">00:00</span>
+                         </div>
+                        
+                        <!-- Controles da Direita -->
+                        <div class="flex items-center space-x-2 md:space-x-4">
+                            <button id="fullscreen-btn" class="p-2"></button>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </div>
+
+        <div id="iframe-player-view" class="hidden fixed inset-0 bg-black z-50 flex flex-col">
+            <iframe id="iframe-player" class="w-full h-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <div id="series-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
+        <div id="movies-view" class="hidden pt-24 px-4 md:px-10 py-8 space-y-10"></div>
+        <div id="genres-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="genre-results-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="coming-soon-view" class="hidden pt-24 px-4 md:px-10 pb-12"></div>
+        <div id="pedidos-view" class="hidden pt-24 px-4 md:px-10 pb-24"></div>
+        
+        <div id="profile-view" class="hidden pt-24 px-4 md:px-10 pb-24">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-3xl font-bold mb-8">Conta e Definições</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
+                    <!-- Sidebar Navigation -->
+                    <aside class="md:col-span-1">
+                        <nav id="profile-sidebar-nav" class="flex flex-col space-y-2">
+                            <a href="#details" data-section="details" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Perfil</a>
+                            <a href="#plan" data-section="plan" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Plano e Faturação</a>
+                            <a href="#playback" data-section="playback" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Reprodução</a>
+                            <a href="#notifications" data-section="notifications" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Notificações</a>
+                            <a href="#mylist" data-section="mylist" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Minha Lista</a>
+                             <a href="#switch" data-section="switch" id="logout-btn" class="profile-nav-link text-lg p-3 rounded-lg hover:bg-gray-800/50 transition">Sair</a>
+                        </nav>
+                    </aside>
+                    <!-- Content Area -->
+                    <main class="md:col-span-3">
+                        <!-- Profile Details Section -->
+                        <div id="profile-section-details" class="profile-section">
+                            <h3 class="text-2xl font-bold mb-6">Detalhes do Perfil</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg flex flex-col sm:flex-row items-center gap-6">
+                                <div id="change-avatar-button" data-action="editCurrentProfile" class="relative group cursor-pointer">
+                                    <img id="profile-avatar-img" src="https://placehold.co/100x100/4f46e5/ffffff?text=U" alt="User Avatar" class="w-24 h-24 rounded-full transition-all duration-300 group-hover:ring-4 group-hover:ring-indigo-500 object-cover">
+                                    <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                                    </div>
+                                </div>
+                                <div class="text-center sm:text-left">
+                                    <p id="profile-name" class="text-xl font-bold">Utilizador 1</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Plan & Billing Section -->
+                        <div id="profile-section-plan" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Plano e Faturação</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-4">
+                                <div>
+                                    <p class="text-gray-400">Plano Atual</p>
+                                    <p class="text-xl font-bold">Premium</p>
+                                </div>
+                                <hr class="border-gray-700">
+                                <div>
+                                    <p class="text-gray-400">Forma de Pagamento</p>
+                                    <p>**** **** **** 1234</p>
+                                </div>
+                                <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition">Gerir Assinatura</button>
+                            </div>
+                        </div>
+                        <!-- Playback Settings Section -->
+                        <div id="profile-section-playback" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Controles de Reprodução</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-4">
+                                <div>
+                                    <label for="skip-time-input" class="block text-gray-400 mb-2">Tempo de avanço/retrocesso (segundos)</label>
+                                    <input type="number" id="skip-time-input" min="5" max="30" step="1" class="w-24 p-2 bg-gray-900/50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Notifications Settings Section -->
+                        <div id="profile-section-notifications" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Notificações</h3>
+                            <div class="bg-gray-800/30 p-6 rounded-lg space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-bold">Notificações Push</p>
+                                        <p class="text-sm text-gray-400">Receba alertas no seu navegador ou dispositivo.</p>
+                                    </div>
+                                    <button id="enable-push-notifications-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-gray-500 disabled:cursor-not-allowed">Ativar</button>
+                                </div>
+                                <hr class="border-gray-700">
+                                <div class="flex items-center justify-between">
+                                     <p class="font-bold">Som de Notificação</p>
+                                     <label for="enable-sound-toggle" class="flex items-center cursor-pointer">
+                                         <div class="relative">
+                                             <input type="checkbox" id="enable-sound-toggle" class="sr-only">
+                                             <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                                             <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                         </div>
+                                     </label>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- My List Section -->
+                        <div id="profile-section-mylist" class="profile-section hidden">
+                            <h3 class="text-2xl font-bold mb-6">Minha Lista</h3>
+                            <div id="mylist-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+                            <p id="mylist-no-results" class="hidden text-gray-400">A sua lista está vazia. Adicione conteúdo para o ver aqui.</p>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </div>
+
+        <div id="avatar-selection-view" class="hidden"></div> <!-- Deprecated, functionality moved to edit-profile-view -->
+        
+        <!-- =========== Toast Notification =========== -->
+        <div id="toast-notification" class="fixed bottom-5 right-5 bg-indigo-600 text-white py-2 px-5 rounded-lg shadow-lg toast z-[220]">
+            <p id="toast-message"></p>
+        </div>
+    </main>
+
+    <!-- =========== Notification Permission Modal =========== -->
+    <div id="permission-modal" class="hidden fixed inset-0 bg-black/80 z-[250] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md text-center p-8 transform scale-95 transition-all duration-300">
+            <div class="text-indigo-400 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold text-white mb-4">Receba as Novidades!</h2>
+            <p class="text-gray-400 mb-8">Gostaria de receber notificações sobre novos episódios, filmes e outras novidades diretamente no seu dispositivo?</p>
+            <div class="flex justify-center gap-4">
+                <button id="permission-deny-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Agora não</button>
+                <button id="permission-allow-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg transition">Permitir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========== Request Confirmation Modal =========== -->
+    <div id="request-confirm-modal" class="hidden fixed inset-0 bg-black/80 z-[250] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md text-center p-8 transform scale-95 transition-all duration-300">
+            <h2 class="text-3xl font-bold text-white mb-4">Confirmar Pedido</h2>
+            <img id="request-modal-poster" src="https://placehold.co/128x192/1f2937/ffffff?text=Poster" alt="Poster do Pedido" class="w-32 mx-auto rounded-lg mb-4 shadow-lg">
+            <p class="text-gray-300 mb-1">Você tem a certeza que quer pedir:</p>
+            <p id="request-modal-title" class="font-bold text-xl text-white mb-8">Nome do Filme (Ano)</p>
+            <div class="flex justify-center gap-4">
+                <button id="request-cancel-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition">Cancelar</button>
+                <button id="request-confirm-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-lg transition">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Trailer Modal -->
+    <div id="trailer-modal" class="hidden fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
+        <div class="bg-black rounded-lg shadow-2xl w-full max-w-4xl aspect-video relative">
+            <button data-action="close-trailer-modal" class="absolute -top-2 -right-2 text-white bg-gray-800 rounded-full h-8 w-8 flex items-center justify-center text-lg z-10">&times;</button>
+            <iframe id="trailer-iframe" class="w-full h-full border-0 rounded-lg" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+    </div>
+    
+    <!-- Notifications Panel -->
+    <div id="notifications-panel" class="hidden fixed top-0 right-0 h-full w-full max-w-sm bg-gray-900/95 backdrop-blur-sm shadow-2xl z-[200] transform transition-transform duration-300 translate-x-full">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h2 class="text-xl font-bold">Notificações</h2>
+            <button data-action="closeNotifications" class="text-2xl text-gray-400 hover:text-white">&times;</button>
+        </div>
+        <div id="notifications-list" class="p-4 space-y-3 overflow-y-auto h-[calc(100%-65px)] custom-scrollbar">
+            <!-- Notifications will be rendered here -->
+        </div>
+    </div>
+
+    <!-- =========== Mobile Navigation =========== -->
+    <nav id="mobile-nav" class="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 p-2 grid grid-cols-6 gap-1 md:hidden z-50">
+        <a href="#home" data-action="showView" data-view-name="home" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span class="text-xs text-center">Início</span>
+        </a>
+        <a href="#series" data-action="showView" data-view-name="series" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+            <span class="text-xs text-center">Séries</span>
+        </a>
+        <a href="#movies" data-action="showView" data-view-name="movies" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            <span class="text-xs text-center">Filmes</span>
+        </a>
+        <a href="#genres" data-action="showView" data-view-name="genres" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            <span class="text-xs text-center">Gêneros</span>
+        </a>
+        <a href="#coming-soon" data-action="showView" data-view-name="coming-soon" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <span class="text-xs text-center">Em Breve</span>
+        </a>
+        <a href="#pedidos" data-action="showView" data-view-name="pedidos" class="mobile-nav-link flex flex-col items-center justify-center text-gray-400 w-full p-1 rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <span class="text-xs text-center">Pedidos</span>
+        </a>
+    </nav>
+    
+    <!-- External Script -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>

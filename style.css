@@ -1,0 +1,401 @@
+/* Estilos para o carrossel arrastável */
+.custom-scrollbar {
+    cursor: grab; /* Mãozinha para indicar que é arrastável */
+    user-select: none; /* Impede a seleção de texto ao arrastar */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    scroll-behavior: auto; /* Garante que o scroll por JS funcione bem */
+    scrollbar-width: none; /* Esconde a barra de rolagem no Firefox */
+}
+
+.custom-scrollbar.active-dragging {
+    cursor: grabbing; /* Mãozinha "agarrando" ao arrastar */
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #0c0c0c;
+}
+
+/* FIX: Prevents horizontal scroll from full-width banners */
+#home-view {
+    overflow-x: clip;
+}
+
+.custom-scrollbar::-webkit-scrollbar { display: none; /* Esconde a barra de rolagem para uma melhor experiência de arrastar */ }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
+
+/* --- GRADIENTES ATUALIZADOS E NOVOS --- */
+.hero-gradient { background: linear-gradient(to top, #0c0c0c 5%, rgba(12, 12, 12, 0.6) 25%, transparent 70%); }
+.detail-backdrop-gradient { background: linear-gradient(to right, rgba(12, 12, 12, 1) 25%, rgba(12, 12, 12, 0.7) 50%, rgba(12, 12, 12, 0.4) 75%, transparent 100%); }
+.player-controls-gradient { background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%); }
+
+/* NOVO: Gradiente para o Hero Banner em tela cheia */
+.hero-banner-gradient {
+    background: linear-gradient(90deg, rgba(12,12,12,1) 0%, rgba(12,12,12,0.9) 20%, rgba(12,12,12,0.4) 60%, transparent 100%),
+                linear-gradient(0deg, rgba(12,12,12,1) 0%, transparent 40%);
+}
+
+/* Gradiente para carrosséis banner que NÃO são o hero principal */
+.standard-banner-gradient {
+    background: linear-gradient(to bottom, 
+        #0c0c0c 0%, 
+        #0c0c0c 5%, 
+        transparent 35%, 
+        transparent 65%, 
+        #0c0c0c 95%, 
+        #0c0c0c 100%
+    );
+}
+
+.season-tab-active { border-color: #4f46e5 !important; color: #ffffff !important; }
+.profile-nav-link.active { background-color: rgba(79, 70, 229, 0.3); color: #fff; }
+.avatar-choice.selected, .avatar-option.selected {
+    kerning: 4px;
+    lighting-color: #4f46e5;
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+.toast {
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+.view-transition {
+    animation: fadeIn 0.4s ease-in-out;
+}
+.star-rating .star:hover,
+.star-rating .star.selected,
+.star-rating:hover .star:hover ~ .star {
+    color: #a5b4fc; /* indigo-300 for hover trail */
+}
+.star-rating:hover .star.selected ~ .star {
+     color: #6b7280; /* gray-500 to un-color stars after selected one on hover */
+}
+.star-rating .star.selected {
+    color: #f59e0b; /* amber-500 */
+}
+
+/* --- ALTERAÇÕES PARA O HERO BANNER EM TELA CHEIA --- */
+
+/* Esconde o hero antigo quando um banner-hero está ativo */
+#home-view.has-hero-banner > #hero-section {
+    display: none;
+}
+
+/* Empurra o contêiner de carrosséis para baixo para não ficar atrás do hero-banner */
+#home-view.has-hero-banner > #carousels-container {
+    padding-top: 80vh;
+    position: relative;
+    z-index: 5;
+    /* Adiciona um gradiente para uma transição suave do banner para o conteúdo */
+    background: linear-gradient(to bottom, transparent 0%, #0c0c0c 20%);
+}
+
+/* Estilo base para todos os carrosséis do tipo banner */
+.carousel-banner-section {
+    position: relative;
+    width: 100vw;
+    margin-left: 50%;
+    transform: translateX(-50%);
+}
+
+/* MODIFICAÇÃO: Estilos específicos para o banner que vira o hero principal */
+.hero-banner {
+    width: 100%;
+    height: 100vh;
+    position: absolute; /* Tira o elemento do fluxo normal da página */
+    top: 0;
+    left: 0;
+    transform: none;
+    margin: 0;
+    z-index: 1; /* Fica atrás do header e do conteúdo, mas visível */
+}
+
+.banner-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: var(--bg-desktop);
+    background-size: cover;
+    background-position: var(--bg-align, center center);
+    z-index: 1;
+}
+
+.banner-gradient {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+}
+
+.banner-content {
+    position: relative;
+    z-index: 3;
+    padding-top: 6rem;
+    padding-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 550px;
+    height: 100%; /* Faz o conteúdo ocupar a altura toda */
+}
+
+/* Ajusta o conteúdo do hero-banner para ocupar 100vh e alinhar os itens */
+.hero-banner .banner-content {
+    min-height: 100vh;
+    justify-content: flex-end; /* Alinha tudo para baixo */
+    padding-bottom: 2rem;
+}
+
+.banner-info-wrapper {
+    position: relative;
+    display: flex;
+    flex-grow: 1; /* Empurra o carrossel para baixo */
+    align-items: center; /* Centraliza o conteúdo (logo/texto) verticalmente */
+}
+
+.banner-info {
+    padding-left: max(4rem, 5vw);
+    padding-right: max(4rem, 5vw);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 50%; /* Limita a largura do texto/logo */
+}
+
+.banner-content .custom-scrollbar {
+    padding-left: max(4rem, 5vw);
+    padding-right: max(4rem, 5vw);
+}
+
+.banner-super-title {
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+.banner-logo-wrapper {
+    position: relative;
+}
+
+.banner-logo {
+    max-width: 350px;
+    object-fit: contain;
+    object-position: left;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+}
+
+/* --- FIM DAS ALTERAÇÕES DO HERO BANNER --- */
+
+/* Player Optimizations */
+.seek-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    background-color: rgba(0,0,0,0.6);
+    padding: 1rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none; /* Important */
+    z-index: 25;
+}
+.seek-indicator.show {
+    opacity: 1;
+}
+
+.volume-slider-container {
+    display: none;
+    align-items: center;
+}
+.volume-container:hover .volume-slider-container {
+    display: flex;
+}
+#volume-slider {
+    -webkit-user-drag: none;
+    width: 80px;
+    height: 5px;
+    background: rgba(107, 114, 128, 0.7);
+    border-radius: 5px;
+    outline: none;
+    transition: opacity .2s;
+    cursor: pointer;
+}
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Kids Profile Toggle Switch */
+#kid-profile-toggle:checked ~ .dot {
+    transform: translateX(100%);
+}
+#kid-profile-toggle:checked ~ .block {
+    background-color: #4f46e5;
+}
+
+/* Mobile Navigation */
+.mobile-nav-link.active {
+    color: #4f46e5;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-top: 2rem;
+}
+
+/* Notification Bell */
+#notification-btn.has-notifications {
+    color: #818cf8; /* indigo-400 */
+}
+#notification-btn.shaking {
+    animation: shake 0.5s;
+}
+.notification-item.unread {
+    border-left: 3px solid #818cf8; /* indigo-400 */
+}
+.notification-dismiss-btn {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.5rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: #9ca3af;
+    background: none;
+    border: none;
+}
+.notification-dismiss-btn:hover {
+    color: #fff;
+}
+
+/* Rating Badges */
+.rating-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+}
+.rating-l { background-color: #22c55e; } /* green-500 */
+.rating-10 { background-color: #3b82f6; } /* blue-500 */
+.rating-12 { background-color: #eab308; } /* yellow-500 */
+.rating-14 { background-color: #f97316; } /* orange-500 */
+.rating-16 { background-color: #ef4444; } /* red-500 */
+.rating-18 { background-color: #111827; border: 1px solid #4b5563; } /* gray-900 with gray-600 border */
+
+
+/* Comments Section */
+.comment-reply-form {
+    display: none;
+    margin-left: 56px;
+    margin-top: 8px;
+    animation: fadeIn 0.3s;
+}
+.comment-reply {
+    margin-left: 56px;
+    border-left: 2px solid #374151; /* gray-700 */
+    padding-left: 1rem;
+    padding-top: 0.5rem;
+}
+
+/* Modals */
+#permission-modal.show > div, #pedido-modal.show > div {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Detail View Static Background */
+#detail-view {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden; /* Prevent body from scrolling */
+}
+
+#detail-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 0; /* Place it behind the content */
+}
+
+#detail-scroll-container {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+    .carousel-banner-section .banner-background {
+        background-image: var(--bg-mobile);
+    }
+
+    .banner-content {
+        min-height: 420px;
+        padding-top: 4rem;
+        padding-bottom: 1rem;
+    }
+
+    .banner-info {
+        padding-left: 5vw;
+        padding-right: 5vw;
+        max-width: 80%; /* Mais espaço no mobile */
+    }
+
+    .banner-content .custom-scrollbar {
+        padding-left: 5vw;
+        padding-right: 5vw;
+    }
+
+    /* NOVO: Ajusta o espaçamento do conteúdo abaixo do hero no mobile */
+    #home-view.has-hero-banner > #carousels-container {
+        padding-top: 75vh;
+    }
+}
+
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
+}
